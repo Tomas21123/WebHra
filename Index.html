@@ -1110,19 +1110,19 @@
       <div id="authAlert" class="auth-alert"></div>
 
       <!-- Formulář 1: Přihlášení -->
-      <form id="formLogin" class="auth-form active" novalidate>
+      <form id="formLogin" class="auth-form active" method="post" action="#" novalidate>
         <div class="form-group">
           <label for="loginName">Přezdívka nebo E-mail</label>
           <div class="input-wrap">
             <span class="input-icon">👤</span>
-            <input type="text" id="loginName" placeholder="Zadej nick nebo e-mail" required autocomplete="username">
+            <input type="text" id="loginName" name="username" placeholder="Zadej nick nebo e-mail" required autocomplete="username">
           </div>
         </div>
         <div class="form-group">
           <label for="loginPassword">Heslo</label>
           <div class="input-wrap">
             <span class="input-icon">🔒</span>
-            <input type="password" id="loginPassword" placeholder="Tvoje heslo" required autocomplete="current-password">
+            <input type="password" id="loginPassword" name="password" placeholder="Tvoje heslo" required autocomplete="current-password">
           </div>
         </div>
         <div class="form-links">
@@ -1138,33 +1138,33 @@
       </form>
 
       <!-- Formulář 2: Registrace -->
-      <form id="formRegister" class="auth-form" novalidate>
+      <form id="formRegister" class="auth-form" method="post" action="#" novalidate>
         <div class="form-group">
           <label for="regEmail">E-mailová adresa</label>
           <div class="input-wrap">
             <span class="input-icon">✉️</span>
-            <input type="email" id="regEmail" placeholder="např. jan@example.com" required autocomplete="email">
+            <input type="email" id="regEmail" name="email" placeholder="např. jan@example.com" required autocomplete="email">
           </div>
         </div>
         <div class="form-group">
           <label for="regNick">Herní přezdívka (Nickname)</label>
           <div class="input-wrap">
             <span class="input-icon">🎮</span>
-            <input type="text" id="regNick" placeholder="3 až 30 znaků" required minlength="3" maxlength="30" autocomplete="username">
+            <input type="text" id="regNick" name="username" placeholder="3 až 30 znaků" required minlength="3" maxlength="30" autocomplete="username">
           </div>
         </div>
         <div class="form-group">
           <label for="regPassword">Heslo</label>
           <div class="input-wrap">
             <span class="input-icon">🔒</span>
-            <input type="password" id="regPassword" placeholder="Minimálně 6 znaků" required minlength="6" autocomplete="new-password">
+            <input type="password" id="regPassword" name="new-password" placeholder="Minimálně 6 znaků" required minlength="6" autocomplete="new-password">
           </div>
         </div>
         <div class="form-group">
           <label for="regPasswordConfirm">Potvrzení hesla</label>
           <div class="input-wrap">
             <span class="input-icon">🛡️</span>
-            <input type="password" id="regPasswordConfirm" placeholder="Zopakuj heslo" required minlength="6" autocomplete="new-password">
+            <input type="password" id="regPasswordConfirm" name="confirm-password" placeholder="Zopakuj heslo" required minlength="6" autocomplete="new-password">
           </div>
         </div>
         <button type="submit" class="btn-auth-submit" id="submitRegister">
@@ -1177,26 +1177,26 @@
       </form>
 
       <!-- Formulář 3: Obnova hesla -->
-      <form id="formReset" class="auth-form" novalidate>
+      <form id="formReset" class="auth-form" method="post" action="#" novalidate>
         <div class="form-group">
           <label for="resetEmail">Tvůj registrační e-mail</label>
           <div class="input-wrap">
             <span class="input-icon">✉️</span>
-            <input type="email" id="resetEmail" placeholder="Zadej svůj e-mail" required autocomplete="email">
+            <input type="email" id="resetEmail" name="email" placeholder="Zadej svůj e-mail" required autocomplete="email">
           </div>
         </div>
         <div class="form-group">
           <label for="resetPassword">Nové heslo</label>
           <div class="input-wrap">
             <span class="input-icon">🔑</span>
-            <input type="password" id="resetPassword" placeholder="Nové heslo (min. 6 znaků)" required minlength="6" autocomplete="new-password">
+            <input type="password" id="resetPassword" name="new-password" placeholder="Nové heslo (min. 6 znaků)" required minlength="6" autocomplete="new-password">
           </div>
         </div>
         <div class="form-group">
           <label for="resetPasswordConfirm">Potvrzení nového hesla</label>
           <div class="input-wrap">
             <span class="input-icon">🛡️</span>
-            <input type="password" id="resetPasswordConfirm" placeholder="Zopakuj nové heslo" required minlength="6" autocomplete="new-password">
+            <input type="password" id="resetPasswordConfirm" name="confirm-password" placeholder="Zopakuj nové heslo" required minlength="6" autocomplete="new-password">
           </div>
         </div>
         <button type="submit" class="btn-auth-submit" id="submitReset">
@@ -1731,6 +1731,19 @@
       if (res.ok && res.data && res.data.status === 'success') {
         const user = res.data.user || { nickname: login, email: login };
         setSessionUser(user);
+
+        // Výzva prohlížeči k uložení hesla přes Credential Management API
+        if (window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
+          try {
+            const cred = new PasswordCredential({
+              id: login,
+              password: password,
+              name: user.nickname || login
+            });
+            navigator.credentials.store(cred).catch(() => {});
+          } catch (err) {}
+        }
+
         showAuthAlert('success', `Vítej zpět, ${escapeHtml(user.nickname)}! Přihlášení bylo úspěšné.`);
         setTimeout(() => closeModal(modalAuth), 600);
       } else {
@@ -1778,6 +1791,19 @@
       if (res.ok && res.data && res.data.status === 'success') {
         const user = res.data.user || { nickname, email };
         setSessionUser(user);
+
+        // Výzva prohlížeči k uložení hesla po registraci
+        if (window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
+          try {
+            const cred = new PasswordCredential({
+              id: nickname,
+              password: password,
+              name: nickname
+            });
+            navigator.credentials.store(cred).catch(() => {});
+          } catch (err) {}
+        }
+
         showAuthAlert('success', `Účet pro "${escapeHtml(nickname)}" byl vytvořen a byl jsi přihlášen!`);
         setTimeout(() => closeModal(modalAuth), 750);
       } else {
