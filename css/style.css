@@ -906,3 +906,198 @@ canvas {
   padding-top: 8px;
 }
 
+/* ---------- Herní Chat a Příkazová Konzole (Minecraft Style) ---------- */
+.chat-container {
+  position: fixed;
+  left: 12px;
+  bottom: 120px;
+  width: 460px;
+  max-width: calc(100vw - 24px);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  font-family: 'Outfit', 'Pixelify Sans', system-ui, sans-serif;
+  user-select: none;
+}
+
+.chat-container.chat-active {
+  pointer-events: auto;
+  user-select: text;
+}
+
+.chat-messages {
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: opacity 0.3s ease, background 0.2s ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.chat-container.chat-active .chat-messages {
+  background: rgba(10, 16, 28, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.chat-container.chat-faded .chat-messages {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+.chat-msg {
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #f1f5f9;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+  word-break: break-word;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.chat-container.chat-active .chat-msg {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.chat-nick {
+  color: #facc15;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+}
+
+.chat-arrow {
+  color: #94a3b8;
+  margin: 0 4px;
+  font-weight: bold;
+}
+
+.chat-body {
+  color: #f8fafc;
+}
+
+.chat-tag {
+  display: inline-block;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chat-tag.sys {
+  background: rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+}
+
+.chat-tag.err {
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.chat-tag.inf {
+  background: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.5);
+}
+
+.chat-clickable-cmd {
+  color: #38bdf8;
+  text-decoration: underline;
+  cursor: pointer;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.chat-clickable-cmd:hover {
+  background: rgba(56, 189, 248, 0.35);
+  color: #fff;
+}
+
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(11, 18, 32, 0.95);
+  border: 2px solid #38bdf8;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.chat-prefix {
+  color: #38bdf8;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 1;
+}
+
+#chatInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+}
+
+#chatInput::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#chatSendBtn {
+  background: #0284c7;
+  color: #fff;
+  border: 1px solid #38bdf8;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#chatSendBtn:hover {
+  background: #0369a1;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+.mm-explored-badge {
+  background: rgba(14, 21, 33, 0.88);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #0284c7;
+  color: #38bdf8;
+  font-weight: bold;
+  font-size: 11px;
+}
+

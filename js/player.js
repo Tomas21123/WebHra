@@ -82,7 +82,7 @@ let drag = false;
 function initPlayerControls(cv) {
   cv.addEventListener('mousedown', e => {
     if (typeof tryEnableFullscreen === 'function') tryEnableFullscreen();
-    if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen)) return;
+    if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen)) return;
     if (e.button === 0) {
       triggerAttack();
       if (!document.pointerLockElement) {
@@ -94,14 +94,14 @@ function initPlayerControls(cv) {
 
   addEventListener('mouseup', () => drag = false);
   addEventListener('mousemove', e => {
-    if ((document.pointerLockElement || drag) && !escOpen && !charOpen && !invOpen) {
+    if ((document.pointerLockElement || drag) && !escOpen && !charOpen && !invOpen && !(typeof chatOpen !== 'undefined' && chatOpen)) {
       yaw -= e.movementX * 0.0025;
       pitch = Math.min(1.4, Math.max(-0.4, pitch + e.movementY * 0.0025));
     }
   });
 
   addEventListener('wheel', e => {
-    if (escOpen || charOpen) return;
+    if (escOpen || charOpen || (typeof chatOpen !== 'undefined' && chatOpen)) return;
     dist = Math.min(14, Math.max(0, dist + e.deltaY * 0.005));
   }, { passive: true });
 }

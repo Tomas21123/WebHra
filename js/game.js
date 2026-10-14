@@ -117,6 +117,27 @@ try { tryEnableFullscreen(); } catch (e) {}
 
 // Klávesové vstupy
 addEventListener('keydown', e => {
+  if (typeof chatOpen !== 'undefined' && chatOpen) {
+    if (e.code === 'Escape') {
+      if (typeof closeChat === 'function') closeChat();
+      e.preventDefault();
+      return;
+    }
+    return;
+  }
+
+  // Otevření konzole a chatu klávesou T nebo / (Minecraft styl)
+  if (e.code === 'KeyT' && !escOpen && !charOpen && !invOpen) {
+    if (typeof openChat === 'function') openChat();
+    e.preventDefault();
+    return;
+  }
+  if ((e.code === 'Slash' || e.key === '/') && !escOpen && !charOpen && !invOpen) {
+    if (typeof openChat === 'function') openChat('/');
+    e.preventDefault();
+    return;
+  }
+
   if (e.code === 'KeyV') {
     if (typeof toggleEmotes === 'function') toggleEmotes();
     e.preventDefault();
@@ -146,7 +167,9 @@ addEventListener('keydown', e => {
       navigator.keyboard.lock(['Escape']).catch(() => {});
     }
 
-    if (typeof emoteOpen !== 'undefined' && emoteOpen) {
+    if (typeof chatOpen !== 'undefined' && chatOpen) {
+      if (typeof closeChat === 'function') closeChat();
+    } else if (typeof emoteOpen !== 'undefined' && emoteOpen) {
       closeEmotes();
     } else if (typeof minimapOpen !== 'undefined' && minimapOpen) {
       toggleMinimap(false);
@@ -162,7 +185,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (invKey(e)) return;
-  if (escOpen || charOpen || (typeof emoteOpen !== 'undefined' && emoteOpen)) return;
+  if (escOpen || charOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen)) return;
 
   // Detekce dvojitého stisku Shift (Double-Shift) pro kotrmelec dopředu
   // Časové okno nastaveno na 1000 ms (2 stisky za sekundu) a spotřeba staminy jen 5
@@ -805,6 +828,9 @@ function loop(now) {
   // 3D Minimapa (Cube World Style)
   if (typeof updateMinimap === 'function') {
     updateMinimap(dt, now);
+  }
+  if (typeof markExploredAroundPlayer === 'function' && frames % 45 === 0) {
+    markExploredAroundPlayer();
   }
 
   // 3D Preview v editoru postavy

@@ -4,8 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Voxelový svět</title>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Pixelify+Sans:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -19,7 +20,7 @@
   </script>
   <div id="hud"></div>
   <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
-    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · 1–9 – lišta</div>
+    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · T – chat & příkazy · 1–9 – lišta</div>
   <div id="bars">
     <div class="b hp" title="Životy (HP)">
       <div class="b-ico">
@@ -59,6 +60,16 @@
   </div>
   <div id="hb"></div>
   <div id="toast"></div>
+
+  <!-- Herní Chat a Příkazová Konzole [Klávesa T nebo /] -->
+  <div id="chatBox" class="chat-container">
+    <div id="chatMessages" class="chat-messages"></div>
+    <div id="chatInputRow" class="chat-input-row" hidden>
+      <span class="chat-prefix">❯</span>
+      <input id="chatInput" type="text" maxlength="250" placeholder="Napiš zprávu nebo /příkaz (/help pro nápovědu)..." autocomplete="off" spellcheck="false">
+      <button id="chatSendBtn" title="Odeslat zprávu (Enter)">↵</button>
+    </div>
+  </div>
 
   <!-- Inventář Modal -->
   <div id="inv" hidden>
@@ -186,18 +197,20 @@
       <div class="minimap-compass" id="mmCompass">N</div>
       <div class="minimap-overlay-info">
         <div id="mmBiome" class="mm-biome-badge">🌲 Les</div>
+        <div id="mmExplored" class="mm-explored-badge">🗺️ Objeveno: 0</div>
         <div id="mmCoords" class="mm-coords">X: 0 · Y: 0 · Z: 0</div>
       </div>
     </div>
     <div class="minimap-footer">
       <div class="mm-controls">
         <button id="mmRotL" title="Otočit vlevo">⟲</button>
-        <button id="mmCenter" title="Vycentrovat pohled">Hráč</button>
+        <button id="mmCenter" title="Vycentrovat pohled na hráče">Hráč</button>
         <button id="mmRotR" title="Otočit vpravo">⟳</button>
+        <button id="mmFitAll" title="Zobrazit celé objevené území">🗺️ Vše</button>
         <button id="mmZoomIn" title="Přiblížit">+</button>
         <button id="mmZoomOut" title="Oddálit">−</button>
       </div>
-      <div class="mm-hint">Táhni myší · Kolečko = zoom · [M]</div>
+      <div class="mm-hint">Táhni myší · Pravé tl./Shift = posun · Kolečko = zoom · [M]</div>
     </div>
   </div>
 
@@ -264,6 +277,7 @@
   <script src="js/minimap.js"></script>
   <script src="js/emotes.js"></script>
   <script src="js/cursor.js"></script>
+  <script src="js/chat.js"></script>
   <script src="js/game.js"></script>
 </body>
 
