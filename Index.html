@@ -1,1 +1,1043 @@
-Ahooooj
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Voxelový svět – Úvodní menu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Pixelify+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.45);
+      --primary-hover: #059669;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --gold: #fbbf24;
+      --gold-glow: rgba(251, 191, 36, 0.4);
+      --glass: rgba(15, 23, 42, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-hover: rgba(30, 41, 59, 0.85);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body,
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #1e3a5f 0%, #0f1c30 55%, #070d18 100%);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+    }
+
+    /* 3D Canvas Pozadí */
+    #bgCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* Atmosférické vrstvy */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(5, 8, 15, 0.82) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(56, 189, 248, 0.4), transparent),
+        radial-gradient(3px 3px at 50% 80%, rgba(251, 191, 36, 0.3), transparent);
+      background-repeat: repeat;
+      background-size: 200px 200px;
+      animation: floatParticles 25s linear infinite;
+    }
+
+    @keyframes floatParticles {
+      from { transform: translateY(0); }
+      to { transform: translateY(-200px); }
+    }
+
+    /* Hlavní kontejner menu */
+    .menu-wrap {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 40px 24px;
+      pointer-events: none;
+    }
+
+    /* Horní lišta */
+    .top-bar {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: auto;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #38bdf8;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      letter-spacing: 0.5px;
+    }
+
+    .badge-pill span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .icon-btn:hover {
+      background: var(--glass-hover);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Středový blok s titulem a tlačítky */
+    .hero-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      pointer-events: auto;
+      max-width: 650px;
+      margin: auto 0;
+    }
+
+    .title-box {
+      margin-bottom: 36px;
+      position: relative;
+    }
+
+    .game-logo {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: clamp(48px, 8vw, 84px);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.05;
+      background: linear-gradient(180deg, #ffffff 10%, #a7f3d0 45%, #10b981 85%, #047857 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 6px 24px rgba(16, 185, 129, 0.5)) drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+      text-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
+      position: relative;
+    }
+
+    .game-subtitle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 10px;
+      font-size: clamp(13px, 2vw, 15px);
+      font-weight: 600;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .game-subtitle::before,
+    .game-subtitle::after {
+      content: '';
+      height: 1px;
+      width: 40px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6), transparent);
+    }
+
+    /* Menu tlačítka */
+    .menu-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .btn-main-play {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      padding: 18px 32px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #062419;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 16px;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 
+        0 10px 30px var(--primary-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-main-play::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.75s ease;
+    }
+
+    .btn-main-play:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 
+        0 16px 40px rgba(16, 185, 129, 0.6),
+        0 0 25px rgba(52, 211, 153, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      background: linear-gradient(135deg, #4ade80 0%, #10b981 50%, #047857 100%);
+    }
+
+    .btn-main-play:hover::before {
+      left: 140%;
+    }
+
+    .btn-main-play:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow: 0 6px 18px var(--primary-glow);
+    }
+
+    .btn-main-play .btn-icon {
+      font-size: 22px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      transition: transform 0.2s ease;
+    }
+
+    .btn-main-play:hover .btn-icon {
+      transform: scale(1.15) translateX(2px);
+    }
+
+    .btn-sub {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 13px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #e2e8f0;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-sub:hover {
+      background: var(--glass-hover);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .btn-sub:active {
+      transform: translateY(1px);
+    }
+
+    /* Spodní lišta */
+    .bottom-bar {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      pointer-events: auto;
+    }
+
+    .features-strip {
+      display: flex;
+      gap: 20px;
+      font-weight: 500;
+    }
+
+    .feature-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #cbd5e1;
+    }
+
+    .feature-tag span {
+      color: #38bdf8;
+    }
+
+    .version-tag {
+      padding: 4px 10px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Modal dialogy (Ovládání / O hře) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 7, 15, 0.78);
+      backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 580px;
+      padding: 32px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(56, 189, 248, 0.1);
+      transform: scale(0.92) translateY(20px);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .modal-overlay.open .modal-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-title {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #f87171;
+    }
+
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .key-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(2, 6, 23, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+    }
+
+    .key-desc {
+      font-size: 13.5px;
+      color: #cbd5e1;
+    }
+
+    .key-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+
+    .info-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .info-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    /* Přechodová animace při startu hry */
+    .portal-transition {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+
+    .portal-transition.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .portal-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(16, 185, 129, 0.2);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .portal-text {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: #34d399;
+    }
+
+    @media (max-width: 640px) {
+      .game-subtitle::before,
+      .game-subtitle::after { display: none; }
+      .features-strip { display: none; }
+      .key-grid { grid-template-columns: 1fr; }
+      .menu-wrap { padding: 24px 16px; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 3D Voxel Scene Canvas -->
+  <canvas id="bgCanvas"></canvas>
+
+  <div class="vignette"></div>
+  <div class="particles"></div>
+
+  <!-- Hlavní UI Menu -->
+  <div class="menu-wrap">
+    <!-- Horní lišta -->
+    <header class="top-bar">
+      <div class="badge-pill">
+        <span></span> Voxel Engine Online
+      </div>
+      <div class="top-actions">
+        <button id="btnSound" class="icon-btn" title="Zapnout / Vypnout zvuk">🔊</button>
+        <button id="btnFullscreen" class="icon-btn" title="Režim celé obrazovky">⛶</button>
+      </div>
+    </header>
+
+    <!-- Středové Hero Menu -->
+    <main class="hero-section">
+      <div class="title-box">
+        <h1 class="game-logo">Voxelový svět</h1>
+        <div class="game-subtitle">Nekonečné RPG Dobrodružství</div>
+      </div>
+
+      <nav class="menu-nav">
+        <button id="btnPlay" class="btn-main-play">
+          <span class="btn-icon">▶</span>
+          <span>Hrát hru</span>
+        </button>
+
+        <button id="btnControls" class="btn-sub">
+          <span>🎮</span>
+          <span>Ovládání hry</span>
+        </button>
+
+        <button id="btnAbout" class="btn-sub">
+          <span>ℹ️</span>
+          <span>O hře & Vlastnosti</span>
+        </button>
+      </nav>
+    </main>
+
+    <!-- Spodní lišta -->
+    <footer class="bottom-bar">
+      <div class="features-strip">
+        <div class="feature-tag"><span>✦</span> 3D Minimapa</div>
+        <div class="feature-tag"><span>✦</span> Reálné plavání</div>
+        <div class="feature-tag"><span>✦</span> Úprava postavy</div>
+        <div class="feature-tag"><span>✦</span> Vegetace & Detaily</div>
+      </div>
+      <div class="version-tag">Verze 1.4 · Three.js</div>
+    </footer>
+  </div>
+
+  <!-- Modal: Ovládání -->
+  <div id="modalControls" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title"><span>🎮</span> Ovládání hry</div>
+        <button class="modal-close" id="closeControls">✕</button>
+      </div>
+      <div class="key-grid">
+        <div class="key-item">
+          <span class="key-desc">Pohyb postavy</span>
+          <span class="key-badge">W A S D</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Sprint / Běh</span>
+          <span class="key-badge">Shift</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Skok / Plavání</span>
+          <span class="key-badge">Mezerník</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Kamera & Pohled</span>
+          <span class="key-badge">Myš</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Zoom pohledu</span>
+          <span class="key-badge">Kolečko</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Pauza & Editor vzhledu</span>
+          <span class="key-badge">ESC</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Inventář & Vybavení</span>
+          <span class="key-badge">I</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">3D Voxelová Minimapa</span>
+          <span class="key-badge">M</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Kolo gest (Emotes)</span>
+          <span class="key-badge">V</span>
+        </div>
+        <div class="key-item">
+          <span class="key-desc">Rychlá lišta</span>
+          <span class="key-badge">1 – 9</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: O hře -->
+  <div id="modalAbout" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title"><span>🧭</span> O hře Voxelový svět</div>
+        <button class="modal-close" id="closeAbout">✕</button>
+      </div>
+      <div class="info-list">
+        <div class="info-item">
+          <span class="info-icon">🏔️</span>
+          <div><strong>Nekonečný procedurální svět:</strong> Hory, lesy, březové háje, piniové lesy, pláže a oceány bez výškového limitu.</div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">🌿</span>
+          <div><strong>Přírodní detaily:</strong> Trávy v křížovém Minecraft stylu, 3D kamenná tlačítka/oblázky, koberce spadaného listí, keříky a visící liány.</div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">🏊</span>
+          <div><strong>Fyzika vody a plavání:</strong> Plynulá animace kraula při plavání, šlapání vody na hladině a ukazatel zásoby vzduchu při potopení.</div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">🧭</span>
+          <div><strong>3D Minimapa:</strong> Otočné 3D diorama terénu kolem hráče ve stylu Cube World se zobrazením kompasu a souřadnic.</div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">👤</span>
+          <div><strong>Editor postavy a animace:</strong> Úprava barvy pleti, účesů, vousů, spodního prádla a plynulé animace běhu, skoku a emocí.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Přechodová obrazovka do hry -->
+  <div id="portalOverlay" class="portal-transition">
+    <div class="portal-spinner"></div>
+    <div class="portal-text">Načítám svět…</div>
+  </div>
+
+  <!-- Three.js pro interaktivní 3D Voxel pozadí -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // ---------- Web Audio API Zvukové Efekty ----------
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.15) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playHoverSound() {
+      playTone(480, 'triangle', 0.06, 0.08);
+    }
+
+    function playClickSound() {
+      playTone(560, 'sine', 0.12, 0.15);
+      setTimeout(() => playTone(840, 'sine', 0.15, 0.12), 40);
+    }
+
+    function playLaunchSound() {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+        [261.63, 329.63, 392.00, 523.25, 659.25].forEach((f, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.6);
+        });
+      } catch (e) {}
+    }
+
+    // ---------- 3D Voxel Scéna na Pozadí ----------
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    // Průhledné pozadí nechá vyniknout atmosférickému gradientu z CSS
+    scene.background = null;
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 4.2, 13.5);
+
+    // Osvětlení
+    const hemiLight = new THREE.HemisphereLight(0xfff7ed, 0x1e293b, 0.85);
+    scene.add(hemiLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffedd5, 1.25);
+    sunLight.position.set(8, 14, 10);
+    scene.add(sunLight);
+
+    const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+    blueRimLight.position.set(-10, 6, -8);
+    scene.add(blueRimLight);
+
+    // Skupina vznášejícího se ostrova
+    const islandGroup = new THREE.Group();
+    scene.add(islandGroup);
+
+    // Paleta voxelových barev
+    const PALETTE = {
+      grass: 0x4ade80,
+      grassSide: 0x22c55e,
+      dirt: 0x854d0e,
+      stone: 0x94a3b8,
+      wood: 0x78350f,
+      leaves: 0x16a34a,
+      water: 0x38bdf8,
+      sand: 0xfef08a,
+      flowerRed: 0xef4444,
+      flowerYellow: 0xfacc15,
+      skin: 0xd49b72,
+      blue: 0x2563eb,
+      hair: 0x0284c7
+    };
+
+    // Vytvoření instancovaného ostrova z voxelů
+    const voxelGeo = new THREE.BoxGeometry(0.96, 0.96, 0.96);
+    const voxelMat = new THREE.MeshLambertMaterial();
+
+    const voxels = [];
+    const size = 11;
+    const half = Math.floor(size / 2);
+
+    for (let x = -half; x <= half; x++) {
+      for (let z = -half; z <= half; z++) {
+        const d = Math.hypot(x, z);
+        if (d > half + 0.2) continue;
+
+        const maxDepth = Math.max(1, Math.round((half + 0.5 - d) * 1.4));
+        const surfaceY = Math.round(Math.sin(x * 0.45) * Math.cos(z * 0.45) * 0.8);
+
+        // Travnatý povrch
+        voxels.push({ x, y: surfaceY, z, col: PALETTE.grass });
+
+        // Hlína pod trávou
+        for (let dy = 1; dy <= 2; dy++) {
+          voxels.push({ x, y: surfaceY - dy, z, col: PALETTE.dirt });
+        }
+
+        // Kámen hlouběji
+        for (let dy = 3; dy <= maxDepth + 2; dy++) {
+          voxels.push({ x, y: surfaceY - dy, z, col: PALETTE.stone });
+        }
+
+        // Květiny na povrchu
+        if (d > 1 && d < 4.5 && ((x * 13 + z * 17) % 7 === 0)) {
+          voxels.push({ x, y: surfaceY + 1, z, col: ((x + z) % 2 === 0) ? PALETTE.flowerRed : PALETTE.flowerYellow, scale: 0.45 });
+        }
+      }
+    }
+
+    // Miniaturní voxelový stromek na ostrově
+    const tx = 2, tz = -2, ty = 1;
+    for (let y = 0; y < 4; y++) {
+      voxels.push({ x: tx, y: ty + y, z: tz, col: PALETTE.wood, scale: 0.85 });
+    }
+    for (let lx = -1; lx <= 1; lx++) {
+      for (let lz = -1; lz <= 1; lz++) {
+        for (let ly = 3; ly <= 5; ly++) {
+          if (Math.abs(lx) === 1 && Math.abs(lz) === 1 && ly === 5) continue;
+          voxels.push({ x: tx + lx, y: ty + ly, z: tz + lz, col: PALETTE.leaves, scale: 0.95 });
+        }
+      }
+    }
+
+    // Mini postavička stojící na ostrově
+    const px = -1.5, pz = 1.2, py = 1;
+    // Nohy
+    voxels.push({ x: px - 0.2, y: py + 0.4, z: pz, col: PALETTE.blue, scale: 0.4 });
+    voxels.push({ x: px + 0.2, y: py + 0.4, z: pz, col: PALETTE.blue, scale: 0.4 });
+    // Tělo
+    voxels.push({ x: px, y: py + 0.9, z: pz, col: PALETTE.skin, scale: 0.6 });
+    // Hlava
+    voxels.push({ x: px, y: py + 1.45, z: pz, col: PALETTE.hair, scale: 0.55 });
+
+    // Vytvoření souhrnné sítě ostrova
+    const instMesh = new THREE.InstancedMesh(voxelGeo, voxelMat, voxels.length);
+    const dummy = new THREE.Object3D();
+    const cObj = new THREE.Color();
+
+    voxels.forEach((v, i) => {
+      dummy.position.set(v.x, v.y, v.z);
+      const s = v.scale !== undefined ? v.scale : 1;
+      dummy.scale.set(s, s, s);
+      dummy.updateMatrix();
+      instMesh.setMatrixAt(i, dummy.matrix);
+      cObj.setHex(v.col);
+      instMesh.setColorAt(i, cObj);
+    });
+
+    instMesh.instanceMatrix.needsUpdate = true;
+    if (instMesh.instanceColor) instMesh.instanceColor.needsUpdate = true;
+    islandGroup.add(instMesh);
+
+    // Vznášející se mráčky v pozadí
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
+    const clouds = [];
+
+    for (let c = 0; c < 5; c++) {
+      const cloudGroup = new THREE.Group();
+      const numBlocks = 6 + Math.floor(Math.random() * 6);
+      for (let b = 0; b < numBlocks; b++) {
+        const blk = new THREE.Mesh(voxelGeo, cloudMat);
+        blk.position.set(
+          (Math.random() - 0.5) * 4,
+          (Math.random() - 0.5) * 1.2,
+          (Math.random() - 0.5) * 2
+        );
+        blk.scale.setScalar(1.2 + Math.random() * 0.8);
+        cloudGroup.add(blk);
+      }
+      cloudGroup.position.set(
+        (Math.random() - 0.5) * 35,
+        -2 + Math.random() * 8,
+        -8 + Math.random() * -12
+      );
+      cloudGroup.userData = { speed: 0.015 + Math.random() * 0.02 };
+      scene.add(cloudGroup);
+      clouds.push(cloudGroup);
+    }
+
+    // Parallax myši
+    let targetRotY = 0;
+    let targetRotX = 0;
+    let mouseX = 0, mouseY = 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+      targetRotY = mouseX * 0.35;
+      targetRotX = mouseY * 0.2;
+    });
+
+    // Resize okna
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animační smyčka
+    let clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Pomalé kolébání a rotace ostrova
+      islandGroup.rotation.y += 0.0035;
+      islandGroup.position.y = Math.sin(elapsed * 1.2) * 0.25;
+
+      // Hladké dotažení myši
+      camera.position.x += (mouseX * 1.5 - camera.position.x) * 0.04;
+      camera.position.y += (5 - mouseY * 1.0 - camera.position.y) * 0.04;
+      camera.lookAt(0, 0.5, 0);
+
+      // Posun mráčků
+      clouds.forEach(cl => {
+        cl.position.x += cl.userData.speed;
+        if (cl.position.x > 25) cl.position.x = -25;
+      });
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---------- UI Interakce a Navigace ----------
+    const btnPlay = document.getElementById('btnPlay');
+    const portalOverlay = document.getElementById('portalOverlay');
+    const btnControls = document.getElementById('btnControls');
+    const modalControls = document.getElementById('modalControls');
+    const closeControls = document.getElementById('closeControls');
+
+    const btnAbout = document.getElementById('btnAbout');
+    const modalAbout = document.getElementById('modalAbout');
+    const closeAbout = document.getElementById('closeAbout');
+
+    const btnSound = document.getElementById('btnSound');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+
+    // Spuštění hry
+    btnPlay.addEventListener('click', () => {
+      playLaunchSound();
+      portalOverlay.classList.add('active');
+      setTimeout(() => {
+        window.location.href = 'Voxelový svět.html';
+      }, 650);
+    });
+
+    // Modály
+    function openModal(modal) {
+      playClickSound();
+      modal.classList.add('open');
+    }
+
+    function closeModal(modal) {
+      playClickSound();
+      modal.classList.remove('open');
+    }
+
+    btnControls.addEventListener('click', () => openModal(modalControls));
+    closeControls.addEventListener('click', () => closeModal(modalControls));
+
+    btnAbout.addEventListener('click', () => openModal(modalAbout));
+    closeAbout.addEventListener('click', () => closeModal(modalAbout));
+
+    // Zavření modálu kliknutím na pozadí
+    [modalControls, modalAbout].forEach(m => {
+      m.addEventListener('click', (e) => {
+        if (e.target === m) closeModal(m);
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal(modalControls);
+        closeModal(modalAbout);
+      }
+      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open')) {
+        btnPlay.click();
+      }
+    });
+
+    // Přepínač zvuku
+    btnSound.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      btnSound.textContent = soundEnabled ? '🔊' : '🔇';
+      btnSound.title = soundEnabled ? 'Vypnout zvuk' : 'Zapnout zvuk';
+      if (soundEnabled) playClickSound();
+    });
+
+    // Celá obrazovka
+    btnFullscreen.addEventListener('click', () => {
+      playClickSound();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        btnFullscreen.textContent = '⛶';
+      } else {
+        document.exitFullscreen().catch(() => {});
+        btnFullscreen.textContent = '⛶';
+      }
+    });
+
+    // Zvuky při najetí myši na tlačítka
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('mouseenter', playHoverSound);
+    });
+  </script>
+</body>
+
+</html>
