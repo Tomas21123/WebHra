@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="utf-8">
+  <title>Voxelový svět – Přesměrování</title>
+  <script>
+    // GitHub Pages SPA / clean URL router
+    const path = window.location.pathname;
+    if (path.includes('/play')) {
+      // Přesměrovat do složky play/
+      const basePath = path.substring(0, path.indexOf('/play') + 5);
+      window.location.replace(basePath.replace(/\/?$/, '/') + window.location.search + window.location.hash);
+    } else {
+      // Přesměrovat do kořene repozitáře
+      const segments = path.split('/').filter(Boolean);
+      const repoName = segments.length > 0 ? segments[0] : '';
+      const rootUrl = repoName ? ('/' + repoName + '/') : '/';
+      window.location.replace(rootUrl);
+    }
+  </script>
+</head>
+
+<body>
+  <p style="font-family:sans-serif; text-align:center; margin-top:20vh; color:#94a3b8;">
+    Načítám Voxelový svět...
+  </p>
+</body>
+
+</html>

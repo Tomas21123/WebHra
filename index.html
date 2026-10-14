@@ -5,6 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Voxelový svět – Úvodní menu</title>
+  <script>
+    // Automaticky odstranit /Index.html nebo /index.html z adresního řádku (zůstane čisté https://.../WebHra/)
+    if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/Index.html')) {
+      const cleanPath = window.location.pathname.replace(/\/(index|Index)\.html$/i, '') + '/';
+      window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Pixelify+Sans:wght@500;600;700&display=swap" rel="stylesheet">
@@ -1868,7 +1875,7 @@
       playLaunchSound();
       portalOverlay.classList.add('active');
       setTimeout(() => {
-        window.location.href = 'Voxelový svět.html';
+        window.location.href = 'play/';
       }, 650);
     });
 

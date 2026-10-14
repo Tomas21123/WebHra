@@ -259,6 +259,6 @@ $('escRespawn').onclick = () => {
 const escMainMenuBtn = $('escMainMenu');
 if (escMainMenuBtn) {
   escMainMenuBtn.onclick = () => {
-    window.location.href = 'Index.html';
+    window.location.href = window.location.pathname.includes('/play') ? '../' : './';
   };
 }
