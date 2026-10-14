@@ -217,50 +217,53 @@ function physics(dt) {
     }
   } else {
     P.vy -= 26 * dt;
-    if (keys.Space && P.ground) P.vy = 10.6; // Výskok o 1 blok výše
+    if (keys.Space && P.ground) P.vy = 9.2; // Normální výskok (o 1 blok méně než dříve)
     if (P.vy < -30) P.vy = -30;
   }
 
   const wasG = P.ground;
   P.ground = false;
 
-  // Auto-jump systém: detekce 1-blokové překážky při pohybu
-  autoJumpTimer = Math.max(0, autoJumpTimer - dt);
-  if (wasG && !inW && autoJumpTimer <= 0 && (fx || fz)) {
-    const spd = Math.hypot(P.vx, P.vz);
-    if (spd > 0.35) {
-      const dirX = P.vx / spd, dirZ = P.vz / spd;
-      const chkDist = Math.max(0.24, spd * dt * 2.2);
-      const testX = P.x + dirX * chkDist, testZ = P.z + dirZ * chkDist;
-      // Překážka je 1 blok vysoká: nohy narazí, prostor o 1 blok výš (0.55) i nad hlavou je volný
-      if (hits(testX, P.y, testZ) && !hits(testX, P.y + 0.55, testZ) && !hits(P.x, P.y + 0.6, P.z)) {
-        P.vy = 7.6;
-        P.ground = false;
-        autoJumpTimer = 0.28;
+  // Plynulé vyběhnutí kopce (Step-assist do výšky 1 bloku):
+  // Namísto cloumavého vyskakování postava plynule vyběhne schody/kopec o 1 blok výš bez přerušení běhu.
+  const stepLimit = 0.52;
+
+  // Pohyb po ose X
+  const dx = P.vx * dt;
+  if (dx !== 0) {
+    if (!hits(P.x + dx, P.y, P.z)) {
+      P.x += dx;
+    } else if (wasG && !inW && (fx || fz)) {
+      const stepY = (Math.floor(P.y / S) + 1) * S;
+      if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x + dx, stepY, P.z)) {
+        P.x += dx;
+        P.y = stepY;
+        P.ground = true;
+      } else {
+        P.vx *= 0.2;
       }
+    } else {
+      P.vx *= 0.2;
     }
   }
 
-  P.x += P.vx * dt;
-  if (hits(P.x, P.y, P.z)) {
-    if (wasG && !inW && autoJumpTimer <= 0 && !hits(P.x, P.y + 0.55, P.z) && !hits(P.x - P.vx * dt, P.y + 0.6, P.z)) {
-      P.vy = 7.6;
-      P.ground = false;
-      autoJumpTimer = 0.28;
+  // Pohyb po ose Z
+  const dz = P.vz * dt;
+  if (dz !== 0) {
+    if (!hits(P.x, P.y, P.z + dz)) {
+      P.z += dz;
+    } else if (wasG && !inW && (fx || fz)) {
+      const stepY = (Math.floor(P.y / S) + 1) * S;
+      if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x, stepY, P.z + dz)) {
+        P.z += dz;
+        P.y = stepY;
+        P.ground = true;
+      } else {
+        P.vz *= 0.2;
+      }
+    } else {
+      P.vz *= 0.2;
     }
-    P.x -= P.vx * dt;
-    P.vx *= 0.4;
-  }
-
-  P.z += P.vz * dt;
-  if (hits(P.x, P.y, P.z)) {
-    if (wasG && !inW && autoJumpTimer <= 0 && !hits(P.x, P.y + 0.55, P.z) && !hits(P.x, P.y + 0.6, P.z - P.vz * dt)) {
-      P.vy = 7.6;
-      P.ground = false;
-      autoJumpTimer = 0.28;
-    }
-    P.z -= P.vz * dt;
-    P.vz *= 0.4;
   }
 
   P.y += P.vy * dt;
@@ -268,8 +271,7 @@ function physics(dt) {
     P.y -= P.vy * dt;
     if (P.vy < 0) {
       P.ground = true;
-      autoJumpTimer = 0;
-      if (P.vy < -21 && !inW) hurt((-P.vy - 21) * 5);
+      if (P.vy < -18 && !inW) hurt((-P.vy - 18) * 5);
     }
     P.vy = 0;
   }

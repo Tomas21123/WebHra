@@ -63,16 +63,16 @@ const bS = document.querySelector('.st i'), bSt = document.querySelector('.st sp
 const bO = document.querySelector('.o2 i'), bOt = document.querySelector('.o2 span'), bOBox = document.querySelector('.o2');
 
 function ui() {
-  bH.style.width = G.hp + '%';
-  bS.style.width = G.st + '%';
-  bHt.textContent = 'Životy ' + Math.ceil(G.hp) + ' / 100';
-  bSt.textContent = 'Stamina ' + Math.ceil(G.st) + ' / 100';
+  if (bH) bH.style.width = G.hp + '%';
+  if (bS) bS.style.width = G.st + '%';
+  if (bHt) bHt.textContent = Math.ceil(G.hp);
+  if (bSt) bSt.textContent = Math.ceil(G.st);
 
   if (bOBox) {
     if (G.o2 < 99.5) {
       bOBox.hidden = false;
       if (bO) bO.style.width = Math.max(0, G.o2) + '%';
-      if (bOt) bOt.textContent = 'Kyslík ' + Math.max(0, Math.ceil(G.o2)) + ' %';
+      if (bOt) bOt.textContent = Math.max(0, Math.ceil(G.o2));
     } else {
       bOBox.hidden = true;
     }

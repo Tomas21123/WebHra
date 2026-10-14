@@ -14,8 +14,41 @@
   <div id="help">WASD – pohyb · Shift – sprint · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
     dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · 1–9 – lišta</div>
   <div id="bars">
-    <div class="b hp"><i></i><span></span></div>
-    <div class="b st"><i></i><span></span></div>
+    <div class="b hp" title="Životy (HP)">
+      <div class="b-ico">
+        <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
+          <path d="M4 1 h3 v1 h-3 v-1 z M9 1 h3 v1 h-3 v-1 z M2 2 h2 v1 h-2 v-1 z M7 2 h2 v1 h-2 v-1 z M12 2 h2 v1 h-2 v-1 z M1 3 h1 v3 h-1 v-3 z M14 3 h1 v3 h-1 v-3 z M2 6 h1 v2 h-1 v-2 z M13 6 h1 v2 h-1 v-2 z M3 8 h1 v2 h-1 v-2 z M12 8 h1 v2 h-1 v-2 z M4 10 h1 v2 h-1 v-2 z M11 10 h1 v2 h-1 v-2 z M5 12 h1 v1 h-1 v-1 z M10 12 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z M9 13 h1 v1 h-1 v-1 z M7 14 h2 v1 h-2 v-1 z" fill="#180205"/>
+          <path d="M4 2 h3 v1 h-3 v-1 z M9 2 h3 v1 h-3 v-1 z M2 3 h12 v3 h-12 v-3 z M3 6 h10 v2 h-10 v-2 z M4 8 h8 v2 h-8 v-2 z M5 10 h6 v2 h-6 v-2 z M6 12 h4 v1 h-4 v-1 z M7 13 h2 v1 h-2 v-1 z" fill="#dc2626"/>
+          <path d="M4 2 h2 v1 h-2 v-1 z M3 3 h2 v2 h-2 v-2 z M9 3 h2 v1 h-2 v-1 z" fill="#ff7a68"/>
+          <rect x="3" y="3" width="1" height="1" fill="#ffffff"/>
+          <path d="M12 4 h1 v2 h-1 v-2 z M11 6 h1 v2 h-1 v-2 z M10 8 h1 v2 h-1 v-2 z M9 10 h1 v2 h-1 v-2 z M8 12 h1 v1 h-1 v-1 z" fill="#991b1b"/>
+        </svg>
+      </div>
+      <div class="b-track"><i></i><span>100</span></div>
+    </div>
+    <div class="b st" title="Stamina (Výdrž)">
+      <div class="b-ico">
+        <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
+          <path d="M8 1 h4 v1 h-4 v-1 z M7 2 h1 v1 h-1 v-1 z M12 2 h1 v2 h-1 v-2 z M6 3 h1 v2 h-1 v-2 z M5 5 h1 v2 h-1 v-2 z M10 4 h2 v1 h-2 v-1 z M9 5 h2 v1 h-2 v-1 z M8 6 h2 v1 h-2 v-1 z M4 7 h5 v1 h-5 v-1 z M11 7 h1 v1 h-1 v-1 z M3 8 h2 v1 h-2 v-1 z M10 8 h2 v1 h-2 v-1 z M2 9 h2 v1 h-2 v-1 z M9 9 h2 v1 h-2 v-1 z M8 10 h2 v1 h-2 v-1 z M7 11 h2 v1 h-2 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M6 14 h1 v1 h-1 v-1 z M5 15 h1 v1 h-1 v-1 z" fill="#1f1300"/>
+          <path d="M8 2 h4 v2 h-4 v-2 z M6 5 h4 v2 h-4 v-2 z M4 8 h6 v1 h-6 v-1 z M3 9 h6 v1 h-6 v-1 z M5 10 h4 v1 h-4 v-1 z M6 11 h3 v1 h-3 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M5 14 h1 v1 h-1 v-1 z" fill="#eab308"/>
+          <path d="M8 2 h3 v1 h-3 v-1 z M7 3 h3 v1 h-3 v-1 z M6 5 h2 v2 h-2 v-2 z M4 8 h2 v1 h-2 v-1 z M6 10 h1 v2 h-1 v-2 z" fill="#fef08a"/>
+          <rect x="9" y="2" width="1" height="1" fill="#ffffff"/>
+          <path d="M11 3 h1 v1 h-1 v-1 z M9 6 h1 v1 h-1 v-1 z M8 9 h1 v1 h-1 v-1 z M7 11 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z" fill="#ca8a04"/>
+        </svg>
+      </div>
+      <div class="b-track"><i></i><span>100</span></div>
+    </div>
+    <div class="b o2" title="Kyslík (Dech)" hidden>
+      <div class="b-ico">
+        <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
+          <path d="M5 2 h6 v1 h-6 v-1 z M3 3 h2 v1 h-2 v-1 z M11 3 h2 v1 h-2 v-1 z M2 5 h1 v6 h-1 v-6 z M13 5 h1 v6 h-1 v-6 z M3 12 h2 v1 h-2 v-1 z M11 12 h2 v1 h-2 v-1 z M5 13 h6 v1 h-6 v-1 z" fill="#041a29"/>
+          <path d="M5 3 h6 v1 h-6 v-1 z M3 4 h10 v8 h-10 v-8 z M5 12 h6 v1 h-6 v-1 z" fill="#0284c7"/>
+          <path d="M5 4 h3 v2 h-3 v-2 z M4 5 h1 v2 h-1 v-2 z" fill="#ffffff"/>
+          <rect x="10" y="10" width="1" height="1" fill="#7dd3fc"/>
+        </svg>
+      </div>
+      <div class="b-track"><i></i><span>100</span></div>
+    </div>
   </div>
   <div id="hb"></div>
   <div id="toast"></div>

@@ -65,40 +65,76 @@ canvas {
 }
 #bars {
   position: fixed;
-  left: 10px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  width: 240px;
+  left: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: 220px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   pointer-events: none;
+  z-index: 30;
 }
 .b {
   position: relative;
-  height: 22px;
-  background: rgba(10, 14, 22, .65);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+}
+.b-ico {
+  width: 26px;
+  height: 26px;
+  background: rgba(13, 20, 32, 0.88);
   border: 2px solid #0b0e14;
-  border-radius: 3px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.bar-ico {
+  display: block;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+.b-track {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  background: rgba(10, 14, 22, 0.75);
+  border: 2px solid #0b0e14;
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .b i {
   display: block;
   height: 100%;
   width: 100%;
-  transition: width .12s;
+  transition: width 0.12s ease-out;
 }
 .b span {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
-  padding-left: 8px;
+  justify-content: flex-end;
+  padding-right: 8px;
   font-size: 13px;
-  text-shadow: 0 1px 2px #000;
+  font-weight: bold;
+  font-family: inherit;
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 4px #000;
+  letter-spacing: 0.5px;
 }
-.hp i { background: linear-gradient(#ff7a68, #c8281e); }
-.st i { background: linear-gradient(#ffe36b, #e2a21a); }
-.o2 i { background: linear-gradient(#4fc3f7, #0288d1); }
+.hp i { background: linear-gradient(90deg, #dc2626, #ff6b6b); }
+.st i { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.o2 i { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+.hp .b-ico { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+.st .b-ico { border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+.o2 .b-ico { border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
 
 [hidden] { display: none !important; }
 

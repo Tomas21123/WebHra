@@ -212,8 +212,17 @@ function loop(now) {
     }
   }
 
+  // Plynulé vertikální vyhlazení modelu a kamery při vyběhnutí schodů/kopce
+  if (typeof P.renderY === 'undefined') P.renderY = P.y;
+  const dy = P.y - P.renderY;
+  if (Math.abs(dy) < 0.75 && P.ground) {
+    P.renderY += dy * Math.min(1, dt * 26);
+  } else {
+    P.renderY = P.y;
+  }
+
   // Pozice a rotace modelu
-  model.position.set(P.x, P.y, P.z);
+  model.position.set(P.x, P.renderY, P.z);
   let da = face - model.rotation.y;
   da = Math.atan2(Math.sin(da), Math.cos(da));
   model.rotation.y += da * Math.min(1, dt * 12);
@@ -652,7 +661,7 @@ function loop(now) {
   // Kamera
   const cp = Math.cos(pitch);
   const dir = [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
-  const hx = P.x, hy = P.y + 1.55, hz = P.z;
+  const hx = P.x, hy = (P.renderY ?? P.y) + 1.55, hz = P.z;
   let dd = dist;
   for (let t = 0.3; t <= dist; t += 0.25) {
     if (solid(hx + dir[0] * t, hy + dir[1] * t, hz + dir[2] * t)) {
