@@ -256,3 +256,9 @@ $('escRespawn').onclick = () => {
   closeEscMenu();
   toast('Pozice byla obnovena!');
 };
+const escMainMenuBtn = $('escMainMenu');
+if (escMainMenuBtn) {
+  escMainMenuBtn.onclick = () => {
+    window.location.href = 'Index.html';
+  };
+}

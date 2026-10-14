@@ -543,6 +543,376 @@
       .features-strip { display: none; }
       .key-grid { grid-template-columns: 1fr; }
       .menu-wrap { padding: 24px 16px; }
+      .top-bar { flex-direction: column; gap: 12px; }
+      .auth-card { padding: 22px 18px; }
+    }
+
+    /* Auth Widget v horní liště */
+    .auth-widget {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .auth-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-auth {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      color: var(--text);
+    }
+
+    .btn-auth.login {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(14, 116, 144, 0.3));
+      color: #38bdf8;
+    }
+
+    .btn-auth.login:hover {
+      border-color: #38bdf8;
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.45), rgba(56, 189, 248, 0.3));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-auth.register {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3));
+      color: #34d399;
+    }
+
+    .btn-auth.register:hover {
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-auth.logout {
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+
+    .btn-auth.logout:hover {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #f8fafc;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-pill .user-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .user-name {
+      color: #34d399;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Uzamčené / odemčené tlačítko Spustit hru */
+    .play-hint {
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.25s ease;
+    }
+
+    .play-hint.unlocked {
+      color: #34d399;
+    }
+
+    .play-hint.locked {
+      color: #f59e0b;
+    }
+
+    .btn-main-play.locked {
+      background: linear-gradient(135deg, #475569 0%, #334155 50%, #1e293b 100%);
+      color: #e2e8f0;
+      border-color: rgba(245, 158, 11, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-main-play.locked:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.25);
+      background: linear-gradient(135deg, #64748b 0%, #475569 50%, #334155 100%);
+    }
+
+    /* Auth modal specifické styly */
+    .auth-card {
+      max-width: 480px;
+      padding: 30px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: rgba(2, 6, 23, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 9px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      color: #94a3b8;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .auth-tab:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .auth-tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(14, 116, 144, 0.4));
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .auth-alert {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      margin-bottom: 18px;
+      animation: alertFadeIn 0.25s ease;
+    }
+
+    @keyframes alertFadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-alert.error {
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .auth-alert.success {
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #86efac;
+    }
+
+    .auth-alert.info {
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+    }
+
+    .auth-form {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .auth-form.active {
+      display: flex;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .form-group label {
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: #cbd5e1;
+      text-transform: uppercase;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 16px;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      background: rgba(2, 6, 23, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14.5px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .input-wrap input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+      background: rgba(2, 6, 23, 0.85);
+    }
+
+    .input-wrap input::placeholder {
+      color: #64748b;
+      font-size: 13.5px;
+    }
+
+    .form-links {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: -6px;
+    }
+
+    .auth-link {
+      font-size: 13px;
+      color: #38bdf8;
+      text-decoration: none;
+      transition: color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .auth-link:hover {
+      color: #7dd3fc;
+      text-decoration: underline;
+    }
+
+    .btn-auth-submit {
+      width: 100%;
+      padding: 14px 20px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-auth-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(56, 189, 248, 0.45);
+      background: linear-gradient(135deg, #7dd3fc 0%, #0284c7 100%);
+    }
+
+    .btn-auth-submit:active {
+      transform: translateY(1px);
+    }
+
+    .btn-auth-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .form-footer {
+      text-align: center;
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+
+    .offline-demo-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px dashed rgba(251, 191, 36, 0.35);
+      font-size: 12px;
+      color: #fde68a;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .btn-demo-login {
+      align-self: flex-start;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      background: rgba(251, 191, 36, 0.2);
+      color: #fef08a;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-demo-login:hover {
+      background: rgba(251, 191, 36, 0.35);
     }
   </style>
 </head>
@@ -558,10 +928,38 @@
   <div class="menu-wrap">
     <!-- Horní lišta -->
     <header class="top-bar">
-      <div class="badge-pill">
-        <span></span> Voxel Engine Online
+      <div class="top-left">
+        <div class="badge-pill">
+          <span></span> Voxel Engine Online
+        </div>
       </div>
       <div class="top-actions">
+        <!-- Auth widget (Přihlášení / Uživatelský profil) -->
+        <div id="authWidget" class="auth-widget">
+          <!-- Nepřihlášený stav -->
+          <div id="authLoggedOut" class="auth-group">
+            <button id="btnOpenLogin" class="btn-auth login">
+              <span>👤</span>
+              <span>Přihlásit se</span>
+            </button>
+            <button id="btnOpenRegister" class="btn-auth register">
+              <span>✦</span>
+              <span>Registrace</span>
+            </button>
+          </div>
+          <!-- Přihlášený stav -->
+          <div id="authLoggedIn" class="auth-group" style="display: none;">
+            <div class="user-pill" title="Přihlášený hráč">
+              <span class="user-status-dot"></span>
+              <span class="user-avatar">👤</span>
+              <span id="userNickname" class="user-name">Hráč</span>
+            </div>
+            <button id="btnLogout" class="btn-auth logout" title="Odhlásit se z účtu">
+              <span>Odhlásit</span>
+            </button>
+          </div>
+        </div>
+
         <button id="btnSound" class="icon-btn" title="Zapnout / Vypnout zvuk">🔊</button>
         <button id="btnFullscreen" class="icon-btn" title="Režim celé obrazovky">⛶</button>
       </div>
@@ -575,10 +973,13 @@
       </div>
 
       <nav class="menu-nav">
-        <button id="btnPlay" class="btn-main-play">
-          <span class="btn-icon">▶</span>
-          <span>Hrát hru</span>
+        <button id="btnPlay" class="btn-main-play locked">
+          <span class="btn-icon" id="playIcon">🔒</span>
+          <span id="playText">Přihlásit se a hrát</span>
         </button>
+        <div id="playHint" class="play-hint locked">
+          <span>🔒</span> Pro spuštění hry se nejprve přihlaste
+        </div>
 
         <button id="btnControls" class="btn-sub">
           <span>🎮</span>
@@ -685,6 +1086,127 @@
           <div><strong>Editor postavy a animace:</strong> Úprava barvy pleti, účesů, vousů, spodního prádla a plynulé animace běhu, skoku a emocí.</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Přihlášení / Registrace / Obnova hesla -->
+  <div id="modalAuth" class="modal-overlay">
+    <div class="modal-card auth-card">
+      <div class="modal-head">
+        <div class="modal-title" id="authModalTitle">
+          <span>👤</span> Účet hráče
+        </div>
+        <button class="modal-close" id="closeAuth">✕</button>
+      </div>
+
+      <!-- Navigační záložky -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">Přihlášení</button>
+        <button type="button" class="auth-tab" data-tab="register">Registrace</button>
+        <button type="button" class="auth-tab" data-tab="reset">Obnova hesla</button>
+      </div>
+
+      <!-- Zpráva / Notifikace -->
+      <div id="authAlert" class="auth-alert"></div>
+
+      <!-- Formulář 1: Přihlášení -->
+      <form id="formLogin" class="auth-form active" novalidate>
+        <div class="form-group">
+          <label for="loginName">Přezdívka nebo E-mail</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="loginName" placeholder="Zadej nick nebo e-mail" required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Heslo</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="loginPassword" placeholder="Tvoje heslo" required autocomplete="current-password">
+          </div>
+        </div>
+        <div class="form-links">
+          <a class="auth-link" id="linkToReset">Zapomenuté heslo?</a>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitLogin">
+          <span>Přihlásit se</span>
+          <span class="submit-arrow">➔</span>
+        </button>
+        <div class="form-footer">
+          Nemáš ještě účet? <a class="auth-link" id="linkToRegister">Zaregistruj se zde</a>
+        </div>
+      </form>
+
+      <!-- Formulář 2: Registrace -->
+      <form id="formRegister" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="regEmail">E-mailová adresa</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="regEmail" placeholder="např. jan@example.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="regNick">Herní přezdívka (Nickname)</label>
+          <div class="input-wrap">
+            <span class="input-icon">🎮</span>
+            <input type="text" id="regNick" placeholder="3 až 30 znaků" required minlength="3" maxlength="30" autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Heslo</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="regPassword" placeholder="Minimálně 6 znaků" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="regPasswordConfirm">Potvrzení hesla</label>
+          <div class="input-wrap">
+            <span class="input-icon">🛡️</span>
+            <input type="password" id="regPasswordConfirm" placeholder="Zopakuj heslo" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitRegister">
+          <span>Vytvořit herní účet</span>
+          <span class="submit-arrow">➔</span>
+        </button>
+        <div class="form-footer">
+          Již máš vytvořený účet? <a class="auth-link" id="linkToLoginFromReg">Přihlas se zde</a>
+        </div>
+      </form>
+
+      <!-- Formulář 3: Obnova hesla -->
+      <form id="formReset" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="resetEmail">Tvůj registrační e-mail</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="resetEmail" placeholder="Zadej svůj e-mail" required autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="resetPassword">Nové heslo</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="resetPassword" placeholder="Nové heslo (min. 6 znaků)" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="resetPasswordConfirm">Potvrzení nového hesla</label>
+          <div class="input-wrap">
+            <span class="input-icon">🛡️</span>
+            <input type="password" id="resetPasswordConfirm" placeholder="Zopakuj nové heslo" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitReset">
+          <span>Obnovit a nastavit heslo</span>
+          <span class="submit-arrow">➔</span>
+        </button>
+        <div class="form-footer">
+          Vzpomněl sis na heslo? <a class="auth-link" id="linkToLoginFromReset">Zpět na přihlášení</a>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -956,8 +1478,15 @@
     }
     animate();
 
-    // ---------- UI Interakce a Navigace ----------
+    // ---------- UI Interakce, Autentizace a Navigace ----------
+    const API_URL = 'https://podsednikt.endora.site/api.php';
+    const AUTH_STORAGE_KEY = 'voxel_auth_user';
+
     const btnPlay = document.getElementById('btnPlay');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const playHint = document.getElementById('playHint');
+
     const portalOverlay = document.getElementById('portalOverlay');
     const btnControls = document.getElementById('btnControls');
     const modalControls = document.getElementById('modalControls');
@@ -970,8 +1499,346 @@
     const btnSound = document.getElementById('btnSound');
     const btnFullscreen = document.getElementById('btnFullscreen');
 
-    // Spuštění hry
+    // Auth elementy
+    const modalAuth = document.getElementById('modalAuth');
+    const closeAuth = document.getElementById('closeAuth');
+    const btnOpenLogin = document.getElementById('btnOpenLogin');
+    const btnOpenRegister = document.getElementById('btnOpenRegister');
+    const btnLogout = document.getElementById('btnLogout');
+    const authLoggedOut = document.getElementById('authLoggedOut');
+    const authLoggedIn = document.getElementById('authLoggedIn');
+    const userNickname = document.getElementById('userNickname');
+    const authTabs = document.querySelectorAll('.auth-tab');
+    const authAlert = document.getElementById('authAlert');
+
+    const formLogin = document.getElementById('formLogin');
+    const formRegister = document.getElementById('formRegister');
+    const formReset = document.getElementById('formReset');
+
+    const linkToReset = document.getElementById('linkToReset');
+    const linkToRegister = document.getElementById('linkToRegister');
+    const linkToLoginFromReg = document.getElementById('linkToLoginFromReg');
+    const linkToLoginFromReset = document.getElementById('linkToLoginFromReset');
+
+    let currentUser = null;
+
+    // Načtení uživatele z paměti
+    function loadSavedUser() {
+      try {
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (stored) {
+          currentUser = JSON.parse(stored);
+        }
+      } catch (e) {
+        currentUser = null;
+      }
+      updateAuthUI();
+    }
+
+    function setSessionUser(user) {
+      currentUser = user;
+      if (user) {
+        try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user)); } catch (e) {}
+      } else {
+        try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+      }
+      updateAuthUI();
+    }
+
+    function updateAuthUI() {
+      if (currentUser && currentUser.nickname) {
+        authLoggedOut.style.display = 'none';
+        authLoggedIn.style.display = 'flex';
+        userNickname.textContent = currentUser.nickname;
+
+        btnPlay.classList.remove('locked');
+        playIcon.textContent = '▶';
+        playText.textContent = 'Hrát hru';
+        playHint.className = 'play-hint unlocked';
+        playHint.innerHTML = `<span>✨</span> Přihlášen jako <strong>${escapeHtml(currentUser.nickname)}</strong> · Hra je připravena`;
+      } else {
+        authLoggedOut.style.display = 'flex';
+        authLoggedIn.style.display = 'none';
+
+        btnPlay.classList.add('locked');
+        playIcon.textContent = '🔒';
+        playText.textContent = 'Přihlásit se a hrát';
+        playHint.className = 'play-hint locked';
+        playHint.innerHTML = `<span>🔒</span> Pro spuštění hry se nejprve přihlaste`;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    // Přepínání záložek v modálu
+    function switchAuthTab(tabName) {
+      authTabs.forEach(t => {
+        if (t.dataset.tab === tabName) {
+          t.classList.add('active');
+        } else {
+          t.classList.remove('active');
+        }
+      });
+
+      formLogin.classList.toggle('active', tabName === 'login');
+      formRegister.classList.toggle('active', tabName === 'register');
+      formReset.classList.toggle('active', tabName === 'reset');
+      hideAuthAlert();
+    }
+
+    authTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        playClickSound();
+        switchAuthTab(tab.dataset.tab);
+      });
+    });
+
+    linkToReset.addEventListener('click', (e) => {
+      e.preventDefault();
+      playClickSound();
+      switchAuthTab('reset');
+    });
+
+    linkToRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      playClickSound();
+      switchAuthTab('register');
+    });
+
+    linkToLoginFromReg.addEventListener('click', (e) => {
+      e.preventDefault();
+      playClickSound();
+      switchAuthTab('login');
+    });
+
+    linkToLoginFromReset.addEventListener('click', (e) => {
+      e.preventDefault();
+      playClickSound();
+      switchAuthTab('login');
+    });
+
+    btnOpenLogin.addEventListener('click', () => {
+      openAuthModal('login');
+    });
+
+    btnOpenRegister.addEventListener('click', () => {
+      openAuthModal('register');
+    });
+
+    btnLogout.addEventListener('click', () => {
+      playClickSound();
+      setSessionUser(null);
+    });
+
+    function openAuthModal(tab = 'login', notice = null) {
+      openModal(modalAuth);
+      switchAuthTab(tab);
+      if (notice) {
+        showAuthAlert('info', notice);
+      }
+    }
+
+    function showAuthAlert(type, message, showDemoButton = false) {
+      authAlert.className = `auth-alert ${type}`;
+      authAlert.style.display = 'flex';
+      let icon = 'ℹ️';
+      if (type === 'error') icon = '⚠️';
+      if (type === 'success') icon = '✅';
+
+      let html = `<span class="alert-icon">${icon}</span><div class="alert-msg"><div>${message}</div>`;
+      if (showDemoButton) {
+        html += `
+          <div class="offline-demo-box">
+            <span>Server na Endoře vrátil chybu 500 (databáze ještě není na serveru nakonfigurována). Pro okamžité otestování hry můžete použít testovací účet:</span>
+            <button type="button" class="btn-demo-login" id="btnDemoLogin">🎮 Vstoupit do hry jako Host</button>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      authAlert.innerHTML = html;
+
+      if (showDemoButton) {
+        const demoBtn = document.getElementById('btnDemoLogin');
+        if (demoBtn) {
+          demoBtn.addEventListener('click', () => {
+            playClickSound();
+            setSessionUser({
+              id: 999,
+              nickname: 'Hráč_' + Math.floor(Math.random() * 899 + 100),
+              email: 'host@voxel.cz'
+            });
+            closeModal(modalAuth);
+          });
+        }
+      }
+    }
+
+    function hideAuthAlert() {
+      authAlert.style.display = 'none';
+      authAlert.innerHTML = '';
+    }
+
+    // Pomocné volání API na https://podsednikt.endora.site/api.php
+    async function apiRequest(payload) {
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        let data = null;
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          data = { status: 'error', message: text || `Chyba serveru (${res.status})` };
+        }
+        return { ok: res.ok, status: res.status, data };
+      } catch (err) {
+        return {
+          ok: false,
+          status: 0,
+          data: { status: 'error', message: 'Nepodařilo se připojit k serveru (chyba sítě nebo CORS).' }
+        };
+      }
+    }
+
+    // 1. Zpracování přihlášení
+    formLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const login = document.getElementById('loginName').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const submitBtn = document.getElementById('submitLogin');
+
+      if (!login || !password) {
+        showAuthAlert('error', 'Vyplňte prosím přihlašovací jméno a heslo.');
+        return;
+      }
+
+      playClickSound();
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Ověřuji…</span>';
+      hideAuthAlert();
+
+      const res = await apiRequest({ action: 'login', login, password });
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Přihlásit se</span><span class="submit-arrow">➔</span>';
+
+      if (res.ok && res.data && res.data.status === 'success') {
+        const user = res.data.user || { nickname: login, email: login };
+        setSessionUser(user);
+        showAuthAlert('success', `Vítej zpět, ${escapeHtml(user.nickname)}! Přihlášení bylo úspěšné.`);
+        setTimeout(() => closeModal(modalAuth), 600);
+      } else {
+        const isServer500 = (res.status === 500 || res.status === 0);
+        const msg = res.data?.message || 'Nesprávné přihlašovací jméno nebo heslo.';
+        showAuthAlert('error', msg, isServer500);
+      }
+    });
+
+    // 2. Zpracování registrace
+    formRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('regEmail').value.trim();
+      const nickname = document.getElementById('regNick').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirm = document.getElementById('regPasswordConfirm').value;
+      const submitBtn = document.getElementById('submitRegister');
+
+      if (!email || !nickname || !password) {
+        showAuthAlert('error', 'Vyplňte všechna povinná pole.');
+        return;
+      }
+      if (nickname.length < 3 || nickname.length > 30) {
+        showAuthAlert('error', 'Přezdívka musí mít 3 až 30 znaků.');
+        return;
+      }
+      if (password.length < 6) {
+        showAuthAlert('error', 'Heslo musí mít alespoň 6 znaků.');
+        return;
+      }
+      if (password !== confirm) {
+        showAuthAlert('error', 'Zadaná hesla se neshodují.');
+        return;
+      }
+
+      playClickSound();
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Registruji…</span>';
+      hideAuthAlert();
+
+      const res = await apiRequest({ action: 'register', email, nickname, password });
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Vytvořit herní účet</span><span class="submit-arrow">➔</span>';
+
+      if (res.ok && res.data && res.data.status === 'success') {
+        const user = res.data.user || { nickname, email };
+        setSessionUser(user);
+        showAuthAlert('success', `Účet pro "${escapeHtml(nickname)}" byl vytvořen a byl jsi přihlášen!`);
+        setTimeout(() => closeModal(modalAuth), 750);
+      } else {
+        const isServer500 = (res.status === 500 || res.status === 0);
+        const msg = res.data?.message || 'Registrace se nezdařila.';
+        showAuthAlert('error', msg, isServer500);
+      }
+    });
+
+    // 3. Zpracování obnovy hesla
+    formReset.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('resetEmail').value.trim();
+      const new_password = document.getElementById('resetPassword').value;
+      const confirm = document.getElementById('resetPasswordConfirm').value;
+      const submitBtn = document.getElementById('submitReset');
+
+      if (!email || !new_password) {
+        showAuthAlert('error', 'Vyplňte e-mail a nové heslo.');
+        return;
+      }
+      if (new_password.length < 6) {
+        showAuthAlert('error', 'Nové heslo musí mít alespoň 6 znaků.');
+        return;
+      }
+      if (new_password !== confirm) {
+        showAuthAlert('error', 'Zadaná hesla se neshodují.');
+        return;
+      }
+
+      playClickSound();
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Ukládám heslo…</span>';
+      hideAuthAlert();
+
+      const res = await apiRequest({ action: 'reset_password', email, new_password });
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Obnovit a nastavit heslo</span><span class="submit-arrow">➔</span>';
+
+      if (res.ok && res.data && res.data.status === 'success') {
+        showAuthAlert('success', res.data.message || 'Heslo bylo úspěšně změněno. Nyní se můžete přihlásit.');
+        setTimeout(() => {
+          switchAuthTab('login');
+          document.getElementById('loginName').value = email;
+          showAuthAlert('success', 'Heslo bylo změněno! Zadejte nové heslo k přihlášení.');
+        }, 1200);
+      } else {
+        const isServer500 = (res.status === 500 || res.status === 0);
+        const msg = res.data?.message || 'Obnova hesla se nezdařila.';
+        showAuthAlert('error', msg, isServer500);
+      }
+    });
+
+    // Spuštění hry (pouze pro přihlášené hráče!)
     btnPlay.addEventListener('click', () => {
+      if (!currentUser) {
+        playClickSound();
+        openAuthModal('login', 'Pro spuštění hry se nejprve přihlaste nebo zaregistrujte.');
+        return;
+      }
+
       playLaunchSound();
       portalOverlay.classList.add('active');
       setTimeout(() => {
@@ -995,9 +1862,10 @@
 
     btnAbout.addEventListener('click', () => openModal(modalAbout));
     closeAbout.addEventListener('click', () => closeModal(modalAbout));
+    closeAuth.addEventListener('click', () => closeModal(modalAuth));
 
     // Zavření modálu kliknutím na pozadí
-    [modalControls, modalAbout].forEach(m => {
+    [modalControls, modalAbout, modalAuth].forEach(m => {
       m.addEventListener('click', (e) => {
         if (e.target === m) closeModal(m);
       });
@@ -1007,8 +1875,9 @@
       if (e.key === 'Escape') {
         closeModal(modalControls);
         closeModal(modalAbout);
+        closeModal(modalAuth);
       }
-      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open')) {
+      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open')) {
         btnPlay.click();
       }
     });
@@ -1034,9 +1903,16 @@
     });
 
     // Zvuky při najetí myši na tlačítka
-    document.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('mouseenter', playHoverSound);
-    });
+    function attachButtonSounds() {
+      document.querySelectorAll('button').forEach(btn => {
+        btn.removeEventListener('mouseenter', playHoverSound);
+        btn.addEventListener('mouseenter', playHoverSound);
+      });
+    }
+    attachButtonSounds();
+
+    // Spuštění inicializace uloženého uživatele
+    loadSavedUser();
   </script>
   <script src="js/cursor.js"></script>
 </body>

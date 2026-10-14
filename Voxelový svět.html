@@ -10,6 +10,13 @@
 </head>
 
 <body>
+  <script>
+    try {
+      if (!localStorage.getItem('voxel_auth_user')) {
+        window.location.replace('Index.html');
+      }
+    } catch (e) {}
+  </script>
   <div id="hud"></div>
   <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
     dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · 1–9 – lišta</div>
@@ -83,6 +90,7 @@
         <button id="escCharEdit" class="esc-btn">👤 Upravit postavu</button>
         <button id="escInv" class="esc-btn">🎒 Inventář</button>
         <button id="escRespawn" class="esc-btn subtle">🔄 Obnovit pozici</button>
+        <button id="escMainMenu" class="esc-btn subtle">🏠 Hlavní menu</button>
       </div>
       <div class="esc-hint">Stiskni [ESC] pro návrat do hry</div>
     </div>
