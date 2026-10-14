@@ -74,16 +74,34 @@ scene.add(model);
 // Inicializace ovládání myší
 initPlayerControls(cv);
 
-// Automatická maximalizace / Fullscreen (F11 styl)
+// Automatická maximalizace / Fullscreen (F11 styl bez zmenšování klávesou ESC)
 function tryEnableFullscreen() {
   const doc = document.documentElement;
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     const req = doc.requestFullscreen || doc.webkitRequestFullscreen || doc.msRequestFullscreen;
     if (req) {
-      req.call(doc).catch(() => {});
+      req.call(doc).then(() => {
+        // Uzamčení klávesy ESC, aby prohlížeč nezmenšoval okno, ale předal ESC do hry
+        if (navigator.keyboard && navigator.keyboard.lock) {
+          navigator.keyboard.lock(['Escape']).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  } else {
+    if (navigator.keyboard && navigator.keyboard.lock) {
+      navigator.keyboard.lock(['Escape']).catch(() => {});
     }
   }
 }
+
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) {
+    if (navigator.keyboard && navigator.keyboard.lock) {
+      navigator.keyboard.lock(['Escape']).catch(() => {});
+    }
+  }
+});
+
 window.addEventListener('click', tryEnableFullscreen, { once: true });
 window.addEventListener('keydown', tryEnableFullscreen, { once: true });
 window.addEventListener('DOMContentLoaded', () => {
@@ -117,6 +135,17 @@ addEventListener('keydown', e => {
     return;
   }
   if (e.code === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Zajistit trvalý fullscreen (okno se nezmenší při stisku ESC)
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      tryEnableFullscreen();
+    }
+    if (navigator.keyboard && navigator.keyboard.lock) {
+      navigator.keyboard.lock(['Escape']).catch(() => {});
+    }
+
     if (typeof emoteOpen !== 'undefined' && emoteOpen) {
       closeEmotes();
     } else if (typeof minimapOpen !== 'undefined' && minimapOpen) {
@@ -130,16 +159,16 @@ addEventListener('keydown', e => {
     } else {
       openEscMenu();
     }
-    e.preventDefault();
     return;
   }
   if (invKey(e)) return;
   if (escOpen || charOpen || (typeof emoteOpen !== 'undefined' && emoteOpen)) return;
 
-  // Detekce dvojitého stisku Shift (Double-Shift) pro kotrmelec dopředu (Elden Ring Dodge Roll)
+  // Detekce dvojitého stisku Shift (Double-Shift) pro kotrmelec dopředu
+  // Časové okno nastaveno na 1000 ms (2 stisky za sekundu) a spotřeba staminy jen 5
   if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) {
     const curTime = performance.now();
-    if (curTime - lastShiftTapTime < 320 && !P.inWater && P.ground && !isRolling && G.st >= 12 && !escOpen && !charOpen && !invOpen) {
+    if (curTime - lastShiftTapTime < 1000 && !P.inWater && P.ground && !isRolling && G.st >= 5 && !escOpen && !charOpen && !invOpen) {
       if (typeof triggerRoll === 'function') triggerRoll();
       lastShiftTapTime = 0;
     } else {
@@ -667,7 +696,7 @@ function loop(now) {
     }
   }
 
-  // --- ANIMACE KOTRMELCE / DODGE ROLL (Elden Ring styl) ---
+  // --- ANIMACE KOTRMELCE / DODGE ROLL (Elden Ring styl – reálný na povrchu země) ---
   if (typeof isRolling !== 'undefined' && isRolling) {
     const p = Math.min(1, rollTimer / ROLL_DURATION);
     hand.position.set(0, -8 * VX, 0);
@@ -679,29 +708,32 @@ function loop(now) {
 
       // Celé tělo se nakloní střemhlav dopředu o ~72° (1.26 rad)
       body.rotation.set(easeU * 1.26, 0, 0);
-      body.position.set(0, Math.sin(u * Math.PI) * 0.16, 0);
+      // Mírné nadlehčení při skoku (zůstává na povrchu)
+      body.position.set(0, Math.sin(u * Math.PI) * 0.12, 0);
 
       torso.rotation.set(-0.15 * (1 - u) + 0.3 * u, 0, 0);
       head.rotation.set(0.25 * u, 0, 0);
 
-      // Ruce se natahují dopředu a dolů pro ztlumení dopadu a zahájení kotrmelce
-      arms[0].rotation.set(-1.85 * easeU, 0.12, -0.2 * easeU);
-      arms[1].rotation.set(-1.85 * easeU, -0.12, 0.2 * easeU);
+      // Ruce se natahují dopředu a dolů ke ztlumení dopadu a kontaktu se zemí
+      arms[0].rotation.set(-1.65 * easeU, 0.1, -0.15 * easeU);
+      arms[1].rotation.set(-1.65 * easeU, -0.1, 0.15 * easeU);
 
       // Nohy se natahují vzad za tělo v letu
       legs[0].rotation.set(0.55 * easeU, 0, -0.05);
       legs[1].rotation.set(0.65 * easeU, 0, 0.05);
 
     } else if (p < 0.72) {
-      // Fáze 2: Dopad na ruce/ramena a plné přetočení o 360° (Somersault Tuck na zemi)
+      // Fáze 2: Dopad na ruce/ramena a plné přetočení o 360° (Somersault na zemi)
       const u = (p - 0.25) / 0.47;
       // Rotace plynule přetočí postavu přes ramena a záda o plných 360 stupňů (2*PI + 0.35 rad)
       const rollRot = 1.26 + u * (Math.PI * 2 + 0.35 - 1.26);
       body.rotation.set(rollRot, 0, 0);
 
-      // Snížení těžiště při sbalení na zemi (plynulý přechod od 0 k hlubokému tucku a k -0.15 při doskoku)
-      const dipY = -0.32 * Math.sin(u * Math.PI) - 0.15 * (u * u);
-      body.position.set(0, dipY, 0);
+      // DŮLEŽITÉ: Těžiště / kyčle se při kotrmelci NESMÍ zanořit pod zem!
+      // Protože se postava točí kolem pasu a ramena/hlava dosahují cca 0.9m od středu,
+      // kyčle se zvednou (+0.25m až +0.32m), aby záda a ramena klouzaly po povrchu země a nezalézaly pod terén!
+      const rollLiftY = 0.12 * (1 - u) + 0.28 * Math.sin(u * Math.PI) + 0.04 * u;
+      body.position.set(0, rollLiftY, 0);
 
       // Hlava pevně přitisknutá k hrudi (brada na prsa jako v gymnastice)
       const chinTuck = 0.25 + 0.65 * Math.sin(u * Math.PI);
@@ -709,8 +741,8 @@ function loop(now) {
       torso.rotation.set(0.3 + 0.35 * Math.sin(u * Math.PI) + 0.1 * u, 0, 0);
 
       // Sbalení paží do těsného klubíčka (tuck) s plynulým navázáním na Fázi 1 i Fázi 3
-      const armX = -1.85 * (1 - u) + (-0.45) * u + 0.45 * Math.sin(u * Math.PI);
-      const armZ = (-0.2 * (1 - u) + -0.12 * u) - 0.1 * Math.sin(u * Math.PI);
+      const armX = -1.65 * (1 - u) + (-0.45) * u + 0.5 * Math.sin(u * Math.PI);
+      const armZ = (-0.15 * (1 - u) + -0.12 * u) - 0.1 * Math.sin(u * Math.PI);
       arms[0].rotation.set(armX, 0.15 * Math.sin(u * Math.PI), armZ);
       arms[1].rotation.set(armX, -0.15 * Math.sin(u * Math.PI), -armZ);
 
@@ -727,7 +759,7 @@ function loop(now) {
 
       // Dokončení rotace do vzpřímeného postoje
       body.rotation.set((1 - easeOut) * 0.35, 0, 0);
-      body.position.set(0, -0.15 * (1 - easeOut), 0);
+      body.position.set(0, 0.04 * (1 - easeOut), 0);
 
       torso.rotation.set(0.4 * (1 - easeOut), 0, 0);
       head.rotation.set(0.25 * (1 - easeOut), 0, 0);

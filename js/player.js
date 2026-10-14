@@ -20,7 +20,7 @@ let rollDirX = 0, rollDirZ = 0;
 let lastShiftTapTime = 0;
 
 function triggerRoll() {
-  if (isRolling || P.inWater || !P.ground || G.st < 12) return;
+  if (isRolling || P.inWater || !P.ground || G.st < 5) return;
   if (typeof cancelEmote === 'function') cancelEmote();
 
   isRolling = true;
@@ -40,13 +40,13 @@ function triggerRoll() {
   }
   face = Math.atan2(rollDirX, rollDirZ);
 
-  // Spotřeba staminy
-  G.st = Math.max(0, G.st - 16);
+  // Spotřeba staminy (pouze 5 staminy)
+  G.st = Math.max(0, G.st - 5);
   G.sd = 0;
   if (G.st <= 0) G.tired = 1;
 
-  // Skok po hlavě dopředu (vertikální impuls na začátku dive skoku)
-  P.vy = 2.4;
+  // Přirozený kotrmelec na zemi (nízký skok dopředu)
+  P.vy = 1.4;
   P.ground = false;
 
   if (typeof playRollSound === 'function') playRollSound();
