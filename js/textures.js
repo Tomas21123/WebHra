@@ -227,6 +227,66 @@ const atlas = (() => {
     return null;
   });
 
+  // 28: Žlutá pampeliška / pryskyřník (Minecraft pampeliška)
+  tile(28, (x, y) => {
+    if ((x === 7 || x === 8) && y >= 7) return [j(65, 12), j(145, 16), j(45, 10)];
+    if ((x === 6 && y === 12) || (x === 9 && y === 11)) return [j(75, 12), j(160, 18), j(50, 10)];
+    const d = Math.hypot((x - 7.5) * 1.1, y - 5);
+    if (d <= 2.8) {
+      if (d <= 0.8) return [230, 160, 15]; // Tmavší střed
+      return [j(255, 8), j(215, 12), j(25, 8)]; // Zářivě žluté okvětní lístky
+    }
+    return null;
+  });
+
+  // 29: Modrá chrpa / orchidej (Minecraft modrá květina)
+  tile(29, (x, y) => {
+    if ((x === 7 || x === 8) && y >= 6) return [j(60, 10), j(140, 14), j(45, 10)];
+    if ((x === 6 && y === 10) || (x === 9 && y === 12)) return [j(70, 10), j(150, 16), j(50, 10)];
+    const d = Math.hypot((x - 7.5) * 1.15, y - 4);
+    if (d <= 2.6) {
+      if (d <= 0.7) return [70, 90, 200];
+      return (x + y) % 2 === 0 ? [j(45, 10), j(145, 16), j(245, 10)] : [j(30, 10), j(180, 18), j(255, 8)];
+    }
+    return null;
+  });
+
+  // 30: Bílá kopretina (Minecraft bílá kopretina se žlutým středem)
+  tile(30, (x, y) => {
+    if ((x === 7 || x === 8) && y >= 7) return [j(65, 12), j(145, 16), j(45, 10)];
+    if ((x === 6 && y === 11) || (x === 9 && y === 13)) return [j(75, 12), j(160, 18), j(50, 10)];
+    const d = Math.hypot(x - 7.5, y - 5);
+    if (d <= 2.7) {
+      if (d <= 1.0) return [255, 205, 20]; // Zlatý střed
+      return (x === 7 || y === 5 || d > 1.8) ? [250, 252, 255] : [230, 235, 245]; // Bílé lístky
+    }
+    return null;
+  });
+
+  // 31: Fialové allium / levandule (Minecraft fialová koule allia)
+  tile(31, (x, y) => {
+    if ((x === 7 || x === 8) && y >= 7) return [j(65, 12), j(145, 16), j(45, 10)];
+    const d = Math.hypot(x - 7.5, y - 4);
+    if (d <= 2.9) {
+      if (d > 2.4 && (x + y) % 2 === 0) return null;
+      return (x + y) % 2 === 0 ? [j(200, 15), j(75, 15), j(220, 15)] : [j(170, 15), j(50, 12), j(190, 15)];
+    }
+    return null;
+  });
+
+  // 32: Lesní kapradí (Minecraft kapradí)
+  tile(32, (x, y) => {
+    const isSpine = (x === 7 || x === 8) && y >= 2;
+    const f1 = (y >= 4 && y <= 6 && Math.abs(x - 7.5) <= 2.5 && y - 4 === Math.floor(Math.abs(x - 7.5)));
+    const f2 = (y >= 7 && y <= 10 && Math.abs(x - 7.5) <= 4.5 && y - 7 === Math.floor(Math.abs(x - 7.5) * 0.7));
+    const f3 = (y >= 11 && y <= 14 && Math.abs(x - 7.5) <= 5.5 && y - 11 === Math.floor(Math.abs(x - 7.5) * 0.6));
+    if (isSpine || f1 || f2 || f3) {
+      const isTip = y <= 5 || Math.abs(x - 7.5) >= 3.5;
+      return isTip ? [j(95, 12), j(195, 18), j(55, 10)] : [j(55, 10), j(140, 16), j(45, 8)];
+    }
+    return null;
+  });
+
   const t = new THREE.CanvasTexture(c);
   t.magFilter = t.minFilter = THREE.NearestFilter;
   t.generateMipmaps = false;
@@ -260,6 +320,11 @@ const TILES = {
   23: [23, 23, 23], // Balvan / Zvětralý kámen
   24: [24, 24, 24], // Keřík
   25: [25, 25, 25], // Lijány
-  26: [26, 26, 26], // Květiny
-  27: [27, 27, 27]  // Houby
+  26: [26, 26, 26], // Červený vlčí mák
+  27: [27, 27, 27], // Muchomůrka
+  28: [28, 28, 28], // Žlutá pampeliška
+  29: [29, 29, 29], // Modrá chrpa
+  30: [30, 30, 30], // Bílá kopretina
+  31: [31, 31, 31], // Fialové allium
+  32: [32, 32, 32]  // Lesní kapradí
 };

@@ -58,8 +58,7 @@ function cancelEmote() {
   }
 }
 
-// Inicializace tlačítek a událostí emotů
-document.addEventListener('DOMContentLoaded', () => {
+function initEmotes() {
   const closeBtn = $('emoteClose');
   if (closeBtn) closeBtn.onclick = closeEmotes;
 
@@ -76,4 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (em) playEmote(em);
     };
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initEmotes);
+} else {
+  initEmotes();
+}

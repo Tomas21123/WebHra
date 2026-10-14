@@ -395,35 +395,49 @@ function gen(cx, cz) {
           continue;
         }
 
-        // Lesní houby (vlhčí oblasti / stín)
-        if (u > 0.54 && rnd < 0.035) {
-          set(X, h + 1, Z, 27); // Houba
+        // Lesní kapradí a houby (vlhčí oblasti / stín)
+        if (u > 0.52) {
+          if (rnd < 0.04) {
+            set(X, h + 1, Z, 32); // Kapradí
+            continue;
+          } else if (rnd < 0.065) {
+            set(X, h + 1, Z, 27); // Houba
+            continue;
+          }
+        }
+
+        // Květinová pole (více druhů květin: vlčí máky, pampelišky, chrpy, kopretiny, allium)
+        const flowerPatch = vn(X * 0.11 + 100, Z * 0.11 + 100);
+        if (flowerPatch > 0.64 && rnd < 0.35) {
+          const flowerChoice = Math.floor(h2(X * 89 + 11, Z * 97 + 13) * 5);
+          const flowerBlock = [26, 28, 29, 30, 31][flowerChoice];
+          set(X, h + 1, Z, flowerBlock);
           continue;
         }
 
-        // Květiny (vlčí mák v Minecraft stylu)
-        const flowerPatch = vn(X * 0.12 + 100, Z * 0.12 + 100);
-        if (flowerPatch > 0.68 && rnd < 0.25) {
-          set(X, h + 1, Z, 26); // Květina
+        // Občasná květina rozesetá v běžné trávě
+        if (rnd < 0.025) {
+          const singleFlower = (h2(X * 41 + 3, Z * 47 + 7) < 0.5) ? 26 : 28;
+          set(X, h + 1, Z, singleFlower);
           continue;
         }
 
         // Traviny podle biomových shluků: nízká, střední, vysoká tráva
         const grassPatch = vn(X * 0.07 + 50, Z * 0.07 + 50);
         if (grassPatch > 0.72) {
-          if (rnd < 0.72) {
+          if (rnd < 0.75) {
             set(X, h + 1, Z, 18); // Vysoká tráva
-          } else if (rnd < 0.90) {
+          } else if (rnd < 0.92) {
             set(X, h + 1, Z, 17); // Střední tráva
           }
         } else if (grassPatch > 0.44) {
-          if (rnd < 0.58) {
+          if (rnd < 0.60) {
             set(X, h + 1, Z, 17); // Střední tráva
-          } else if (rnd < 0.82) {
+          } else if (rnd < 0.85) {
             set(X, h + 1, Z, 16); // Nízká tráva
           }
         } else if (grassPatch > 0.22) {
-          if (rnd < 0.45) {
+          if (rnd < 0.50) {
             set(X, h + 1, Z, 16); // Nízká tráva
           }
         }
@@ -452,7 +466,7 @@ function block(x, y, z) {
   return c.d[(x & 15) + (z & 15) * CS + y * 256];
 }
 
-const isCross = (b) => b === 16 || b === 17 || b === 18 || b === 25 || b === 26 || b === 27;
+const isCross = (b) => (b >= 16 && b <= 18) || (b >= 25 && b <= 32);
 const isFlatFloor = (b) => b === 19 || b === 20 || b === 21;
 const isPebble = (b) => b === 22;
 const isCutout = (b) => isCross(b) || isFlatFloor(b) || isPebble(b);
@@ -489,12 +503,12 @@ function buildMesh(c) {
         if (!b) continue;
         const m = b === 5 ? W : SO;
 
-        // 1. Křížový model (Minecraft styl: úhlopříčné stěny tvaru X pro trávu, květiny, houby, liány)
+        // 1. Křížový model (Minecraft styl: více 3D modelů, přirozený posun ze středu bloku a variace výšky)
         if (isCross(b)) {
           const X = ox + x, Z = oz + z;
           let tint = 0.92 + 0.18 * vn(X * 0.035, Z * 0.035);
           let cr = 1, cg = 1, cb = 1;
-          if (b === 16 || b === 17 || b === 18 || b === 25) {
+          if (b === 16 || b === 17 || b === 18 || b === 25 || b === 32) {
             const t = temp(X, Z) - Math.max(0, y - SEA - 8) * 0.0055, u = hum(X, Z), n = vn(X * 0.0075, Z * 0.0075);
             const dry = sm(0.55, 0.38, u) * sm(0.45, 0.58, t), cold = sm(0.5, 0.38, t), wet = sm(0.5, 0.65, u) * sm(0.52, 0.62, t);
             cr = (1 + 0.45 * dry - 0.15 * cold - 0.35 * wet) * (0.9 + 0.2 * n);
@@ -506,34 +520,57 @@ function buildMesh(c) {
           const u0 = tx * 0.125 + 0.002, u1 = (tx + 1) * 0.125 - 0.002;
           const v0 = 1 - (ty + 1) * 0.125 + 0.002, v1 = 1 - ty * 0.125 - 0.002;
 
-          const hg = (b === 18) ? 1.35 : (b === 16 ? 0.75 : (b === 27 ? 0.65 : (b === 26 ? 0.85 : 1.0)));
-          const d0 = 0.14, d1 = 0.86;
+          // Přirozený Minecraft posun (jitter) ze středu bloku
+          const jx = (h2(X * 31 + 7, Z * 37 + 11) - 0.5) * 0.28;
+          const jz = (h2(Z * 43 + 13, X * 47 + 17) - 0.5) * 0.28;
+          const cx0 = x + 0.5 + jx;
+          const cz0 = z + 0.5 + jz;
 
-          // Úhlopříčka 1: (d0, d0) -> (d1, d1)
-          let k = m.n;
-          m.p.push(
-            x + d0, y, z + d0,
-            x + d1, y, z + d1,
-            x + d1, y + hg, z + d1,
-            x + d0, y + hg, z + d0
-          );
-          m.u.push(u0, v0, u1, v0, u1, v1, u0, v1);
-          for (let i = 0; i < 4; i++) m.c.push(tint * cr, tint * cg, tint * cb);
-          m.i.push(k, k + 1, k + 2, k, k + 2, k + 3);
-          m.n += 4;
+          // Variace výšky každé jednotlivé rostliny
+          const hVar = 0.88 + 0.24 * h2(X * 67 + 19, Z * 71 + 23);
+          const baseHg = (b === 18) ? 1.35 : (b === 16 ? 0.72 : (b === 27 ? 0.65 : (b === 32 ? 0.85 : (b >= 28 && b <= 31 ? 0.88 : 0.95))));
+          const hg = baseHg * hVar;
 
-          // Úhlopříčka 2: (d0, d1) -> (d1, d0)
-          k = m.n;
-          m.p.push(
-            x + d0, y, z + d1,
-            x + d1, y, z + d0,
-            x + d1, y + hg, z + d0,
-            x + d0, y + hg, z + d1
-          );
-          m.u.push(u0, v0, u1, v0, u1, v1, u0, v1);
-          for (let i = 0; i < 4; i++) m.c.push(tint * cr, tint * cg, tint * cb);
-          m.i.push(k, k + 1, k + 2, k, k + 2, k + 3);
-          m.n += 4;
+          // Pomocná funkce pro svislou rovinu
+          const addPlane = (px, pz, ang, w, h) => {
+            const dx = Math.cos(ang) * w * 0.5;
+            const dz = Math.sin(ang) * w * 0.5;
+            const k = m.n;
+            m.p.push(
+              px - dx, y, pz - dz,
+              px + dx, y, pz + dz,
+              px + dx, y + h, pz + dz,
+              px - dx, y + h, pz - dz
+            );
+            m.u.push(u0, v0, u1, v0, u1, v1, u0, v1);
+            for (let i = 0; i < 4; i++) m.c.push(tint * cr, tint * cg, tint * cb);
+            m.i.push(k, k + 1, k + 2, k, k + 2, k + 3);
+            m.n += 4;
+          };
+
+          // 4 různé prostorové modely pro rozmanitost sousedící trávy
+          const modelType = Math.floor(h2(X * 79 + 5, Z * 83 + 9) * 4);
+
+          if (modelType === 0) {
+            // Model 0: Klasický Minecraft kříž (45° a 135°)
+            addPlane(cx0, cz0, Math.PI / 4, 0.96, hg);
+            addPlane(cx0, cz0, 3 * Math.PI / 4, 0.96, hg);
+          } else if (modelType === 1) {
+            // Model 1: Pootočený kříž (cca 22° a 112°)
+            addPlane(cx0, cz0, 0.38, 0.96, hg);
+            addPlane(cx0, cz0, 0.38 + Math.PI / 2, 0.96, hg);
+          } else if (modelType === 2) {
+            // Model 2: Hustý 3-rovinový trs (hvězdice po 60°)
+            addPlane(cx0, cz0, 0.15, 0.92, hg);
+            addPlane(cx0, cz0, 0.15 + Math.PI / 3, 0.92, hg);
+            addPlane(cx0, cz0, 0.15 + 2 * Math.PI / 3, 0.92, hg);
+          } else {
+            // Model 3: Dvojitý trs (dva menší překřížené chomáčky na jednom bloku)
+            addPlane(cx0 - 0.11, cz0 - 0.11, Math.PI / 4, 0.72, hg * 0.94);
+            addPlane(cx0 - 0.11, cz0 - 0.11, 3 * Math.PI / 4, 0.72, hg * 0.94);
+            addPlane(cx0 + 0.13, cz0 + 0.13, 0.4, 0.65, hg * 0.84);
+            addPlane(cx0 + 0.13, cz0 + 0.13, 0.4 + Math.PI / 2, 0.65, hg * 0.84);
+          }
           continue;
         }
 

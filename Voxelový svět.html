@@ -12,7 +12,7 @@
 <body>
   <div id="hud"></div>
   <div id="help">WASD – pohyb · Shift – sprint · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
-    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · 1–9 – lišta</div>
+    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · 1–9 – lišta</div>
   <div id="bars">
     <div class="b hp"><i></i><span></span></div>
     <div class="b st"><i></i><span></span></div>
@@ -160,6 +160,51 @@
     </div>
   </div>
 
+  <!-- Emoty a Gesta Modal (Klávesa V) -->
+  <div id="emoteModal" class="overlay" hidden>
+    <div class="panel emote-panel">
+      <div class="emote-head">
+        <span>🎭 Emoty & Gesta [V]</span>
+        <button id="emoteClose" class="close-btn" title="Zavřít (V / ESC)">✕</button>
+      </div>
+      <div class="emote-grid">
+        <button class="emote-btn" data-emote="dance67">
+          <span class="emote-badge">1</span>
+          <span class="emote-icon">🕺</span>
+          <div class="emote-info">
+            <span class="emote-name">Tanec 67</span>
+            <span class="emote-desc">Mávání rukama do rytmu</span>
+          </div>
+        </button>
+        <button class="emote-btn" data-emote="wave">
+          <span class="emote-badge">2</span>
+          <span class="emote-icon">👋</span>
+          <div class="emote-info">
+            <span class="emote-name">Pozdrav</span>
+            <span class="emote-desc">Zamávání pravou rukou</span>
+          </div>
+        </button>
+        <button class="emote-btn" data-emote="point">
+          <span class="emote-badge">3</span>
+          <span class="emote-icon">👉</span>
+          <div class="emote-info">
+            <span class="emote-name">Ukázání</span>
+            <span class="emote-desc">Rázné ukázání prstem dopředu</span>
+          </div>
+        </button>
+        <button class="emote-btn" data-emote="sit">
+          <span class="emote-badge">4</span>
+          <span class="emote-icon">🧘</span>
+          <div class="emote-info">
+            <span class="emote-name">Sednout si</span>
+            <span class="emote-desc">Posez na zadek na zem</span>
+          </div>
+        </button>
+      </div>
+      <div class="emote-hint">Stiskni [1–4] pro rychlou volbu · Pohybem [WASD] nebo mezerníkem emote zrušíš</div>
+    </div>
+  </div>
+
   <div id="load">Generuji svět…<div id="bar"><i></i></div>
   </div>
 
@@ -176,6 +221,8 @@
   <script src="js/audio.js"></script>
   <script src="js/player.js"></script>
   <script src="js/minimap.js"></script>
+  <script src="js/emotes.js"></script>
+  <script src="js/cursor.js"></script>
   <script src="js/game.js"></script>
 </body>
 

@@ -217,7 +217,7 @@ function physics(dt) {
     }
   } else {
     P.vy -= 26 * dt;
-    if (keys.Space && P.ground) P.vy = 9.2;
+    if (keys.Space && P.ground) P.vy = 10.6; // Výskok o 1 blok výše
     if (P.vy < -30) P.vy = -30;
   }
 
@@ -234,7 +234,7 @@ function physics(dt) {
       const testX = P.x + dirX * chkDist, testZ = P.z + dirZ * chkDist;
       // Překážka je 1 blok vysoká: nohy narazí, prostor o 1 blok výš (0.55) i nad hlavou je volný
       if (hits(testX, P.y, testZ) && !hits(testX, P.y + 0.55, testZ) && !hits(P.x, P.y + 0.6, P.z)) {
-        P.vy = 7.0;
+        P.vy = 7.6;
         P.ground = false;
         autoJumpTimer = 0.28;
       }
@@ -244,7 +244,7 @@ function physics(dt) {
   P.x += P.vx * dt;
   if (hits(P.x, P.y, P.z)) {
     if (wasG && !inW && autoJumpTimer <= 0 && !hits(P.x, P.y + 0.55, P.z) && !hits(P.x - P.vx * dt, P.y + 0.6, P.z)) {
-      P.vy = 7.0;
+      P.vy = 7.6;
       P.ground = false;
       autoJumpTimer = 0.28;
     }
@@ -255,7 +255,7 @@ function physics(dt) {
   P.z += P.vz * dt;
   if (hits(P.x, P.y, P.z)) {
     if (wasG && !inW && autoJumpTimer <= 0 && !hits(P.x, P.y + 0.55, P.z) && !hits(P.x, P.y + 0.6, P.z - P.vz * dt)) {
-      P.vy = 7.0;
+      P.vy = 7.6;
       P.ground = false;
       autoJumpTimer = 0.28;
     }
@@ -269,7 +269,7 @@ function physics(dt) {
     if (P.vy < 0) {
       P.ground = true;
       autoJumpTimer = 0;
-      if (P.vy < -18 && !inW) hurt((-P.vy - 18) * 5);
+      if (P.vy < -21 && !inW) hurt((-P.vy - 21) * 5);
     }
     P.vy = 0;
   }
