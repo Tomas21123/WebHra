@@ -13,9 +13,20 @@
 
 <body>
   <script>
+    function getRootUrl() {
+      const p = window.location.pathname;
+      const idx = p.indexOf('/play');
+      if (idx !== -1) {
+        return (window.location.origin && window.location.origin !== 'null')
+          ? (window.location.origin + p.substring(0, idx) + '/')
+          : '../index.html';
+      }
+      return '../';
+    }
+
     try {
       if (!localStorage.getItem('voxel_auth_user')) {
-        window.location.replace('../');
+        window.location.replace(getRootUrl());
       }
     } catch (e) {}
 

@@ -259,6 +259,15 @@ $('escRespawn').onclick = () => {
 const escMainMenuBtn = $('escMainMenu');
 if (escMainMenuBtn) {
   escMainMenuBtn.onclick = () => {
-    window.location.href = window.location.pathname.includes('/play') ? '../' : './';
+    const p = window.location.pathname;
+    const idx = p.indexOf('/play');
+    if (idx !== -1) {
+      const rootUrl = (window.location.origin && window.location.origin !== 'null')
+        ? (window.location.origin + p.substring(0, idx) + '/')
+        : '../index.html';
+      window.location.href = rootUrl;
+      return;
+    }
+    window.location.href = './';
   };
 }
