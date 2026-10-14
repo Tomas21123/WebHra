@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Voxelový svět</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="hud"></div>
+  <div id="help">WASD – pohyb · Shift – sprint · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
+    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · 1–9 – lišta</div>
+  <div id="bars">
+    <div class="b hp"><i></i><span></span></div>
+    <div class="b st"><i></i><span></span></div>
+  </div>
+  <div id="hb"></div>
+  <div id="toast"></div>
+
+  <!-- Inventář Modal -->
+  <div id="inv" hidden>
+    <div class="panel">
+      <div class="head">
+        <span>Inventář</span>
+        <button id="invx">✕</button>
+      </div>
+      <div class="tabs">
+        <button data-c="all" class="on">Vše</button>
+        <button data-c="weapon">Zbraně</button>
+        <button data-c="armor">Oblečení</button>
+        <button data-c="loot">Loot</button>
+      </div>
+      <div id="grid"></div>
+    </div>
+    <div id="pop" hidden>
+      <div id="pn"></div>
+      <button id="eqb"></button>
+    </div>
+  </div>
+
+  <!-- ESC Menu Modal -->
+  <div id="escMenu" class="overlay" hidden>
+    <div class="panel esc-panel">
+      <div class="esc-title">PAUZA</div>
+      <div class="esc-btns">
+        <button id="escResume" class="esc-btn primary">▶ Pokračovat</button>
+        <button id="escCharEdit" class="esc-btn">👤 Upravit postavu</button>
+        <button id="escInv" class="esc-btn">🎒 Inventář</button>
+        <button id="escRespawn" class="esc-btn subtle">🔄 Obnovit pozici</button>
+      </div>
+      <div class="esc-hint">Stiskni [ESC] pro návrat do hry</div>
+    </div>
+  </div>
+
+  <!-- Editor Postavy Modal -->
+  <div id="charModal" class="overlay" hidden>
+    <div class="panel char-panel">
+      <div class="char-head">
+        <span>Upravit postavu</span>
+        <button id="charClose" class="close-btn">✕</button>
+      </div>
+      <div class="char-content">
+        <div class="char-preview-box">
+          <canvas id="charPreviewCanvas"></canvas>
+          <div class="char-pv-controls">
+            <button id="pvRotL" title="Otočit vlevo">⟲</button>
+            <button id="pvReset" title="Vycentrovat">Vycentrovat</button>
+            <button id="pvRotR" title="Otočit vpravo">⟳</button>
+          </div>
+          <div class="char-pv-tip">Táhni myší pro otáčení · Kolečko pro zoom</div>
+        </div>
+        <div class="char-opts">
+          <!-- Skin Section -->
+          <div class="char-section">
+            <div class="char-section-title"><span>👤</span> Barva kůže</div>
+            <div class="char-subgroup">
+              <div class="swatch-row" id="skinSwatches"></div>
+            </div>
+          </div>
+          <!-- Hair Style Section -->
+          <div class="char-section">
+            <div class="char-section-title"><span>💇</span> Účes a vousy</div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Typ účesu:</div>
+              <div class="pill-group" id="hairStylePills"></div>
+            </div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Barva vlasů:</div>
+              <div class="swatch-row" id="hairSwatches"></div>
+            </div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Vousy / strniště:</div>
+              <div class="pill-group" id="beardPills"></div>
+            </div>
+          </div>
+          <!-- Eyes Section -->
+          <div class="char-section">
+            <div class="char-section-title"><span>👁️</span> Oči</div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Barva očí:</div>
+              <div class="swatch-row" id="eyeSwatches"></div>
+            </div>
+          </div>
+          <!-- Underwear Section -->
+          <div class="char-section">
+            <div class="char-section-title"><span>🩳</span> Spodní prádlo (spodky)</div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Střih spodků:</div>
+              <div class="pill-group" id="undStylePills"></div>
+            </div>
+            <div class="char-subgroup">
+              <div class="char-subgroup-label">Barva spodků:</div>
+              <div class="swatch-row" id="undSwatches"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="char-footer">
+        <button id="charRandom" class="btn-sec">🎲 Náhodný vzhled</button>
+        <div class="char-footer-btns">
+          <button id="charCancel" class="btn-sec">Zrušit</button>
+          <button id="charSave" class="btn-main">✓ Uložit a použít</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D Minimapa (Cube World Style) -->
+  <div id="minimapBox" hidden>
+    <div class="minimap-header">
+      <div class="minimap-title">
+        <span class="mm-icon">🧭</span>
+        <span>3D MAPA SVĚTA</span>
+      </div>
+      <div class="minimap-actions">
+        <button id="mmExpandBtn" title="Zvětšit / Zmenšit (Tab)">⤢</button>
+        <button id="mmCloseBtn" title="Zavřít (M)">✕</button>
+      </div>
+    </div>
+    <div class="minimap-viewport">
+      <canvas id="minimapCanvas"></canvas>
+      <div class="minimap-compass" id="mmCompass">N</div>
+      <div class="minimap-overlay-info">
+        <div id="mmBiome" class="mm-biome-badge">🌲 Les</div>
+        <div id="mmCoords" class="mm-coords">X: 0 · Y: 0 · Z: 0</div>
+      </div>
+    </div>
+    <div class="minimap-footer">
+      <div class="mm-controls">
+        <button id="mmRotL" title="Otočit vlevo">⟲</button>
+        <button id="mmCenter" title="Vycentrovat pohled">Hráč</button>
+        <button id="mmRotR" title="Otočit vpravo">⟳</button>
+        <button id="mmZoomIn" title="Přiblížit">+</button>
+        <button id="mmZoomOut" title="Oddálit">−</button>
+      </div>
+      <div class="mm-hint">Táhni myší · Kolečko = zoom · [M]</div>
+    </div>
+  </div>
+
+  <div id="load">Generuji svět…<div id="bar"><i></i></div>
+  </div>
+
+  <!-- Knihovny a Moduly -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/voxelBuilder.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/character.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/customizer.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/minimap.js"></script>
+  <script src="js/game.js"></script>
+</body>
+
+</html>
