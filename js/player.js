@@ -12,8 +12,48 @@ let isSprinting = false, airBlend = 0, landingSquash = 0, wasGround = true;
 let attacking = false, attackTime = 0, attackDuration = 0.26, attackCombo = 0;
 let autoJumpTimer = 0, waterExitTimer = 0;
 
+// Elden Ring / Souls-like Dodge Roll (Kotrmelec)
+let isRolling = false;
+let rollTimer = 0;
+const ROLL_DURATION = 0.62;
+let rollDirX = 0, rollDirZ = 0;
+let lastShiftTapTime = 0;
+
+function triggerRoll() {
+  if (isRolling || P.inWater || !P.ground || G.st < 12) return;
+  if (typeof cancelEmote === 'function') cancelEmote();
+
+  isRolling = true;
+  rollTimer = 0;
+
+  // Směr kotrmelce podle směru pohybu kláves nebo čelem dopředu
+  const fx = P.moveX || 0, fz = P.moveZ || 0;
+  if (Math.hypot(fx, fz) > 0.1) {
+    const rwx = (-Math.sin(yaw)) * fz + Math.cos(yaw) * fx;
+    const rwz = (-Math.cos(yaw)) * fz - Math.sin(yaw) * fx;
+    const len = Math.hypot(rwx, rwz) || 1;
+    rollDirX = rwx / len;
+    rollDirZ = rwz / len;
+  } else {
+    rollDirX = -Math.sin(yaw);
+    rollDirZ = -Math.cos(yaw);
+  }
+  face = Math.atan2(rollDirX, rollDirZ);
+
+  // Spotřeba staminy
+  G.st = Math.max(0, G.st - 16);
+  G.sd = 0;
+  if (G.st <= 0) G.tired = 1;
+
+  // Skok po hlavě dopředu (vertikální impuls na začátku dive skoku)
+  P.vy = 2.4;
+  P.ground = false;
+
+  if (typeof playRollSound === 'function') playRollSound();
+}
+
 function triggerAttack() {
-  if (escOpen || charOpen || invOpen) return;
+  if (escOpen || charOpen || invOpen || isRolling) return;
   attacking = true;
   attackTime = 0;
   attackCombo = (attackCombo + 1) % 2;
@@ -131,42 +171,63 @@ function physics(dt) {
   P.moveX = fx;
   P.moveZ = fz;
 
-  const sprint = (keys.ShiftLeft || keys.ShiftRight) && (fx || fz) && G.st > 0 && !G.tired;
-  isSprinting = sprint;
-
-  if (sprint) {
-    G.st = Math.max(0, G.st - 12 * dt);
-    G.sd = 0;
-    if (G.st <= 0) G.tired = 1;
+  // Kotrmelec (Elden Ring Dodge Roll) - priorita pohybu
+  if (isRolling) {
+    rollTimer += dt;
+    if (rollTimer >= ROLL_DURATION) {
+      isRolling = false;
+      rollTimer = 0;
+    } else {
+      const p = rollTimer / ROLL_DURATION;
+      let rollSpeed;
+      if (p < 0.25) {
+        // Fáze 1: Skok střemhlav (rychlý rozjezd)
+        rollSpeed = 11.2;
+      } else if (p < 0.72) {
+        // Fáze 2: Kotrmelec na zemi
+        const t = (p - 0.25) / 0.47;
+        rollSpeed = 11.2 - t * 3.7;
+      } else {
+        // Fáze 3: Dojezd a zvednutí se na nohy
+        const t = (p - 0.72) / 0.28;
+        rollSpeed = 7.5 - t * 2.5;
+      }
+      P.vx = rollDirX * rollSpeed;
+      P.vz = rollDirZ * rollSpeed;
+      face = Math.atan2(rollDirX, rollDirZ);
+    }
   } else {
-    G.sd += dt;
-    if (G.sd > 0.7) G.st = Math.min(100, G.st + 20 * dt);
-    if (G.tired && G.st > 25) G.tired = 0;
+    const sprint = (keys.ShiftLeft || keys.ShiftRight) && (fx || fz) && G.st > 0 && !G.tired;
+    isSprinting = sprint;
+
+    if (sprint) {
+      G.st = Math.max(0, G.st - 12 * dt);
+      G.sd = 0;
+      if (G.st <= 0) G.tired = 1;
+    } else {
+      G.sd += dt;
+      if (G.sd > 0.7) G.st = Math.min(100, G.st + 20 * dt);
+      if (G.tired && G.st > 25) G.tired = 0;
+    }
+
+    // Rychlost: ve vodě (ani při skákání po hladině) nelze běhat rychlostí 9 m/s!
+    let sp;
+    if (inW) {
+      sp = sprint ? 4.2 : 3.0; // Plavecká rychlost
+    } else if (waterExitTimer > 0) {
+      sp = 4.0; // Přechodová rychlost po opuštění vody zabraňující bunny-hopu po vodě
+    } else {
+      sp = sprint ? 9 : 5.5; // Běžná pozemní rychlost
+    }
+
+    const wx = (-Math.sin(yaw)) * fz + Math.cos(yaw) * fx;
+    const wz = (-Math.cos(yaw)) * fz - Math.sin(yaw) * fx;
+    const k = 1 - Math.exp(-(P.ground ? 14 : inW ? 6 : 4) * dt);
+    P.vx += (wx * sp - P.vx) * k;
+    P.vz += (wz * sp - P.vz) * k;
+
+    if (fx || fz) face = Math.atan2(wx, wz);
   }
-
-  // Rychlost: ve vodě (ani při skákání po hladině) nelze běhat rychlostí 9 m/s!
-  let sp;
-  if (inW) {
-    sp = sprint ? 4.2 : 3.0; // Plavecká rychlost
-  } else if (waterExitTimer > 0) {
-    sp = 4.0; // Přechodová rychlost po opuštění vody zabraňující bunny-hopu po vodě
-  } else {
-    sp = sprint ? 9 : 5.5; // Běžná pozemní rychlost
-  }
-
-  const wx = (-Math.sin(yaw)) * fz + Math.cos(yaw) * fx;
-  const wz = (-Math.cos(yaw)) * fz - Math.sin(yaw) * fx;
-  const k = 1 - Math.exp(-(P.ground ? 14 : inW ? 6 : 4) * dt);
-  P.vx += (wx * sp - P.vx) * k;
-  P.vz += (wz * sp - P.vz) * k;
-
-  // Odpor vody (viskozita)
-  if (inW) {
-    P.vx *= 1 - 2.5 * dt;
-    P.vz *= 1 - 2.5 * dt;
-  }
-
-  if (fx || fz) face = Math.atan2(wx, wz);
 
   if (inW) {
     P.vy *= 1 - 3 * dt;
@@ -217,7 +278,7 @@ function physics(dt) {
     }
   } else {
     P.vy -= 26 * dt;
-    if (keys.Space && P.ground) P.vy = 9.2; // Normální výskok (o 1 blok méně než dříve)
+    if (keys.Space && P.ground && !isRolling) P.vy = 9.2; // Normální výskok (o 1 blok méně než dříve)
     if (P.vy < -30) P.vy = -30;
   }
 

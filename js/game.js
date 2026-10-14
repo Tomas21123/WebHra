@@ -135,6 +135,18 @@ addEventListener('keydown', e => {
   }
   if (invKey(e)) return;
   if (escOpen || charOpen || (typeof emoteOpen !== 'undefined' && emoteOpen)) return;
+
+  // Detekce dvojitého stisku Shift (Double-Shift) pro kotrmelec dopředu (Elden Ring Dodge Roll)
+  if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) {
+    const curTime = performance.now();
+    if (curTime - lastShiftTapTime < 320 && !P.inWater && P.ground && !isRolling && G.st >= 12 && !escOpen && !charOpen && !invOpen) {
+      if (typeof triggerRoll === 'function') triggerRoll();
+      lastShiftTapTime = 0;
+    } else {
+      lastShiftTapTime = curTime;
+    }
+  }
+
   keys[e.code] = 1;
   if (e.code === 'BracketRight') { RD = Math.min(14, RD + 1); setFog(); lastC = ''; }
   if (e.code === 'BracketLeft') { RD = Math.max(3, RD - 1); setFog(); lastC = ''; }
@@ -652,6 +664,81 @@ function loop(now) {
       // Ruce spočívají přirozeně položené dlaněmi na stehnech / kolenou
       arms[0].rotation.set(-0.95, 0.22, -0.12);
       arms[1].rotation.set(-0.95, -0.22, 0.12);
+    }
+  }
+
+  // --- ANIMACE KOTRMELCE / DODGE ROLL (Elden Ring styl) ---
+  if (typeof isRolling !== 'undefined' && isRolling) {
+    const p = Math.min(1, rollTimer / ROLL_DURATION);
+    hand.position.set(0, -8 * VX, 0);
+
+    if (p < 0.25) {
+      // Fáze 1: Skok střemhlav dopředu (Dive Leap po hlavě)
+      const u = p / 0.25;
+      const easeU = Math.sin(u * Math.PI * 0.5);
+
+      // Celé tělo se nakloní střemhlav dopředu o ~72° (1.26 rad)
+      body.rotation.set(easeU * 1.26, 0, 0);
+      body.position.set(0, Math.sin(u * Math.PI) * 0.16, 0);
+
+      torso.rotation.set(-0.15 * (1 - u) + 0.3 * u, 0, 0);
+      head.rotation.set(0.25 * u, 0, 0);
+
+      // Ruce se natahují dopředu a dolů pro ztlumení dopadu a zahájení kotrmelce
+      arms[0].rotation.set(-1.85 * easeU, 0.12, -0.2 * easeU);
+      arms[1].rotation.set(-1.85 * easeU, -0.12, 0.2 * easeU);
+
+      // Nohy se natahují vzad za tělo v letu
+      legs[0].rotation.set(0.55 * easeU, 0, -0.05);
+      legs[1].rotation.set(0.65 * easeU, 0, 0.05);
+
+    } else if (p < 0.72) {
+      // Fáze 2: Dopad na ruce/ramena a plné přetočení o 360° (Somersault Tuck na zemi)
+      const u = (p - 0.25) / 0.47;
+      // Rotace plynule přetočí postavu přes ramena a záda o plných 360 stupňů (2*PI + 0.35 rad)
+      const rollRot = 1.26 + u * (Math.PI * 2 + 0.35 - 1.26);
+      body.rotation.set(rollRot, 0, 0);
+
+      // Snížení těžiště při sbalení na zemi (plynulý přechod od 0 k hlubokému tucku a k -0.15 při doskoku)
+      const dipY = -0.32 * Math.sin(u * Math.PI) - 0.15 * (u * u);
+      body.position.set(0, dipY, 0);
+
+      // Hlava pevně přitisknutá k hrudi (brada na prsa jako v gymnastice)
+      const chinTuck = 0.25 + 0.65 * Math.sin(u * Math.PI);
+      head.rotation.set(chinTuck, 0, 0);
+      torso.rotation.set(0.3 + 0.35 * Math.sin(u * Math.PI) + 0.1 * u, 0, 0);
+
+      // Sbalení paží do těsného klubíčka (tuck) s plynulým navázáním na Fázi 1 i Fázi 3
+      const armX = -1.85 * (1 - u) + (-0.45) * u + 0.45 * Math.sin(u * Math.PI);
+      const armZ = (-0.2 * (1 - u) + -0.12 * u) - 0.1 * Math.sin(u * Math.PI);
+      arms[0].rotation.set(armX, 0.15 * Math.sin(u * Math.PI), armZ);
+      arms[1].rotation.set(armX, -0.15 * Math.sin(u * Math.PI), -armZ);
+
+      // Sbalení nohou a příprava na došlap
+      const leg0X = (0.55 * (1 - u) + -0.6 * u) - 1.65 * Math.sin(u * Math.PI);
+      const leg1X = (0.65 * (1 - u) + 0.4 * u) - 1.95 * Math.sin(u * Math.PI);
+      legs[0].rotation.set(leg0X, 0, -0.06);
+      legs[1].rotation.set(leg1X, 0, 0.06);
+
+    } else {
+      // Fáze 3: Dojezd na nohy, rozbalení a plynulý přechod do běhu (Recovery)
+      const u = (p - 0.72) / 0.28;
+      const easeOut = Math.sin(u * Math.PI * 0.5);
+
+      // Dokončení rotace do vzpřímeného postoje
+      body.rotation.set((1 - easeOut) * 0.35, 0, 0);
+      body.position.set(0, -0.15 * (1 - easeOut), 0);
+
+      torso.rotation.set(0.4 * (1 - easeOut), 0, 0);
+      head.rotation.set(0.25 * (1 - easeOut), 0, 0);
+
+      // Nohy dosedají na zem a přecházejí do běžeckého kroku
+      legs[0].rotation.set(-0.6 * (1 - easeOut), 0, -0.04 * (1 - easeOut));
+      legs[1].rotation.set(0.4 * (1 - easeOut), 0, 0.04 * (1 - easeOut));
+
+      // Ruce se vracejí do rovnovážné polohy pro běh
+      arms[0].rotation.set(-0.45 * (1 - easeOut), 0, -0.12 * (1 - easeOut));
+      arms[1].rotation.set(-0.45 * (1 - easeOut), 0, 0.12 * (1 - easeOut));
     }
   }
 

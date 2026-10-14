@@ -80,6 +80,10 @@ function ui() {
 }
 
 function hurt(n) {
+  // Elden Ring i-frames během kotrmelce (nezranitelnost v aktivní fázi přetočení)
+  if (typeof isRolling !== 'undefined' && isRolling && rollTimer > 0.04 && rollTimer < 0.52) {
+    return;
+  }
   G.hp = Math.max(0, G.hp - n);
   G.rg = 0;
   if (G.hp <= 0) {

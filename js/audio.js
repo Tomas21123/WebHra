@@ -66,3 +66,48 @@ function playAttackSound(type) {
     }
   } catch (e) {}
 }
+
+function playRollSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    // Vzdušný svist při skoku střemhlav
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'triangle';
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, t);
+    filter.frequency.exponentialRampToValueAtTime(100, t + 0.28);
+    osc.frequency.setValueAtTime(260, t);
+    osc.frequency.exponentialRampToValueAtTime(60, t + 0.28);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t);
+    osc.stop(t + 0.28);
+
+    // Ztlumený dopad na zem při přetočení
+    setTimeout(() => {
+      try {
+        if (!audioCtx) return;
+        const t2 = audioCtx.currentTime;
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(90, t2);
+        osc2.frequency.exponentialRampToValueAtTime(35, t2 + 0.12);
+        gain2.gain.setValueAtTime(0.14, t2);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.12);
+        osc2.start(t2);
+        osc2.stop(t2 + 0.12);
+      } catch (e) {}
+    }, 180);
+  } catch (e) {}
+}
