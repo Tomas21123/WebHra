@@ -128,7 +128,10 @@
       <div class="esc-title">PAUZA</div>
       <div class="esc-btns">
         <button id="escResume" class="esc-btn primary">▶ Pokračovat</button>
-        <button id="escOpenP2P" class="esc-btn" style="background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.35));border-color:rgba(52,211,153,0.5);color:#34d399;font-weight:700;">🌐 Otevřít pro přátele (P2P)</button>
+        <button id="escOpenP2P" class="esc-btn" style="background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.35));border-color:rgba(52,211,153,0.5);color:#34d399;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 12px;">
+          <span>🌐 Otevřít pro přátele (P2P)</span>
+          <span id="escP2PCodeBadge" style="font-size:12px;color:#6ee7b7;font-family:monospace;letter-spacing:1px;font-weight:800;">Kód: VOX-????</span>
+        </button>
         <button id="escCharEdit" class="esc-btn">👤 Upravit postavu</button>
         <button id="escInv" class="esc-btn">🎒 Inventář</button>
         <button id="escSettings" class="esc-btn">⚙️ Nastavení</button>
@@ -263,7 +266,7 @@
   </div>
 
   <!-- Žádost o připojení hráče (Floating Approval Popup) -->
-  <div id="p2pRequestPopup" style="display:none;position:fixed;top:28px;right:28px;z-index:99999999;background:rgba(15,23,42,0.96);border:2px solid #10b981;border-radius:18px;padding:20px 24px;box-shadow:0 16px 50px rgba(0,0,0,0.85), 0 0 30px rgba(16,185,129,0.35);backdrop-filter:blur(16px);max-width:340px;color:#fff;font-family:'Outfit',sans-serif;pointer-events:auto;animation:bounceIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);">
+  <div id="p2pRequestPopup" style="display:none;position:fixed;top:32px;left:50%;transform:translateX(-50%);z-index:99999999;background:rgba(15,23,42,0.97);border:2px solid #10b981;border-radius:20px;padding:22px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(16,185,129,0.45);backdrop-filter:blur(18px);width:min(440px, 94vw);color:#fff;font-family:'Outfit',sans-serif;pointer-events:auto;text-align:center;">
     <div style="font-weight:800;font-size:16px;color:#34d399;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
       <span style="font-size:20px;">🔔</span> Žádost o připojení do světa
     </div>

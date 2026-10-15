@@ -232,6 +232,12 @@ class NetworkManager {
 
     this.isP2PHost = true;
 
+    // Aktualizovat kód v menu pauzy i ve všech prvcích
+    const badge = document.getElementById('escP2PCodeBadge');
+    if (badge) badge.textContent = `Kód: ${this.p2pRoomCode}`;
+    const display = document.getElementById('p2pRoomCodeDisplay');
+    if (display) display.textContent = this.p2pRoomCode;
+
     // 1. Spustit lokální BroadcastChannel pro okamžité a 100% spolehlivé spojení mezi záložkami na stejném PC
     this.setupHostLocalChannel(cleanNum);
 
@@ -244,69 +250,75 @@ class NetworkManager {
     if (this.localChannel) {
       try { this.localChannel.close(); } catch(e) {}
     }
+    if (this.localHubChannel) {
+      try { this.localHubChannel.close(); } catch(e) {}
+    }
+
+    const onIncomingLocalMessage = (event, activeChannel) => {
+      if (!event.data || event.data.target !== 'host') return;
+      const senderId = event.data.sender;
+      const msg = event.data.data;
+      if (!senderId || !msg) return;
+
+      console.log(`[P2P Host] Příchozí lokální zpráva (${msg.type}) od: ${senderId}`);
+
+      let conn = this.p2pClients.get(senderId);
+      if (!conn || !conn.isLocal) {
+        conn = {
+          peer: senderId,
+          isLocal: true,
+          open: true,
+          send: (data) => {
+            try {
+              activeChannel.postMessage({
+                sender: 'host',
+                target: senderId,
+                data: data
+              });
+            } catch(e) {
+              console.warn('[P2P Local Send Error]', e);
+            }
+          },
+          close: () => {
+            try {
+              activeChannel.postMessage({
+                sender: 'host',
+                target: senderId,
+                data: { type: 'hostDisconnect', message: 'Hostitel se odpojil ze světa.' }
+              });
+            } catch(e) {}
+            this.p2pClients.delete(senderId);
+            this.removeRemotePlayer(senderId);
+            this.updateP2PPlayerCount();
+          }
+        };
+      }
+
+      if (msg.type === 'joinRequest') {
+        this.promptJoinRequest(conn, msg);
+      } else if (msg.type === 'playerLeave') {
+        console.log('[P2P Host] Lokální klient opustil hru:', senderId);
+        this.p2pClients.delete(senderId);
+        this.removeRemotePlayer(senderId);
+        this.updateP2PPlayerCount();
+        if (typeof addChatMessage === 'function') {
+          addChatMessage('Systém', `Hráč opustil svět.`, 'system');
+        }
+      } else {
+        if (this.p2pClients.has(senderId)) {
+          this.handleP2PClientMessage(conn, msg);
+        }
+      }
+    };
 
     try {
       this.localChannel = new BroadcastChannel(`vox_p2p_${cleanNum}`);
-      console.log(`[P2P Host] Lokální BroadcastChannel aktivní: vox_p2p_${cleanNum}`);
+      this.localChannel.onmessage = (e) => onIncomingLocalMessage(e, this.localChannel);
+      console.log(`[P2P Host] Lokální kanál aktivní: vox_p2p_${cleanNum}`);
 
-      this.localChannel.onmessage = (event) => {
-        if (!event.data || event.data.target !== 'host') return;
-        const senderId = event.data.sender;
-        const msg = event.data.data;
-        if (!senderId || !msg) return;
-
-        let conn = this.p2pClients.get(senderId);
-        if (!conn || !conn.isLocal) {
-          conn = {
-            peer: senderId,
-            isLocal: true,
-            open: true,
-            send: (data) => {
-              if (this.localChannel) {
-                try {
-                  this.localChannel.postMessage({
-                    sender: 'host',
-                    target: senderId,
-                    data: data
-                  });
-                } catch(e) {
-                  console.warn('[P2P Local Send Error]', e);
-                }
-              }
-            },
-            close: () => {
-              if (this.localChannel) {
-                try {
-                  this.localChannel.postMessage({
-                    sender: 'host',
-                    target: senderId,
-                    data: { type: 'hostDisconnect', message: 'Hostitel se odpojil ze světa.' }
-                  });
-                } catch(e) {}
-              }
-              this.p2pClients.delete(senderId);
-              this.removeRemotePlayer(senderId);
-              this.updateP2PPlayerCount();
-            }
-          };
-        }
-
-        if (msg.type === 'joinRequest') {
-          this.promptJoinRequest(conn, msg);
-        } else if (msg.type === 'playerLeave') {
-          console.log('[P2P Host] Lokální klient opustil hru:', senderId);
-          this.p2pClients.delete(senderId);
-          this.removeRemotePlayer(senderId);
-          this.updateP2PPlayerCount();
-          if (typeof addChatMessage === 'function') {
-            addChatMessage('Systém', `Hráč opustil svět.`, 'system');
-          }
-        } else {
-          if (this.p2pClients.has(senderId)) {
-            this.handleP2PClientMessage(conn, msg);
-          }
-        }
-      };
+      this.localHubChannel = new BroadcastChannel('vox_p2p_local_hub');
+      this.localHubChannel.onmessage = (e) => onIncomingLocalMessage(e, this.localHubChannel);
+      console.log(`[P2P Host] Záložní lokální hub aktivní: vox_p2p_local_hub`);
     } catch(e) {
       console.warn('[P2P Host] Chyba inicializace lokálního kanálu:', e);
     }
@@ -348,6 +360,8 @@ class NetworkManager {
 
       const display = document.getElementById('p2pRoomCodeDisplay');
       if (display) display.textContent = this.p2pRoomCode;
+      const badge = document.getElementById('escP2PCodeBadge');
+      if (badge) badge.textContent = `Kód: ${this.p2pRoomCode}`;
 
       if (!this.syncTimer) {
         this.syncTimer = setInterval(() => this.sendPlayerTransform(), 50);
@@ -386,17 +400,12 @@ class NetworkManager {
     this.peer.on('error', (err) => {
       console.warn('[P2P Host Error]', err);
       if (err.type === 'unavailable-id') {
-        console.warn('[P2P Host] Kód je obsazen. Obnovuji kód světa...');
-        const newNum = Math.floor(1000 + Math.random() * 9000);
-        this.p2pRoomCode = `VOX-${newNum}`;
-        if (typeof GameStorage !== 'undefined') {
-          const w = GameStorage.getWorld(worldId);
-          if (w) {
-            w.p2pCode = newNum;
-            GameStorage.saveWorlds(GameStorage.getWorlds());
+        console.warn(`[P2P Host] ID ${peerId} je dočasně obsazeno (probíhá uvolnění socketu). Zkusím reconnect...`);
+        setTimeout(() => {
+          if (this.peer && !this.peer.destroyed) {
+            try { this.peer.reconnect(); } catch(e) {}
           }
-        }
-        setTimeout(() => this.startP2PHost(), 1000);
+        }, 2500);
       }
     });
 
@@ -412,18 +421,13 @@ class NetworkManager {
 
   // Zobrazení žádosti o připojení hostiteli
   promptJoinRequest(conn, data) {
-    // Pokud je již schválen, jen znovu odešleme init data
     if (this.p2pClients.has(conn.peer)) {
       this.sendInitToClient(conn);
       return;
     }
 
-    const isAlreadyPending = (this.pendingP2PConn && this.pendingP2PConn.conn.peer === conn.peer);
+    const firstTime = (!this.pendingP2PConn || this.pendingP2PConn.conn.peer !== conn.peer);
     this.pendingP2PConn = { conn, data };
-
-    if (isAlreadyPending) {
-      return;
-    }
 
     // Uvolnit pointer lock kurzoru, aby hostitel mohl okamžitě kliknout myší
     if (document.exitPointerLock) {
@@ -434,18 +438,31 @@ class NetworkManager {
     const text = document.getElementById('p2pRequestText');
     if (popup && text) {
       text.innerHTML = `
-        <div style="font-size:16px;font-weight:800;color:#34d399;margin-bottom:4px;">
+        <div style="font-size:18px;font-weight:800;color:#34d399;margin-bottom:6px;">
           ${this.escape(data.nickname || 'Přítel')}
         </div>
-        <div style="font-size:13.5px;color:#e2e8f0;line-height:1.45;">
+        <div style="font-size:14px;color:#e2e8f0;line-height:1.5;">
           žádá o připojení do tvého světa.
         </div>
-        <div style="font-size:11.5px;color:#94a3b8;margin-top:8px;background:rgba(255,255,255,0.06);padding:4px 8px;border-radius:6px;">
+        <div style="font-size:12px;color:#94a3b8;margin-top:10px;background:rgba(255,255,255,0.06);padding:6px 12px;border-radius:8px;display:inline-block;">
           ⌨ Stiskni <strong>[Y]</strong> pro povolení nebo <strong>[N]</strong> pro odmítnutí
         </div>
       `;
       popup.style.display = 'block';
       popup.style.zIndex = '99999999';
+    }
+
+    // Horní status pruh pro maximální nepřehlédnutelnost
+    this.showNetStatus(`🔔 Hráč "${data.nickname || 'Přítel'}" žádá o připojení! Stiskni [Y] pro povolení`, 'connecting');
+
+    if (firstTime) {
+      if (typeof playClickSound === 'function') playClickSound();
+      if (typeof addChatMessage === 'function') {
+        addChatMessage('Systém', `🔔 Hráč "${data.nickname || 'Přítel'}" poslal žádost o připojení! Klikni na [Povolit] na obrazovce nebo stiskni [Y].`, 'system');
+      }
+      if (typeof toast === 'function') {
+        toast(`Žádost o připojení: ${data.nickname || 'Hráč'}`);
+      }
     }
 
     if (typeof playClickSound === 'function') playClickSound();
@@ -666,21 +683,37 @@ class NetworkManager {
     if (this.localChannel) {
       try { this.localChannel.close(); } catch(e) {}
     }
+    if (this.localHubChannel) {
+      try { this.localHubChannel.close(); } catch(e) {}
+    }
 
     this.localClientId = 'local_client_' + Math.random().toString(36).substring(2, 9);
 
-    try {
-      this.localChannel = new BroadcastChannel(`vox_p2p_${cleanNum}`);
-      console.log(`[P2P Client] Lokální BroadcastChannel aktivní: vox_p2p_${cleanNum}, moje ID: ${this.localClientId}`);
+    const onIncomingClientMsg = (event, activeChannel) => {
+      if (!event.data || (event.data.target !== this.localClientId && event.data.target !== 'all')) return;
+      const msg = event.data.data;
+      if (!msg) return;
 
-      const virtualHostConn = {
-        peer: 'host',
-        isLocal: true,
-        open: true,
-        send: (data) => {
-          if (this.localChannel) {
+      if (msg.type === 'rejected') {
+        if (this.localRetryTimer) clearInterval(this.localRetryTimer);
+        if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+        alert(msg.message || 'Hostitel odmítl žádost o připojení.');
+        window.location.replace('../index.html');
+        return;
+      }
+
+      if (msg.type === 'init') {
+        console.log('[P2P Client] ÚSPĚCH: Obdržena init data přes lokální kanál!');
+        if (this.localRetryTimer) clearInterval(this.localRetryTimer);
+        if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+
+        this.p2pHostConn = {
+          peer: 'host',
+          isLocal: true,
+          open: true,
+          send: (data) => {
             try {
-              this.localChannel.postMessage({
+              activeChannel.postMessage({
                 sender: this.localClientId,
                 target: 'host',
                 data: data
@@ -688,83 +721,77 @@ class NetworkManager {
             } catch(e) {
               console.warn('[P2P Client Local Send Error]', e);
             }
-          }
-        },
-        close: () => {
-          if (this.localChannel) {
+          },
+          close: () => {
             try {
-              this.localChannel.postMessage({
+              activeChannel.postMessage({
                 sender: this.localClientId,
                 target: 'host',
                 data: { type: 'playerLeave', id: this.localClientId }
               });
             } catch(e) {}
           }
-        }
-      };
+        };
 
-      this.localChannel.onmessage = (event) => {
-        if (!event.data || (event.data.target !== this.localClientId && event.data.target !== 'all')) return;
-        const msg = event.data.data;
-        if (!msg) return;
+        this.approved = true;
+        this.connected = true;
+        this.hideNetStatus();
 
-        if (msg.type === 'rejected') {
-          if (this.localRetryTimer) clearInterval(this.localRetryTimer);
-          if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
-          alert(msg.message || 'Hostitel odmítl žádost o připojení.');
-          window.location.replace('../index.html');
-          return;
-        }
+        const statusDetail = document.getElementById('p2pClientStatusDetail');
+        if (statusDetail) statusDetail.textContent = 'Vstup schválen! Generuji svět…';
 
-        if (msg.type === 'init') {
-          console.log('[P2P Client] ÚSPĚCH: Obdržena init data přes lokální kanál!');
-          if (this.localRetryTimer) clearInterval(this.localRetryTimer);
-          if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
-          this.p2pHostConn = virtualHostConn;
-          this.approved = true;
-          this.connected = true;
-          this.hideNetStatus();
+        this.handleServerMessage(msg);
+        return;
+      }
 
-          const statusDetail = document.getElementById('p2pClientStatusDetail');
-          if (statusDetail) statusDetail.textContent = 'Vstup schválen! Generuji svět…';
+      if (this.approved) {
+        this.handleServerMessage(msg);
+      }
+    };
 
-          this.handleServerMessage(msg);
-          return;
-        }
+    try {
+      this.localChannel = new BroadcastChannel(`vox_p2p_${cleanNum}`);
+      this.localChannel.onmessage = (e) => onIncomingClientMsg(e, this.localChannel);
+      console.log(`[P2P Client] Lokální BroadcastChannel aktivní: vox_p2p_${cleanNum}, moje ID: ${this.localClientId}`);
 
-        if (this.approved) {
-          this.handleServerMessage(msg);
-        }
-      };
+      this.localHubChannel = new BroadcastChannel('vox_p2p_local_hub');
+      this.localHubChannel.onmessage = (e) => onIncomingClientMsg(e, this.localHubChannel);
+      console.log(`[P2P Client] Globální lokální hub aktivní: vox_p2p_local_hub`);
 
-      // Pravidelné odesílání žádosti o připojení
+      // Pravidelné odesílání žádosti o připojení na oba kanály
       const sendLocalJoin = () => {
         if (this.approved) {
           if (this.localRetryTimer) clearInterval(this.localRetryTimer);
           return;
         }
-        if (this.localChannel) {
-          const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
-          this.localChannel.postMessage({
-            sender: this.localClientId,
-            target: 'host',
-            data: {
-              type: 'joinRequest',
-              nickname: nickname,
-              skin: this.getLocalPlayerSkin(),
-              equipment: this.getLocalEquippedMap()
-            }
-          });
-          const statusDetail = document.getElementById('p2pClientStatusDetail');
-          if (statusDetail && !this.approved) {
-            statusDetail.textContent = 'Žádost odeslána. Čekám na schválení hostitelem…';
+        const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
+        const packet = {
+          sender: this.localClientId,
+          target: 'host',
+          data: {
+            type: 'joinRequest',
+            nickname: nickname,
+            skin: this.getLocalPlayerSkin(),
+            equipment: this.getLocalEquippedMap()
           }
+        };
+
+        if (this.localChannel) {
+          try { this.localChannel.postMessage(packet); } catch(e) {}
+        }
+        if (this.localHubChannel) {
+          try { this.localHubChannel.postMessage(packet); } catch(e) {}
+        }
+
+        const statusDetail = document.getElementById('p2pClientStatusDetail');
+        if (statusDetail && !this.approved) {
+          statusDetail.textContent = 'Žádost odeslána. Čekám na schválení hostitelem…';
         }
       };
 
       sendLocalJoin();
       if (this.localRetryTimer) clearInterval(this.localRetryTimer);
-      this.localRetryTimer = setInterval(sendLocalJoin, 1200);
+      this.localRetryTimer = setInterval(sendLocalJoin, 1000);
 
     } catch(e) {
       console.warn('[P2P Client] Chyba inicializace lokálního kanálu:', e);
