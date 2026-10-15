@@ -249,6 +249,15 @@ function closeEscMenu() {
 }
 
 $('escResume').onclick = closeEscMenu;
+const escOpenP2PBtn = $('escOpenP2P');
+if (escOpenP2PBtn) {
+  escOpenP2PBtn.onclick = () => {
+    closeEscMenu();
+    if (window.networkManager) {
+      window.networkManager.openP2PHostDialog();
+    }
+  };
+}
 $('escCharEdit').onclick = () => { closeEscMenu(); openCharEditor(); };
 $('escInv').onclick = () => { closeEscMenu(); toggleInv(); };
 $('escRespawn').onclick = () => {

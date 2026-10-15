@@ -1458,8 +1458,24 @@
 
         <!-- ZÁLOŽKA 2: MULTIPLAYER -->
         <div id="contentMultiplayer" style="display:none;">
+          <!-- P2P Připojení k příteli pomocí kódu -->
+          <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,78,59,0.25));border:1px solid rgba(52,211,153,0.4);border-radius:14px;padding:16px;margin-bottom:20px;">
+            <div style="font-size:14.5px;font-weight:700;color:#34d399;display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span>🤝</span> <span>Připojit se k příteli na síti (P2P Kód)</span>
+            </div>
+            <div style="font-size:12.5px;color:#94a3b8;margin-bottom:10px;">
+              Kamarád v otevřené hře v menu (ESC) kliknul na <em>„Otevřít pro přátele“</em> a poslal ti kód světa:
+            </div>
+            <div class="direct-connect-bar" style="margin-bottom:0;">
+              <input type="text" id="p2pConnectInput" placeholder="Zadej kód světa (např. VOX-7429)" style="border-color:rgba(52,211,153,0.4);text-transform:uppercase;">
+              <button id="btnP2PConnect" class="btn-play-entry" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <span>Odeslat žádost</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Rychlé připojení k libovolné IP -->
-          <div style="font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:6px;">Rychlé připojení k hernímu serveru:</div>
+          <div style="font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:6px;">Nebo připojení k dedikovanému serveru přes IP:</div>
           <div class="direct-connect-bar">
             <input type="text" id="directConnectInput" placeholder="IP:port nebo doména (např. localhost:3000 nebo 192.168.1.50:3000)">
             <button id="btnDirectConnect" class="btn-play-entry">
@@ -2412,6 +2428,25 @@
         serverName: 'Přímé připojení'
       });
     });
+
+    // Připojení k příteli pomocí P2P kódu světa
+    const p2pConnectInput = document.getElementById('p2pConnectInput');
+    const btnP2PConnect = document.getElementById('btnP2PConnect');
+    if (btnP2PConnect) {
+      btnP2PConnect.addEventListener('click', () => {
+        const code = (p2pConnectInput.value || '').trim().toUpperCase();
+        if (!code) {
+          alert('Zadej kód světa od kamaráda (např. VOX-7429).');
+          return;
+        }
+        playClickSound();
+        launchGame({
+          mode: 'p2p_client',
+          p2pRoomCode: code,
+          serverName: `P2P Svět (${code})`
+        });
+      });
+    }
 
     // Spuštění hry tlačítkem v hlavním menu
     btnPlay.addEventListener('click', () => {
