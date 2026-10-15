@@ -388,9 +388,27 @@ class NetworkManager {
       nickname: data.nickname || 'Hráč',
       skin: data.skin || {},
       equipment: data.equipment || {},
-      x: P.x + 2, y: P.y + 0.2, z: P.z + 2,
+      x: P.x + 1.5, y: P.y + 0.2, z: P.z + 1.5,
       isOp: false
     });
+
+    // Ujistit se, že hostitel odesílá svou polohu všem klientům každých 50ms
+    if (!this.syncTimer) {
+      this.syncTimer = setInterval(() => this.sendPlayerTransform(), 50);
+    }
+
+    // Upozornit ostatní klienty o novém hráči
+    this.broadcastP2P({
+      type: 'playerJoin',
+      player: {
+        id: conn.peer,
+        nickname: data.nickname || 'Hráč',
+        skin: data.skin || {},
+        equipment: data.equipment || {},
+        x: P.x + 1.5, y: P.y + 0.2, z: P.z + 1.5,
+        isOp: false
+      }
+    }, conn.peer);
 
     this.updateP2PPlayerCount();
 
@@ -455,8 +473,9 @@ class NetworkManager {
     if (!this.p2pClients.has(conn.peer)) return;
 
     if (msg.type === 'move') {
-      this.updateRemotePlayer(Object.assign({ id: conn.peer }, msg));
-      this.broadcastP2P(Object.assign({ id: conn.peer }, msg), conn.peer);
+      const clientData = Object.assign({ id: conn.peer }, msg);
+      this.updateRemotePlayer(clientData);
+      this.broadcastP2P(Object.assign({ type: 'playerMove' }, clientData), conn.peer);
     } else if (msg.type === 'blockChange') {
       this.onRemoteBlockChange(msg.x, msg.y, msg.z, msg.blockType);
       this.broadcastP2P(msg, conn.peer);
@@ -702,6 +721,24 @@ class NetworkManager {
   sendPlayerTransform() {
     if (!this.connected || typeof P === 'undefined') return;
 
+    if (this.isP2PHost) {
+      // Host odesílá svou polohu s id: 'host' a type: 'playerMove' všem připojeným klientům
+      this.broadcastP2P({
+        type: 'playerMove',
+        id: 'host',
+        x: P.x,
+        y: P.y,
+        z: P.z,
+        yaw: typeof yaw !== 'undefined' ? yaw : 0,
+        pitch: typeof pitch !== 'undefined' ? pitch : 0,
+        heldItem: typeof heldId !== 'undefined' ? heldId : null,
+        isRolling: typeof isRolling !== 'undefined' ? isRolling : false,
+        attacking: typeof attacking !== 'undefined' ? attacking : false
+      });
+      return;
+    }
+
+    // Klient posílá move na server nebo hostiteli
     this.send({
       type: 'move',
       x: P.x,
@@ -786,8 +823,10 @@ class NetworkManager {
         break;
 
       case 'playerMove':
-        if (msg.id !== this.playerId) {
-          this.updateRemotePlayer(msg);
+      case 'move':
+        const senderId = msg.id || (this.p2pHostConn ? 'host' : null);
+        if (senderId && senderId !== this.playerId) {
+          this.updateRemotePlayer(Object.assign({}, msg, { id: senderId }));
         }
         break;
 
@@ -950,8 +989,16 @@ class NetworkManager {
 
       g.position.x += dx * Math.min(1, dt * 14);
       g.position.y += dy * Math.min(1, dt * 14);
-      g.position.z += dz * Math.min(1, dt * 14);
-      g.rotation.y = p.targetYaw;
+      // Plynulá rotace těla (interpolace úhlu bez skákání)
+      let diffYaw = (p.targetYaw || 0) - g.rotation.y;
+      while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+      while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+      g.rotation.y += diffYaw * Math.min(1, dt * 14);
+
+      // Náklon hlavy nahoru / dolů podle pohledu
+      if (p.rig && p.rig.head) {
+        p.rig.head.rotation.x = Math.max(-0.85, Math.min(0.85, p.targetPitch || 0));
+      }
 
       if (p.rig && p.rig.arms && p.rig.legs) {
         if (dist > 0.04) {
