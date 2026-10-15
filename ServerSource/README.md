@@ -23,7 +23,7 @@ Server je postaven na lehkém a rychlém **Node.js** a protokolu **WebSockets**.
    chmod +x start.sh
    ./start.sh
    ```
-
+   
 ---
 
 ## 🌐 Jak se hráči připojí k tvému serveru

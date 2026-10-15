@@ -482,6 +482,16 @@ class NetworkManager {
       const clientData = Object.assign({ id: conn.peer }, msg);
       this.updateRemotePlayer(clientData);
       this.broadcastP2P(Object.assign({ type: 'playerMove' }, clientData), conn.peer);
+    } else if (msg.type === 'equipmentChange') {
+      this.updateRemotePlayerEquipment(conn.peer, msg.equipment, msg.skin, msg.heldItem);
+      this.broadcastP2P(Object.assign({ type: 'equipmentChange', id: conn.peer }, msg), conn.peer);
+    } else if (msg.type === 'playerHit') {
+      if (msg.targetId === 'host') {
+        this.handleLocalPlayerHit(msg);
+      } else {
+        this.broadcastP2P(msg);
+        this.spawnDamageIndicator(msg.targetId, msg.damage, msg.isCrit);
+      }
     } else if (msg.type === 'blockChange') {
       this.onRemoteBlockChange(msg.x, msg.y, msg.z, msg.blockType);
       this.broadcastP2P(msg, conn.peer);
@@ -853,6 +863,24 @@ class NetworkManager {
         }
         break;
 
+      case 'equipmentChange': {
+        const pid = msg.id || (this.p2pHostConn ? 'host' : null);
+        if (pid && pid !== this.playerId) {
+          this.updateRemotePlayerEquipment(pid, msg.equipment, msg.skin, msg.heldItem);
+        }
+        break;
+      }
+
+      case 'playerHit': {
+        const isTargetMe = (msg.targetId === this.playerId || (this.isP2PHost && msg.targetId === 'host'));
+        if (isTargetMe) {
+          this.handleLocalPlayerHit(msg);
+        } else {
+          this.spawnDamageIndicator(msg.targetId, msg.damage, msg.isCrit);
+        }
+        break;
+      }
+
       case 'playerLeave':
         this.removeRemotePlayer(msg.id);
         break;
@@ -956,6 +984,8 @@ class NetworkManager {
       nickname: playerData.nickname || 'Hráč',
       group: group,
       rig: rig,
+      skin: custom,
+      equipment: eqMap,
       weapons: remoteWeapons,
       nametag: nametag,
       targetX: playerData.x || 0,
@@ -1081,6 +1111,205 @@ class NetworkManager {
         p.emoteTimer = 0;
       }
     }
+  }
+
+  updateRemotePlayerEquipment(id, equipment, skin, heldItem) {
+    const p = this.remotePlayers.get(id);
+    if (!p) return;
+    if (equipment) p.equipment = equipment;
+    if (skin) p.skin = Object.assign({}, p.skin || {}, skin);
+
+    if (typeof updateCharacterRig === 'function' && p.rig) {
+      updateCharacterRig(p.rig, p.skin || {}, p.equipment || {});
+    }
+
+    if (typeof heldItem !== 'undefined') {
+      p.heldItem = heldItem;
+      if (p.weapons) {
+        for (const k in p.weapons) {
+          p.weapons[k].visible = (k === p.heldItem);
+        }
+      }
+    }
+  }
+
+  sendEquipmentChange() {
+    const eqMap = this.getLocalEquippedMap();
+    const skin = this.getLocalPlayerSkin();
+    const hId = (typeof heldId !== 'undefined') ? heldId : null;
+    const payload = {
+      type: 'equipmentChange',
+      id: this.isP2PHost ? 'host' : this.playerId,
+      equipment: eqMap,
+      skin: skin,
+      heldItem: hId
+    };
+
+    if (this.isP2PHost) {
+      this.broadcastP2P(payload);
+    } else if (this.p2pHostConn && this.p2pHostConn.open) {
+      this.p2pHostConn.send(payload);
+    } else if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(payload));
+    }
+  }
+
+  sendPlayerHit(targetId, damage, knockback, isCrit = false, weaponName = 'Zbraň') {
+    const attackerNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
+    const msg = {
+      type: 'playerHit',
+      attackerId: this.isP2PHost ? 'host' : this.playerId,
+      attackerNick: attackerNick,
+      targetId: targetId,
+      damage: damage,
+      knockback: knockback,
+      isCrit: !!isCrit,
+      weaponName: weaponName
+    };
+
+    this.spawnDamageIndicator(targetId, damage, isCrit);
+
+    if (this.isP2PHost) {
+      this.broadcastP2P(msg);
+    } else if (this.p2pHostConn && this.p2pHostConn.open) {
+      this.p2pHostConn.send(msg);
+    } else if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(msg));
+    }
+  }
+
+  handleLocalPlayerHit(msg) {
+    if (typeof isRolling !== 'undefined' && isRolling && rollTimer > 0.04 && rollTimer < 0.52) return;
+
+    const armorRed = (typeof getPlayerArmorReduction === 'function') ? getPlayerArmorReduction() : 0;
+    const finalDmg = Math.max(1, Math.round(msg.damage * (1 - armorRed)));
+
+    const fl = document.getElementById('damageFlash');
+    if (fl) {
+      fl.style.opacity = '0.9';
+      setTimeout(() => { fl.style.opacity = '0'; }, 240);
+    }
+
+    if (msg.knockback && typeof P !== 'undefined') {
+      P.vx += (msg.knockback.x || 0) * 4.2;
+      P.vy = Math.max(P.vy || 0, 2.5);
+      P.vz += (msg.knockback.z || 0) * 4.2;
+      P.ground = false;
+    }
+
+    if (typeof playAttackSound === 'function') playAttackSound('slash');
+    if (typeof hurt === 'function') hurt(finalDmg);
+    if (typeof ui === 'function') ui();
+
+    this.spawnDamageIndicator('self', finalDmg, msg.isCrit);
+
+    if (typeof addChatMessage === 'function') {
+      const atk = msg.attackerNick || 'Nepřítel';
+      const wName = msg.weaponName || 'zbraní';
+      const critStr = msg.isCrit ? '💥 KRITICKÝ ZÁSAH! ' : '';
+      const redPercent = Math.round(armorRed * 100);
+      const defMsg = redPercent > 0 ? ` (🛡️ Zbroj odrazila ${redPercent}%)` : '';
+      addChatMessage('Boj', `${critStr}${atk} tě zasáhl (${wName}) za ${finalDmg} HP!${defMsg}`, 'error');
+    }
+  }
+
+  spawnDamageIndicator(targetId, dmg, isCrit = false) {
+    if (typeof scene === 'undefined') return;
+    let posX = 0, posY = 0, posZ = 0;
+    const isMe = (targetId === 'self' || targetId === this.playerId || (this.isP2PHost && targetId === 'host'));
+    if (isMe) {
+      if (typeof P === 'undefined') return;
+      posX = P.x;
+      posY = (P.renderY ?? P.y) + 1.9;
+      posZ = P.z;
+    } else {
+      const p = this.remotePlayers.get(targetId);
+      if (!p || !p.group) return;
+      posX = p.group.position.x;
+      posY = p.group.position.y + 1.9;
+      posZ = p.group.position.z;
+    }
+
+    // 1. Textový 3D štítek s číslem poškození
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 96;
+    const ctx = canvas.getContext('2d');
+
+    ctx.font = isCrit ? '900 48px Outfit, sans-serif' : '800 42px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+    const txt = isCrit ? `💥 -${dmg}!` : `-${dmg}`;
+    ctx.strokeText(txt, 128, 48);
+    ctx.fillStyle = isCrit ? '#fbbf24' : '#ef4444';
+    ctx.fillText(txt, 128, 48);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(isCrit ? 1.6 : 1.3, isCrit ? 0.6 : 0.48, 1);
+    const jitterX = (Math.random() - 0.5) * 0.4;
+    const jitterZ = (Math.random() - 0.5) * 0.4;
+    sprite.position.set(posX + jitterX, posY + 0.2, posZ + jitterZ);
+    scene.add(sprite);
+
+    // 2. Částicový dopad (jiskry)
+    const particleCount = isCrit ? 16 : 8;
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(particleCount * 3);
+    const pVels = [];
+    for (let i = 0; i < particleCount; i++) {
+      pPos[i * 3] = posX;
+      pPos[i * 3 + 1] = posY - 0.3;
+      pPos[i * 3 + 2] = posZ;
+      pVels.push({
+        x: (Math.random() - 0.5) * (isCrit ? 5.5 : 3.5),
+        y: Math.random() * (isCrit ? 4.5 : 3.0) + 0.8,
+        z: (Math.random() - 0.5) * (isCrit ? 5.5 : 3.5)
+      });
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: isCrit ? 0xfbbf24 : 0xef4444,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.95
+    });
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    // 3. Plovoucí animace a úklid
+    const startTime = performance.now();
+    const duration = 900;
+    const animInterval = setInterval(() => {
+      const elapsed = performance.now() - startTime;
+      const progress = elapsed / duration;
+      if (progress >= 1) {
+        clearInterval(animInterval);
+        scene.remove(sprite);
+        scene.remove(particles);
+        texture.dispose();
+        mat.dispose();
+        pGeo.dispose();
+        pMat.dispose();
+        return;
+      }
+      sprite.position.y += 0.024 * (1 - progress);
+      mat.opacity = Math.max(0, 1 - progress * progress);
+
+      const positions = pGeo.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] += pVels[i].x * 0.016;
+        positions[i * 3 + 1] += pVels[i].y * 0.016;
+        positions[i * 3 + 2] += pVels[i].z * 0.016;
+        pVels[i].y -= 9.8 * 0.016;
+      }
+      pGeo.attributes.position.needsUpdate = true;
+      pMat.opacity = Math.max(0, 1 - progress);
+    }, 16);
   }
 
   removeRemotePlayer(id) {

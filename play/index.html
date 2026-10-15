@@ -92,6 +92,9 @@
     </div>
   </div>
 
+  <!-- Efekt zásahu / poškození -->
+  <div id="damageFlash"></div>
+
   <!-- Inventář Modal -->
   <div id="inv" hidden>
     <div class="panel">
@@ -108,8 +111,14 @@
       <div id="grid"></div>
     </div>
     <div id="pop" hidden>
-      <div id="pn"></div>
-      <button id="eqb"></button>
+      <div class="pop-header">
+        <span id="popRarity" class="pop-rarity-pill">Běžné</span>
+        <div id="pn" class="pop-title"></div>
+        <div id="popType" class="pop-type"></div>
+      </div>
+      <div id="popStats" class="pop-stats-list"></div>
+      <div id="popDesc" class="pop-desc"></div>
+      <button id="eqb" class="pop-action-btn"></button>
     </div>
   </div>
 

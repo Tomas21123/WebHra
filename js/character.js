@@ -481,95 +481,188 @@ function animateFullCharacterRig(rig, s, dt, now) {
   if (attacking) {
     const p = Math.min(1, attackTime / attackDuration);
     if (!heldId) {
-      // Úder pěstmi
+      // 1. Boxerský úder pěstmi (1-2 kombinace levá / pravá)
       const isLeft = (attackCombo === 1);
       const punchReach = Math.sin(p * Math.PI);
       if (isLeft) {
-        arms[0].rotation.x = -1.55 + punchReach * 0.25;
+        arms[0].rotation.x = -1.55 - punchReach * 0.35;
         arms[0].rotation.y = 0.25 * punchReach;
         arms[0].rotation.z = -0.05;
         arms[1].rotation.x = -1.1;
         arms[1].rotation.y = 0.35;
         arms[1].rotation.z = -0.25;
-        torso.rotation.y += 0.22 * punchReach;
+        torso.rotation.y += 0.28 * punchReach;
+        torso.rotation.x += 0.08 * punchReach;
       } else {
-        arms[1].rotation.x = -1.55 + punchReach * 0.25;
+        arms[1].rotation.x = -1.55 - punchReach * 0.35;
         arms[1].rotation.y = -0.25 * punchReach;
         arms[1].rotation.z = 0.05;
         arms[0].rotation.x = -1.1;
         arms[0].rotation.y = -0.35;
         arms[0].rotation.z = 0.25;
-        torso.rotation.y -= 0.22 * punchReach;
+        torso.rotation.y -= 0.28 * punchReach;
+        torso.rotation.x += 0.08 * punchReach;
       }
       hand.position.set(0, -8 * VX_VAL, 0);
+      hand.rotation.set(0, 0, 0);
     } else if (heldId === 'spear') {
-      const thrust = Math.sin(p * Math.PI);
-      arms[1].rotation.x = -1.35;
-      arms[1].rotation.y = -0.12;
-      arms[1].rotation.z = 0.15;
-      arms[0].rotation.x = -1.25;
-      arms[0].rotation.y = 0.28;
-      arms[0].rotation.z = -0.1;
-      hand.position.set(0, -8 * VX_VAL, -thrust * 0.42);
-      torso.rotation.y += thrust * 0.18;
-    } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
-      const swingSign = attackCombo === 0 ? 1 : -1;
-      if (p < 0.3) {
-        const t = p / 0.3;
-        arms[1].rotation.x = -0.8 - t * 1.3;
-        arms[1].rotation.y = swingSign * t * 0.6;
-        arms[1].rotation.z = 0.2 + swingSign * t * 0.4;
-        arms[0].rotation.x = -0.5 - t * 1.0;
-        arms[0].rotation.y = -swingSign * t * 0.4;
-        torso.rotation.y -= swingSign * t * 0.25;
-      } else if (p < 0.7) {
-        const t = (p - 0.3) / 0.4;
-        arms[1].rotation.x = -2.1 + t * 2.4;
-        arms[1].rotation.y = swingSign * (0.6 - t * 1.2);
-        arms[1].rotation.z = 0.6 - t * 0.8;
-        arms[0].rotation.x = -1.5 + t * 1.6;
-        torso.rotation.y += swingSign * (-0.25 + t * 0.6);
-      } else {
-        const t = (p - 0.7) / 0.3;
-        arms[1].rotation.x = 0.3 * (1 - t) + (-0.78) * t;
-        arms[1].rotation.y = -0.6 * swingSign * (1 - t) + (-0.18) * t;
-        arms[1].rotation.z = 0.18;
-        arms[0].rotation.x = 0.1 * (1 - t) + armSwingL * t;
-      }
-      hand.position.set(0, -8 * VX_VAL, 0);
-    } else if (heldId === 'staff_fire') {
-      const cast = Math.sin(p * Math.PI);
-      arms[1].rotation.x = -1.95 + cast * 0.65;
-      arms[1].rotation.y = -0.22;
-      arms[1].rotation.z = 0.25;
-      torso.rotation.x += cast * 0.12;
-      hand.position.set(0, -8 * VX_VAL, -cast * 0.2);
-    } else if (heldId === 'bow') {
-      const draw = p < 0.5 ? p / 0.5 : 1 - (p - 0.5) / 0.5;
-      arms[0].rotation.x = -1.5; arms[0].rotation.y = 0.45; arms[0].rotation.z = -0.1;
-      arms[1].rotation.x = -1.45; arms[1].rotation.y = -0.5 * draw; arms[1].rotation.z = 0.3;
-      hand.position.set(0, -8 * VX_VAL, draw * 0.15);
-    } else {
-      const swingSign = attackCombo === 0 ? 1 : -1;
+      // 2. Realistický bodný útok kopím (Dlouhý obouruční výpad přímo dopředu)
+      // 0.0 - 0.25: Nápřah vzad s přípravou hrotu
+      // 0.25 - 0.60: Explozivní výpad oběma rukama přímo do cíle
+      // 0.60 - 1.00: Plynulé stažení kopí zpět do střehu
+      let thrustProgress = 0;
       if (p < 0.25) {
         const t = p / 0.25;
-        arms[1].rotation.x = -0.7 - t * 0.9;
-        arms[1].rotation.y = swingSign * t * 0.5;
-        arms[1].rotation.z = 0.15 + swingSign * t * 0.35;
-      } else if (p < 0.65) {
-        const t = (p - 0.25) / 0.4;
-        arms[1].rotation.x = -1.6 + t * 1.9;
-        arms[1].rotation.y = swingSign * (0.5 - t * 1.05);
-        arms[1].rotation.z = 0.5 - t * 0.75;
+        thrustProgress = -t * 0.28;
+        torso.rotation.y -= t * 0.16;
+        torso.rotation.x -= t * 0.06;
+      } else if (p < 0.6) {
+        const t = (p - 0.25) / 0.35;
+        thrustProgress = -0.28 + t * 0.98; // až +0.70m vpřed!
+        torso.rotation.y = -0.16 + t * 0.38;
+        torso.rotation.x = -0.06 + t * 0.26;
       } else {
-        const t = (p - 0.65) / 0.35;
-        const targetX = -0.78;
-        arms[1].rotation.x = 0.3 * (1 - t) + targetX * t;
-        arms[1].rotation.y = (-0.55 * swingSign) * (1 - t) + (-0.18) * t;
-        arms[1].rotation.z = 0.18;
+        const t = (p - 0.6) / 0.4;
+        thrustProgress = 0.70 * (1 - t);
+        torso.rotation.y = 0.22 * (1 - t);
+        torso.rotation.x = 0.20 * (1 - t);
       }
-      hand.position.set(0, -8 * VX_VAL, 0);
-      torso.rotation.y += Math.sin(p * Math.PI) * 0.25 * (attackCombo === 0 ? 1 : -1);
+
+      arms[1].rotation.x = -1.57 - thrustProgress * 0.12;
+      arms[1].rotation.y = 0.08 - thrustProgress * 0.14;
+      arms[1].rotation.z = 0.08;
+
+      arms[0].rotation.x = -1.52 - thrustProgress * 0.15;
+      arms[0].rotation.y = 0.24 - thrustProgress * 0.18;
+      arms[0].rotation.z = -0.12;
+
+      hand.rotation.set(-1.48, 0, 0);
+      hand.position.set(0, -8 * VX_VAL - thrustProgress * 0.35, thrustProgress * 0.75);
+    } else if (heldId === 'dagger') {
+      // 3. Rychlé zákeřné bodnutí dýkou (Combo 0: hluboký bod, Combo 1: bleskový řez)
+      if (attackCombo === 0) {
+        const stab = Math.sin(p * Math.PI);
+        arms[1].rotation.x = -1.58 - stab * 0.25;
+        arms[1].rotation.y = -0.18 * stab;
+        arms[1].rotation.z = 0.08;
+        arms[0].rotation.x = -1.25;
+        arms[0].rotation.y = -0.32;
+        arms[0].rotation.z = 0.25;
+        torso.rotation.y += stab * 0.22;
+        torso.rotation.x += stab * 0.15;
+        hand.rotation.set(-1.4, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, stab * 0.45);
+      } else {
+        const slice = Math.sin(p * Math.PI);
+        arms[1].rotation.x = -1.45;
+        arms[1].rotation.y = 0.8 - p * 1.7;
+        arms[1].rotation.z = 0.22;
+        arms[0].rotation.x = -1.1;
+        torso.rotation.y += (0.4 - p * 0.8) * slice;
+        hand.rotation.set(-0.6, 0, 0.4);
+        hand.position.set(0, -8 * VX_VAL, slice * 0.2);
+      }
+    } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
+      // 4. Masivní obouruční drtivý úder shora dolů (Heavy Slam)
+      if (p < 0.32) {
+        const t = p / 0.32;
+        arms[1].rotation.x = -0.8 - t * 1.55;
+        arms[1].rotation.y = 0.25 * t;
+        arms[1].rotation.z = 0.18 + 0.35 * t;
+        arms[0].rotation.x = -0.5 - t * 1.75;
+        arms[0].rotation.y = -0.28 * t;
+        torso.rotation.x = -0.25 * t;
+        torso.rotation.y = 0.18 * t;
+        hand.rotation.set(0.3 * t, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, 0);
+      } else if (p < 0.68) {
+        const t = (p - 0.32) / 0.36;
+        arms[1].rotation.x = -2.35 + t * 2.65;
+        arms[1].rotation.y = 0.25 * (1 - t);
+        arms[1].rotation.z = 0.53 - t * 0.45;
+        arms[0].rotation.x = -2.25 + t * 2.55;
+        arms[0].rotation.y = -0.28 * (1 - t);
+        torso.rotation.x = -0.25 + t * 0.62;
+        torso.rotation.y = 0.18 - t * 0.32;
+        body.position.y -= Math.sin(t * Math.PI) * 0.14;
+        hand.rotation.set(0.3 - t * 0.7, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, t * 0.2);
+      } else {
+        const t = (p - 0.68) / 0.32;
+        arms[1].rotation.x = 0.3 * (1 - t) + (-0.78) * t;
+        arms[1].rotation.y = -0.18 * t;
+        arms[1].rotation.z = 0.18;
+        arms[0].rotation.x = 0.3 * (1 - t) + armSwingL * t;
+        torso.rotation.x = 0.37 * (1 - t);
+        torso.rotation.y = -0.14 * (1 - t);
+        hand.rotation.set(0, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, 0);
+      }
+    } else if (heldId === 'bow') {
+      // 5. Realistická střelba z luku: Napnutí tětivy k líci a výstřel
+      const draw = p < 0.65 ? (p / 0.65) : 1 - (p - 0.65) / 0.35;
+      arms[0].rotation.x = -1.55;
+      arms[0].rotation.y = 0.38;
+      arms[0].rotation.z = -0.06;
+      arms[1].rotation.x = -1.48;
+      arms[1].rotation.y = -0.62 * draw;
+      arms[1].rotation.z = 0.32 + 0.15 * draw;
+      torso.rotation.y = -0.28 * draw;
+      head.rotation.y = 0.28 * draw;
+      hand.rotation.set(-1.45, 0, 0);
+      hand.position.set(0, -8 * VX_VAL, -0.25 * draw);
+    } else if (heldId === 'staff_fire') {
+      // 6. Magické kouzlení holí: Pozvednutí hole k nebi a výron plamene vpřed
+      if (p < 0.4) {
+        const t = p / 0.4;
+        arms[1].rotation.x = -0.78 - t * 1.5;
+        arms[1].rotation.z = 0.18 + t * 0.25;
+        torso.rotation.x = -0.12 * t;
+        hand.rotation.set(0.3 * t, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, 0);
+      } else if (p < 0.75) {
+        const t = (p - 0.4) / 0.35;
+        arms[1].rotation.x = -2.28 + t * 0.85;
+        arms[1].rotation.z = 0.43 - t * 0.25;
+        torso.rotation.x = -0.12 + t * 0.32;
+        hand.rotation.set(-0.6 * t, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, t * 0.42);
+      } else {
+        const t = (p - 0.75) / 0.25;
+        arms[1].rotation.x = -1.43 * (1 - t) + (-0.78) * t;
+        torso.rotation.x = 0.2 * (1 - t);
+        hand.rotation.set(0, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, 0);
+      }
+    } else {
+      // 7. Meče, katany a palcáty: Plynulé diagonální seky s rotací trupu
+      const swingSign = attackCombo === 0 ? 1 : -1;
+      if (p < 0.26) {
+        const t = p / 0.26;
+        arms[1].rotation.x = -0.78 - t * 0.95;
+        arms[1].rotation.y = swingSign * t * 0.65;
+        arms[1].rotation.z = 0.18 + swingSign * t * 0.45;
+        torso.rotation.y = -swingSign * t * 0.28;
+        hand.rotation.set(0.3 * t, 0, 0);
+      } else if (p < 0.68) {
+        const t = (p - 0.26) / 0.42;
+        arms[1].rotation.x = -1.73 + t * 1.95;
+        arms[1].rotation.y = swingSign * (0.65 - t * 1.35);
+        arms[1].rotation.z = 0.63 - t * 0.85;
+        torso.rotation.y = swingSign * (-0.28 + t * 0.65);
+        torso.rotation.x = Math.sin(t * Math.PI) * 0.12;
+        hand.rotation.set(0.3 - t * 0.6, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, Math.sin(t * Math.PI) * 0.25);
+      } else {
+        const t = (p - 0.68) / 0.32;
+        arms[1].rotation.x = 0.22 * (1 - t) + (-0.78) * t;
+        arms[1].rotation.y = (-0.7 * swingSign) * (1 - t) + (-0.18) * t;
+        arms[1].rotation.z = 0.18;
+        torso.rotation.y = (0.37 * swingSign) * (1 - t);
+        torso.rotation.x = 0;
+        hand.rotation.set(0, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, 0);
+      }
     }
   } else {
     // Klidová nebo běžecká pozice pravé ruky
@@ -603,6 +696,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       arms[1].rotation.z = (0.12 * (1 - airBlend) + airArmZ1 * airBlend) * (1 - narutoBlend) + narutoArmZ1 * narutoBlend;
     }
     hand.position.set(0, -8 * VX_VAL, 0);
+    hand.rotation.set(0, 0, 0);
   }
 
   // 10. ANIMACE PLAVÁNÍ VE VODĚ (KRAUL PŘI POHYBU / ŠLAPÁNÍ VODY NA MÍSTĚ)

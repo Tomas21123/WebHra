@@ -490,6 +490,36 @@ if (WebSocketServer) {
           return;
         }
 
+        // 4.5 Změna výbavy a oblečení (Synchronizace v reálném čase)
+        if (msg.type === 'equipmentChange') {
+          player.equipment = msg.equipment || player.equipment;
+          player.skin = msg.skin || player.skin;
+          player.heldItem = msg.heldItem !== undefined ? msg.heldItem : player.heldItem;
+          broadcast({
+            type: 'equipmentChange',
+            id: player.id,
+            equipment: player.equipment,
+            skin: player.skin,
+            heldItem: player.heldItem
+          }, ws);
+          return;
+        }
+
+        // 4.6 Útok a PvP boj mezi hráči
+        if (msg.type === 'playerHit') {
+          broadcast({
+            type: 'playerHit',
+            attackerId: player.id,
+            attackerNick: player.nickname,
+            targetId: msg.targetId,
+            damage: msg.damage,
+            knockback: msg.knockback,
+            isCrit: !!msg.isCrit,
+            weaponName: msg.weaponName || 'Zbraň'
+          });
+          return;
+        }
+
         // 5. Statistiky hráče (HP, Stamina)
         if (msg.type === 'stats') {
           player.hp = msg.hp ?? player.hp;

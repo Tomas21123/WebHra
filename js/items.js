@@ -1,40 +1,351 @@
-// ---------- Položky, 3D Voxelové Zbraně & Ikony ----------
+// ---------- Položky, 3D Voxelové Zbraně, Rarity & RPG Statistiky ----------
+const RARITY_INFO = {
+  common: { name: 'Běžné', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.14)', border: 'rgba(148, 163, 184, 0.4)' },
+  uncommon: { name: 'Neobyčejné', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.18)', border: 'rgba(34, 197, 94, 0.55)' },
+  rare: { name: 'Vzácné', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.22)', border: 'rgba(56, 189, 248, 0.65)' },
+  epic: { name: 'Epické', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.24)', border: 'rgba(168, 85, 247, 0.72)' },
+  legendary: { name: 'Legendární', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.28)', border: 'rgba(245, 158, 11, 0.85)' }
+};
+
 const INV = [
   // 10 Zbraní
-  { id: 'sword', name: 'Ocelový meč', cat: 'weapon' },
-  { id: 'spear', name: 'Rytířské kopí', cat: 'weapon' },
-  { id: 'dagger', name: 'Zlodějská dýka', cat: 'weapon' },
-  { id: 'battleaxe', name: 'Válečná sekera', cat: 'weapon' },
-  { id: 'mace', name: 'Okovaný palcát', cat: 'weapon' },
-  { id: 'greatsword', name: 'Obouruční meč', cat: 'weapon' },
-  { id: 'staff_fire', name: 'Ohnivá hůl', cat: 'weapon' },
-  { id: 'bow', name: 'Tisový luk', cat: 'weapon' },
-  { id: 'hammer', name: 'Kovářské kladivo', cat: 'weapon' },
-  { id: 'katana', name: 'Východní katana', cat: 'weapon' },
+  {
+    id: 'sword',
+    name: 'Ocelový meč',
+    cat: 'weapon',
+    rarity: 'uncommon',
+    damage: 26,
+    reach: 3.2,
+    speed: 1.1,
+    critChance: 0.12,
+    desc: 'Vyvážený jednoruční meč z kalené oceli. Spolehlivý v boji zblízka.',
+    statList: ['⚔️ Poškození: 26 HP', '🎯 Dosah: 3.2 m', '⚡ Rychlost: 1.1×', '💥 Šance na kritický zásah: 12%']
+  },
+  {
+    id: 'spear',
+    name: 'Rytířské kopí',
+    cat: 'weapon',
+    rarity: 'rare',
+    damage: 34,
+    reach: 4.8,
+    speed: 0.95,
+    critChance: 0.15,
+    desc: 'Dlouhé obouruční kopí s ocelovým hrotem. Umožňuje probodnout nepřátele z bezpečné vzdálenosti.',
+    statList: ['⚔️ Poškození: 34 HP', '🎯 Extra dosah: 4.8 m', '⚡ Bodný útok: 0.95×', '🛡️ Průraznost zbroje: +15%']
+  },
+  {
+    id: 'dagger',
+    name: 'Zlodějská dýka',
+    cat: 'weapon',
+    rarity: 'uncommon',
+    damage: 18,
+    reach: 2.2,
+    speed: 1.6,
+    critChance: 0.30,
+    desc: 'Extrémně rychlá čepel pro zákeřné a bleskurychlé bodné útoky.',
+    statList: ['⚔️ Poškození: 18 HP', '⚡ Rychlost útoku: 1.6×', '🎯 Dosah: 2.2 m', '💥 Zvýšený kritický zásah: 30%']
+  },
+  {
+    id: 'battleaxe',
+    name: 'Válečná sekera',
+    cat: 'weapon',
+    rarity: 'rare',
+    damage: 42,
+    reach: 3.4,
+    speed: 0.8,
+    critChance: 0.18,
+    desc: 'Těžká dvoubřitá sekera schopná rozdrtit i to nejtvrdší brnění.',
+    statList: ['⚔️ Poškození: 42 HP', '💥 Drtivý zásah: +20%', '🎯 Dosah: 3.4 m', '⚡ Rychlost: 0.8× (Těžká)']
+  },
+  {
+    id: 'mace',
+    name: 'Okovaný palcát',
+    cat: 'weapon',
+    rarity: 'uncommon',
+    damage: 30,
+    reach: 3.0,
+    speed: 1.0,
+    critChance: 0.10,
+    desc: 'Hrotitá železná hlavice navržená na lámání kostí a štítů.',
+    statList: ['⚔️ Poškození: 30 HP', '🛡️ Odmrštění cíle: +25%', '🎯 Dosah: 3.0 m', '⚡ Rychlost: 1.0×']
+  },
+  {
+    id: 'greatsword',
+    name: 'Obouruční meč',
+    cat: 'weapon',
+    rarity: 'epic',
+    damage: 54,
+    reach: 3.9,
+    speed: 0.72,
+    critChance: 0.20,
+    desc: 'Masivní obouruční zbraň s drtivým plošným seknutím.',
+    statList: ['⚔️ Poškození: 54 HP', '🌀 Plošný sek: 3.9 m', '💥 Odmrštění: +40%', '⚡ Rychlost: 0.72×']
+  },
+  {
+    id: 'staff_fire',
+    name: 'Ohnivá hůl',
+    cat: 'weapon',
+    rarity: 'legendary',
+    damage: 62,
+    reach: 5.5,
+    speed: 0.85,
+    critChance: 0.25,
+    desc: 'Mocná magická hůl vyzařující žár dračího plamene. Sežehne nepřátele na dálku.',
+    statList: ['🔥 Magické poškození: 62 HP', '🎯 Dosah: 5.5 m', '✨ Ohnivá exploze', '💥 Šance na kritický zásah: 25%']
+  },
+  {
+    id: 'bow',
+    name: 'Tisový luk',
+    cat: 'weapon',
+    rarity: 'rare',
+    damage: 36,
+    reach: 8.5,
+    speed: 1.0,
+    critChance: 0.22,
+    desc: 'Pružný lovecký luk s vynikajícím dostřelem a přesností.',
+    statList: ['🏹 Střelecké poškození: 36 HP', '🎯 Daleký dostřel: 8.5 m', '⚡ Rychlost nátahu: 1.0×']
+  },
+  {
+    id: 'hammer',
+    name: 'Kovářské kladivo',
+    cat: 'weapon',
+    rarity: 'epic',
+    damage: 50,
+    reach: 3.2,
+    speed: 0.7,
+    critChance: 0.20,
+    desc: 'Monstrózní perlík schopný způsobit otřes země při každém úderu.',
+    statList: ['⚔️ Poškození: 50 HP', '💥 Otřes země a omráčení', '🛡️ Proráží obranu: +35%', '⚡ Rychlost: 0.7×']
+  },
+  {
+    id: 'katana',
+    name: 'Východní katana',
+    cat: 'weapon',
+    rarity: 'legendary',
+    damage: 46,
+    reach: 3.6,
+    speed: 1.35,
+    critChance: 0.35,
+    desc: 'Mistrovsky kovaná čepel ostrá jako břitva. Rychlá a smrtící.',
+    statList: ['⚔️ Poškození: 46 HP', '⚡ Bleskový sek: 1.35×', '💥 Šance na kritický zásah: 35%', '🎯 Dosah: 3.6 m']
+  },
 
   // 10 Kusů oblečení
-  { id: 'cape_black', name: 'Černý plášť stínů', cat: 'armor', slot: 'cape', color: 0x16171d },
-  { id: 'cape_royal', name: 'Královský plášť', cat: 'armor', slot: 'cape', color: 0x8e1b24 },
-  { id: 'tunic_linen', name: 'Plátěná tunika', cat: 'armor', slot: 'chest', color: 0x4a7c59 },
-  { id: 'armor_iron', name: 'Rytířský kyrys', cat: 'armor', slot: 'chest', color: 0x9aa3b4 },
-  { id: 'robe_mage', name: 'Kouzelnické roucho', cat: 'armor', slot: 'chest', color: 0x24336a },
-  { id: 'pants_leather', name: 'Kožené kalhoty', cat: 'armor', slot: 'legs', color: 0x6e4726 },
-  { id: 'pants_plate', name: 'Plátové nohavice', cat: 'armor', slot: 'legs', color: 0x7c8594 },
-  { id: 'boots_leather', name: 'Cestovní boty', cat: 'armor', slot: 'feet', color: 0x2e251e },
-  { id: 'boots_fur', name: 'Kožešinové boty', cat: 'armor', slot: 'feet', color: 0x4a3b30 },
-  { id: 'hood_hunter', name: 'Lovecká kápě', cat: 'armor', slot: 'head', color: 0x2f4836 },
+  {
+    id: 'cape_black',
+    name: 'Černý plášť stínů',
+    cat: 'armor',
+    slot: 'cape',
+    rarity: 'epic',
+    color: 0x16171d,
+    defense: 0.12,
+    bonusHp: 15,
+    bonusSpeed: 0.15,
+    desc: 'Tajemný vlající plášť utkaný ze stínů noci. Zvyšuje rychlost pohybu.',
+    statList: ['🛡️ Obrana těla: +12%', '🏃 Rychlost běhu: +15%', '❤️ Bonusové zdraví: +15 HP', '⚡ Rychlejší obnova staminy']
+  },
+  {
+    id: 'cape_royal',
+    name: 'Královský plášť',
+    cat: 'armor',
+    slot: 'cape',
+    rarity: 'legendary',
+    color: 0x8e1b24,
+    defense: 0.18,
+    bonusHp: 30,
+    bonusSpeed: 0.10,
+    desc: 'Purpurový plášť se zlatým lemováním nošený starověkými králi.',
+    statList: ['🛡️ Obrana těla: +18%', '❤️ Bonusové zdraví: +30 HP', '👑 Královská autorita', '🏃 Rychlost běhu: +10%']
+  },
+  {
+    id: 'tunic_linen',
+    name: 'Plátěná tunika',
+    cat: 'armor',
+    slot: 'chest',
+    rarity: 'common',
+    color: 0x4a7c59,
+    defense: 0.06,
+    bonusHp: 10,
+    bonusSpeed: 0.05,
+    desc: 'Lehká a pohodlná tunika vhodná na cesty divočinou.',
+    statList: ['🛡️ Obrana těla: +6%', '❤️ Zdraví: +10 HP', '🏃 Lehký oděv: +5% rychlost']
+  },
+  {
+    id: 'armor_iron',
+    name: 'Rytířský kyrys',
+    cat: 'armor',
+    slot: 'chest',
+    rarity: 'rare',
+    color: 0x9aa3b4,
+    defense: 0.28,
+    bonusHp: 40,
+    bonusSpeed: -0.05,
+    desc: 'Robustní ocelový kyrys kovaný k ochraně srdce před drtivými údery.',
+    statList: ['🛡️ Masivní obrana těla: +28%', '❤️ Extra zdraví: +40 HP', '🛡️ Odolnost proti sražení']
+  },
+  {
+    id: 'robe_mage',
+    name: 'Kouzelnické roucho',
+    cat: 'armor',
+    slot: 'chest',
+    rarity: 'epic',
+    color: 0x24336a,
+    defense: 0.15,
+    bonusHp: 20,
+    bonusSpeed: 0.10,
+    desc: 'Hedvábné roucho protkané magickými runami a ochrannými bariérami.',
+    statList: ['🛡️ Obrana těla: +15%', '✨ Síla kouzel: +25%', '❤️ Zdraví: +20 HP', '🏃 Rychlost: +10%']
+  },
+  {
+    id: 'pants_leather',
+    name: 'Kožené kalhoty',
+    cat: 'armor',
+    slot: 'legs',
+    rarity: 'common',
+    color: 0x6e4726,
+    defense: 0.08,
+    bonusHp: 10,
+    bonusSpeed: 0.05,
+    desc: 'Pevné kalhoty z jelení kůže s vyztuženými koleny.',
+    statList: ['🛡️ Obrana nohou: +8%', '❤️ Zdraví: +10 HP', '⚡ Kapacita staminy: +15%']
+  },
+  {
+    id: 'pants_plate',
+    name: 'Plátové nohavice',
+    cat: 'armor',
+    slot: 'legs',
+    rarity: 'rare',
+    color: 0x7c8594,
+    defense: 0.22,
+    bonusHp: 25,
+    bonusSpeed: 0.0,
+    desc: 'Ocelové plátové nohavice chránící stehna a holeně.',
+    statList: ['🛡️ Obrana nohou: +22%', '❤️ Extra zdraví: +25 HP', '🛡️ Ochrana před pádem']
+  },
+  {
+    id: 'boots_leather',
+    name: 'Cestovní boty',
+    cat: 'armor',
+    slot: 'feet',
+    rarity: 'common',
+    color: 0x2e251e,
+    defense: 0.05,
+    bonusHp: 5,
+    bonusSpeed: 0.10,
+    desc: 'Pohodlná kožená obuv určená pro dlouhé pochody terénem.',
+    statList: ['🛡️ Obrana nohou: +5%', '🏃 Rychlost chůze a běhu: +10%', '❤️ Zdraví: +5 HP']
+  },
+  {
+    id: 'boots_fur',
+    name: 'Kožešinové boty',
+    cat: 'armor',
+    slot: 'feet',
+    rarity: 'uncommon',
+    color: 0x4a3b30,
+    defense: 0.10,
+    bonusHp: 15,
+    bonusSpeed: 0.08,
+    desc: 'Teplé boty vystlané horskou kožešinou. Chrání před mrazem.',
+    statList: ['🛡️ Obrana nohou: +10%', '❤️ Zdraví: +15 HP', '❄️ Odolnost v horách a sněhu', '🏃 Rychlost: +8%']
+  },
+  {
+    id: 'hood_hunter',
+    name: 'Lovecká kápě',
+    cat: 'armor',
+    slot: 'head',
+    rarity: 'uncommon',
+    color: 0x2f4836,
+    defense: 0.12,
+    bonusHp: 15,
+    bonusSpeed: 0.06,
+    desc: 'Nenápadná maskovací kápě lesních stopařů a lovců.',
+    statList: ['🛡️ Obrana hlavy: +12%', '🎯 Přesnost zásahů: +15%', '❤️ Zdraví: +15 HP', '🏃 Rychlost: +6%']
+  },
 
   // 10 Surovin / Loot
-  { id: 'wood', name: 'Dubové dřevo', cat: 'loot' },
-  { id: 'stone', name: 'Kamenný blok', cat: 'loot' },
-  { id: 'ore_iron', name: 'Železná ruda', cat: 'loot' },
-  { id: 'ore_gold', name: 'Zlatý valoun', cat: 'loot' },
-  { id: 'gem_ruby', name: 'Ohnivý rubín', cat: 'loot' },
-  { id: 'gem_sapphire', name: 'Hvězdný safír', cat: 'loot' },
-  { id: 'leather', name: 'Vyčiněná useň', cat: 'loot' },
-  { id: 'potion_hp', name: 'Léčivý lektvar', cat: 'loot' },
-  { id: 'apple', name: 'Zlaté jablko', cat: 'loot' },
-  { id: 'torch', name: 'Pochodeň', cat: 'loot' }
+  {
+    id: 'wood',
+    name: 'Dubové dřevo',
+    cat: 'loot',
+    rarity: 'common',
+    desc: 'Základní stavební materiál získaný kácením lesních stromů.',
+    statList: ['🪵 Základní stavební materiál', '🔨 Vhodné na výrobu nástrojů']
+  },
+  {
+    id: 'stone',
+    name: 'Kamenný blok',
+    cat: 'loot',
+    rarity: 'common',
+    desc: 'Pevný opracovaný kámen pro budování opevnění.',
+    statList: ['🪨 Odolný stavební kámen', '🏰 Ochrana před zničením']
+  },
+  {
+    id: 'ore_iron',
+    name: 'Železná ruda',
+    cat: 'loot',
+    rarity: 'uncommon',
+    desc: 'Surové železo vytěžené z hlubin skalnatých hor.',
+    statList: ['⛏️ Kovový materiál', '⚔️ Základ pro zbraně a zbroje']
+  },
+  {
+    id: 'ore_gold',
+    name: 'Zlatý valoun',
+    cat: 'loot',
+    rarity: 'rare',
+    desc: 'Třpytivý valoun ryzího zlata s vysokou hodnotou.',
+    statList: ['💰 Vzácný drahý kov', '✨ Magická vodivost']
+  },
+  {
+    id: 'gem_ruby',
+    name: 'Ohnivý rubín',
+    cat: 'loot',
+    rarity: 'epic',
+    desc: 'Zářící rudý drahokam plný spalující elementární energie.',
+    statList: ['💎 Epický drahokam', '🔥 Ohnivá elementární síla']
+  },
+  {
+    id: 'gem_sapphire',
+    name: 'Hvězdný safír',
+    cat: 'loot',
+    rarity: 'legendary',
+    desc: 'Legendární křišťálově modrý safír pulzující vesmírnou energií.',
+    statList: ['💎 Legendární drahokam', '✨ Nekonečná magická moc']
+  },
+  {
+    id: 'leather',
+    name: 'Vyčiněná useň',
+    cat: 'loot',
+    rarity: 'common',
+    desc: 'Kvalitní pružná useň pro výrobu toulců a zbrojí.',
+    statList: ['🧵 Kožený materiál', '🛡️ Výroba lehkého vybavení']
+  },
+  {
+    id: 'potion_hp',
+    name: 'Léčivý lektvar',
+    cat: 'loot',
+    rarity: 'uncommon',
+    healHp: 40,
+    desc: 'Hojivý elixír uvařený z léčivých lesních bylin.',
+    statList: ['❤️ Okamžitě vyléčí +40 HP', '🧪 Jednorázové použití']
+  },
+  {
+    id: 'apple',
+    name: 'Zlaté jablko',
+    cat: 'loot',
+    rarity: 'rare',
+    healHp: 25,
+    restoreStamina: 100,
+    desc: 'Posvátné ovoce poskytující okamžité zotavení těla i ducha.',
+    statList: ['❤️ Vyléčí +25 HP', '⚡ Okamžitě doplní 100% staminy']
+  },
+  {
+    id: 'torch',
+    name: 'Pochodeň',
+    cat: 'loot',
+    rarity: 'common',
+    desc: 'Spolehlivý zdroj světla zahánějící temnotu jeskyní a noci.',
+    statList: ['🔥 Zdroj teplého světla', '👁️ Zlepšuje viditelnost']
+  }
 ];
 
 const STEEL = 0xd5dbe6, DSTEEL = 0x8f98ab, GOLD = 0xe8c34a, LEATHER = 0x3a2a1e, WOOD = 0x6a3f1e;

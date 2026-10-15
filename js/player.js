@@ -89,6 +89,67 @@ function triggerRoll() {
   if (typeof playRollSound === 'function') playRollSound();
 }
 
+function checkPvPHit() {
+  if (!window.networkManager || !window.networkManager.remotePlayers || window.networkManager.remotePlayers.size === 0) {
+    return;
+  }
+
+  const reach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach() : 2.4;
+  const atkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage() : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
+
+  // Směr pohledu hráče
+  const cp = Math.cos(pitch);
+  const fwdX = -Math.sin(yaw) * cp;
+  const fwdY = -Math.sin(pitch);
+  const fwdZ = -Math.cos(yaw) * cp;
+
+  const eyeX = P.x;
+  const eyeY = (P.renderY ?? P.y) + 1.45;
+  const eyeZ = P.z;
+
+  let bestTarget = null;
+  let bestScore = -Infinity;
+
+  for (const [id, p] of window.networkManager.remotePlayers) {
+    if (!p.group) continue;
+    const targetX = p.group.position.x;
+    const targetY = p.group.position.y + 0.9; // střed těla cíle
+    const targetZ = p.group.position.z;
+
+    const dx = targetX - eyeX;
+    const dy = targetY - eyeY;
+    const dz = targetZ - eyeZ;
+    const dist = Math.hypot(dx, dy, dz);
+
+    // Hitbox postavy: poloměr 0.75m, dosah zbraně
+    if (dist <= reach + 0.75) {
+      const dot = (dx * fwdX + dy * fwdY + dz * fwdZ) / (dist || 1);
+      const minDot = dist < 1.2 ? 0.15 : 0.38;
+      if (dot > minDot) {
+        const score = dot * 10 - dist;
+        if (score > bestScore) {
+          bestScore = score;
+          bestTarget = { id, p, dist, dx, dy, dz };
+        }
+      }
+    }
+  }
+
+  if (bestTarget) {
+    const kLen = Math.hypot(bestTarget.dx, bestTarget.dz) || 1;
+    const knockback = {
+      x: (bestTarget.dx / kLen) * (atkInfo.isCrit ? 1.5 : 1.0),
+      z: (bestTarget.dz / kLen) * (atkInfo.isCrit ? 1.5 : 1.0)
+    };
+
+    window.networkManager.sendPlayerHit(bestTarget.id, atkInfo.damage, knockback, atkInfo.isCrit, atkInfo.weaponName);
+    if (typeof toast === 'function') {
+      const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
+      toast(`Zásah do hráče ${bestTarget.p.nickname || 'Přítel'}: -${atkInfo.damage} HP${critText}`);
+    }
+  }
+}
+
 function triggerAttack() {
   if (escOpen || charOpen || invOpen || isRolling) return;
   attacking = true;
@@ -98,11 +159,11 @@ function triggerAttack() {
   if (!heldId) {
     attackDuration = 0.22; playAttackSound('punch');
   } else if (heldId === 'spear') {
-    attackDuration = 0.26; playAttackSound('thrust');
+    attackDuration = 0.28; playAttackSound('thrust');
   } else if (heldId === 'dagger') {
     attackDuration = 0.20; playAttackSound('slash');
   } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
-    attackDuration = 0.36; playAttackSound('heavy');
+    attackDuration = 0.38; playAttackSound('heavy');
   } else if (heldId === 'staff_fire') {
     attackDuration = 0.32; playAttackSound('staff');
   } else if (heldId === 'bow') {
@@ -110,6 +171,11 @@ function triggerAttack() {
   } else {
     attackDuration = 0.26; playAttackSound('slash');
   }
+
+  // Detekce zásahu do hitboxu protihráče synchronizovaná s animací úderu
+  setTimeout(() => {
+    checkPvPHit();
+  }, Math.min(110, Math.round(attackDuration * 320)));
 }
 
 const keys = {};
@@ -248,13 +314,14 @@ function physics(dt) {
     }
 
     // Rychlost: ve vodě (ani při skákání po hladině) nelze běhat rychlostí 9 m/s!
+    const bonusSpd = (typeof getPlayerBonusSpeed === 'function') ? getPlayerBonusSpeed() : 0;
     let sp;
     if (inW) {
-      sp = sprint ? 4.2 : 3.0; // Plavecká rychlost
+      sp = (sprint ? 4.2 : 3.0) * (1 + bonusSpd); // Plavecká rychlost
     } else if (waterExitTimer > 0) {
-      sp = 4.0; // Přechodová rychlost po opuštění vody zabraňující bunny-hopu po vodě
+      sp = 4.0 * (1 + bonusSpd); // Přechodová rychlost po opuštění vody zabraňující bunny-hopu po vodě
     } else {
-      sp = sprint ? 9 : 5.5; // Běžná pozemní rychlost
+      sp = (sprint ? 9 : 5.5) * (1 + bonusSpd); // Běžná pozemní rychlost
     }
 
     const wx = (-Math.sin(yaw)) * fz + Math.cos(yaw) * fx;
