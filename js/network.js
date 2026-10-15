@@ -961,12 +961,12 @@ class NetworkManager {
     const p = this.remotePlayers.get(data.id);
     if (!p) return;
 
-    p.targetX = data.x;
-    p.targetY = data.y;
-    p.targetZ = data.z;
-    p.targetYaw = data.yaw;
-    p.targetPitch = data.pitch;
-    p.heldItem = data.heldItem;
+    if (typeof data.x === 'number') p.targetX = data.x;
+    if (typeof data.y === 'number') p.targetY = data.y;
+    if (typeof data.z === 'number') p.targetZ = data.z;
+    if (typeof data.yaw === 'number') p.targetYaw = data.yaw;
+    if (typeof data.pitch === 'number') p.targetPitch = data.pitch;
+    if (typeof data.heldItem !== 'undefined') p.heldItem = data.heldItem;
   }
 
   removeRemotePlayer(id) {
@@ -987,8 +987,19 @@ class NetworkManager {
       const dz = p.targetZ - g.position.z;
       const dist = Math.hypot(dx, dz);
 
-      g.position.x += dx * Math.min(1, dt * 14);
-      g.position.y += dy * Math.min(1, dt * 14);
+      // Pokud dojde k velkému skoku (teleport, respawn), skočit okamžitě
+      if (dist > 30) {
+        g.position.x = p.targetX;
+        g.position.y = p.targetY;
+        g.position.z = p.targetZ;
+      } else {
+        // Plynulá interpolace všech tří prostorových os X, Y, Z
+        const factor = Math.min(1, dt * 14);
+        g.position.x += dx * factor;
+        g.position.y += dy * factor;
+        g.position.z += dz * factor;
+      }
+
       // Plynulá rotace těla (interpolace úhlu bez skákání)
       let diffYaw = (p.targetYaw || 0) - g.rotation.y;
       while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
@@ -1000,8 +1011,9 @@ class NetworkManager {
         p.rig.head.rotation.x = Math.max(-0.85, Math.min(0.85, p.targetPitch || 0));
       }
 
+      // Animace končetin: pouze pokud se reálně hýbe (rychlost/vzdálenost > 0.05)
       if (p.rig && p.rig.arms && p.rig.legs) {
-        if (dist > 0.04) {
+        if (dist > 0.05) {
           p.phase += dt * 12;
           const armSwing = Math.sin(p.phase) * 0.7;
           const legSwing = Math.sin(p.phase) * 0.8;
@@ -1010,10 +1022,14 @@ class NetworkManager {
           p.rig.legs[0].rotation.x = -legSwing;
           p.rig.legs[1].rotation.x = legSwing;
         } else {
-          p.rig.arms[0].rotation.x *= 0.85;
-          p.rig.arms[1].rotation.x *= 0.85;
-          p.rig.legs[0].rotation.x *= 0.85;
-          p.rig.legs[1].rotation.x *= 0.85;
+          // Zastavení: plynulý návrat rukou i nohou do klidové polohy podél těla
+          p.phase = 0;
+          for (let i = 0; i < 2; i++) {
+            p.rig.arms[i].rotation.x *= 0.75;
+            p.rig.legs[i].rotation.x *= 0.75;
+            if (Math.abs(p.rig.arms[i].rotation.x) < 0.005) p.rig.arms[i].rotation.x = 0;
+            if (Math.abs(p.rig.legs[i].rotation.x) < 0.005) p.rig.legs[i].rotation.x = 0;
+          }
         }
       }
     }
