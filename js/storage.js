@@ -31,7 +31,17 @@ const GameStorage = {
       const raw = localStorage.getItem(STORAGE_KEY_WORLDS);
       if (raw) {
         const list = JSON.parse(raw);
-        if (Array.isArray(list)) return list;
+        if (Array.isArray(list)) {
+          let dirty = false;
+          list.forEach(w => {
+            if (!w.p2pCode) {
+              w.p2pCode = Math.floor(1000 + Math.random() * 9000);
+              dirty = true;
+            }
+          });
+          if (dirty) this.saveWorlds(list);
+          return list;
+        }
       }
     } catch (e) {
       console.error('[Storage] Chyba načítání světů:', e);
@@ -41,6 +51,7 @@ const GameStorage = {
       id: 'world_default',
       name: 'Můj První Svět',
       seed: 12345,
+      p2pCode: Math.floor(1000 + Math.random() * 9000),
       createdAt: new Date().toLocaleDateString('cs-CZ'),
       lastPlayed: new Date().toLocaleDateString('cs-CZ'),
       playerState: null,
@@ -67,6 +78,7 @@ const GameStorage = {
       id: 'world_' + Date.now(),
       name: (name || 'Nový svět').trim().slice(0, 30),
       seed: newSeed,
+      p2pCode: Math.floor(1000 + Math.random() * 9000),
       createdAt: new Date().toLocaleDateString('cs-CZ'),
       lastPlayed: new Date().toLocaleDateString('cs-CZ'),
       playerState: null,
@@ -80,7 +92,31 @@ const GameStorage = {
   // Získat jeden svět podle ID
   getWorld(id) {
     const worlds = this.getWorlds();
-    return worlds.find(w => w.id === id) || null;
+    const w = worlds.find(w => w.id === id);
+    if (w && !w.p2pCode) {
+      w.p2pCode = Math.floor(1000 + Math.random() * 9000);
+      this.saveWorlds(worlds);
+    }
+    return w || null;
+  },
+
+  // Získat stálý P2P kód pro daný svět
+  getP2PRoomCode(id) {
+    if (!id) {
+      const active = this.getActiveGame();
+      id = active ? active.worldId : null;
+    }
+    if (id) {
+      const w = this.getWorld(id);
+      if (w && w.p2pCode) return `VOX-${w.p2pCode}`;
+    }
+    // Fallback do localStorage
+    let saved = localStorage.getItem('voxel_p2p_host_code');
+    if (!saved) {
+      saved = `VOX-${Math.floor(1000 + Math.random() * 9000)}`;
+      localStorage.setItem('voxel_p2p_host_code', saved);
+    }
+    return saved;
   },
 
   // Aktualizovat data světa (postup hráče, položené/rozbité bloky)

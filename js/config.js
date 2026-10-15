@@ -1,5 +1,24 @@
-// ---------- Globální konstanty a konfigurace ----------
-const CS = 16, SEA = 44, S = 0.5, SEED = (Math.random() * 1e9) | 0;
+const CS = 16, SEA = 44, S = 0.5;
+let SEED = (() => {
+  try {
+    if (typeof GameStorage !== 'undefined') {
+      const active = GameStorage.getActiveGame();
+      if (active && active.seed) return parseInt(active.seed);
+      if (active && active.worldId) {
+        const w = GameStorage.getWorld(active.worldId);
+        if (w && w.seed) return parseInt(w.seed);
+      }
+    }
+  } catch (e) {}
+  return 12345;
+})();
+
+function setWorldSeed(newSeed) {
+  if (typeof newSeed === 'number' || (typeof newSeed === 'string' && !isNaN(parseInt(newSeed)))) {
+    SEED = parseInt(newSeed);
+  }
+}
+
 let RD = 8;
 
 const $ = id => document.getElementById(id);

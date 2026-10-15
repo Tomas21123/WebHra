@@ -63,6 +63,23 @@ class NetworkManager {
       this.activeGame = { mode: 'singleplayer' };
     }
 
+    // Podpora URL parametru ?p2p=VOX-XXXX
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const p2pParam = urlParams.get('p2p');
+      if (p2pParam) {
+        const fullCode = p2pParam.toUpperCase().startsWith('VOX-') ? p2pParam.toUpperCase() : `VOX-${p2pParam}`;
+        this.activeGame = {
+          mode: 'p2p_client',
+          p2pRoomCode: fullCode,
+          serverName: `P2P Svět (${fullCode})`
+        };
+        if (typeof GameStorage !== 'undefined') {
+          GameStorage.setActiveGame(this.activeGame);
+        }
+      }
+    } catch(e) {}
+
     if (this.activeGame.mode === 'multiplayer') {
       this.connectToServer(this.activeGame.serverAddress || 'localhost:3000');
     } else if (this.activeGame.mode === 'p2p_client') {
@@ -141,6 +158,9 @@ class NetworkManager {
     window.addEventListener('beforeunload', () => {
       this.saveSingleplayerWorld();
     });
+
+    // Automaticky připravit P2P hostitelský kanál na pozadí se stálým kódem tohoto světa
+    this.startP2PHost();
   }
 
   saveSingleplayerWorld() {
@@ -183,14 +203,17 @@ class NetworkManager {
   // 2. PEER-TO-PEER (P2P LAN / Přátelé přes WebRTC)
   // ===========================================================================
   
-  // Hostitel: Otevření světa pro přátele (vygeneruje kód)
+  // Hostitel: Otevření dialogu se stálým kódem světa
   openP2PHostDialog() {
     const modal = document.getElementById('p2pModal');
     if (!modal) return;
 
-    if (!this.isP2PHost) {
+    if (!this.isP2PHost || !this.peer || this.peer.destroyed) {
       this.startP2PHost();
     }
+
+    const display = document.getElementById('p2pRoomCodeDisplay');
+    if (display && this.p2pRoomCode) display.textContent = this.p2pRoomCode;
 
     modal.hidden = false;
     this.updateP2PPlayerCount();
@@ -198,58 +221,63 @@ class NetworkManager {
 
   startP2PHost() {
     if (typeof Peer === 'undefined') {
-      alert('Knihovna PeerJS se nenačetla. Zkontrolujte připojení k internetu.');
+      console.warn('[P2P Host] Knihovna PeerJS není načtena.');
+      return;
+    }
+    if (this.peer && !this.peer.destroyed) {
+      // Již aktivní
       return;
     }
 
-    // Generování 4-místného kódu (např. VOX-7429)
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    this.p2pRoomCode = `VOX-${randomNum}`;
-    const peerId = `vox-world-${randomNum}`;
+    const worldId = this.activeGame?.worldId || 'world_default';
+    this.p2pRoomCode = (typeof GameStorage !== 'undefined') ? GameStorage.getP2PRoomCode(worldId) : 'VOX-7429';
+    const cleanNum = this.p2pRoomCode.replace(/[^0-9]/g, '');
+    const peerId = `vox-world-${cleanNum}`;
 
-    this.showNetStatus(`Zakládám P2P místnost ${this.p2pRoomCode}…`, 'connecting');
+    console.log(`[P2P Host] Registruji Peer hostitele: ID ${peerId} (kód: ${this.p2pRoomCode})`);
+
+    const PEER_CONFIG = {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
+    };
 
     try {
-      this.peer = new Peer(peerId, { debug: 1 });
+      this.peer = new Peer(peerId, PEER_CONFIG);
     } catch (e) {
-      this.showNetStatus(`Chyba P2P: ${e.message}`, 'error', true);
+      console.warn('[P2P Host] Chyba vytvoření peer instance:', e);
       return;
     }
 
-    this.peer.on('open', () => {
+    this.peer.on('open', (id) => {
       this.isP2PHost = true;
       this.connected = true;
-      this.hideNetStatus();
+      console.log(`[P2P Host] Připraven přijímat přátele s ID: ${id}`);
 
       const display = document.getElementById('p2pRoomCodeDisplay');
       if (display) display.textContent = this.p2pRoomCode;
 
-      if (typeof addChatMessage === 'function') {
-        addChatMessage('Systém', `Svět byl otevřen pro přátele! Kód světa: ${this.p2pRoomCode}`, 'info');
-      }
-      if (typeof toast === 'function') {
-        toast(`Kód světa: ${this.p2pRoomCode}`);
-      }
-
-      // Spustit rozesílání své polohy připojeným hráčům
       if (!this.syncTimer) {
         this.syncTimer = setInterval(() => this.sendPlayerTransform(), 50);
       }
-
-      // Ukládání světa hostitele každých 5 sekund
-      if (!this.autoSaveTimer) {
-        this.autoSaveTimer = setInterval(() => this.saveSingleplayerWorld(), 5000);
-      }
     });
 
-    // Příchozí spojení od jiného hráče
+    // Příchozí WebRTC spojení od přítele
     this.peer.on('connection', (conn) => {
+      console.log('[P2P Host] Příchozí WebRTC připojení od:', conn.peer);
+
       conn.on('data', (data) => {
+        console.log('[P2P Host] Přijata zpráva od klienta:', data.type);
         if (data.type === 'joinRequest') {
-          // Zobrazit dialog se schválením připojení (klient zatím NEVSTUPUJE do světa!)
+          // Zobrazit žádost o schválení vstupu (klient zatím NEVSTUPUJE do světa!)
           this.promptJoinRequest(conn, data);
         } else {
-          // Zpracovat herní zprávy POUZE pro schválené klienty!
+          // Zpracovat herní zprávy POUZE pro již schválené klienty!
           if (this.p2pClients.has(conn.peer)) {
             this.handleP2PClientMessage(conn, data);
           }
@@ -257,6 +285,7 @@ class NetworkManager {
       });
 
       conn.on('close', () => {
+        console.log('[P2P Host] Klient odpojen:', conn.peer);
         this.p2pClients.delete(conn.peer);
         this.removeRemotePlayer(conn.peer);
         this.updateP2PPlayerCount();
@@ -264,27 +293,77 @@ class NetworkManager {
           addChatMessage('Systém', `Hráč opustil svět.`, 'system');
         }
       });
+
+      conn.on('error', (err) => {
+        console.warn('[P2P Host Conn Error]', err);
+      });
     });
 
     this.peer.on('error', (err) => {
       console.warn('[P2P Host Error]', err);
       if (err.type === 'unavailable-id') {
-        this.startP2PHost();
-      } else {
-        this.showNetStatus(`P2P chyba: ${err.message}`, 'error');
+        console.warn('[P2P Host] Kód je obsazen nebo předchozí relace ještě nevypršela. Obnovuji kód světa...');
+        const newNum = Math.floor(1000 + Math.random() * 9000);
+        this.p2pRoomCode = `VOX-${newNum}`;
+        if (typeof GameStorage !== 'undefined') {
+          const w = GameStorage.getWorld(worldId);
+          if (w) {
+            w.p2pCode = newNum;
+            GameStorage.saveWorlds(GameStorage.getWorlds());
+          }
+        }
+        setTimeout(() => this.startP2PHost(), 800);
+      }
+    });
+
+    this.peer.on('disconnected', () => {
+      console.log('[P2P Host] Odpojeno od PeerJS brokera, obnovuji spojení...');
+      if (this.peer && !this.peer.destroyed) {
+        this.peer.reconnect();
       }
     });
   }
 
   // Zobrazení žádosti o připojení hostiteli
   promptJoinRequest(conn, data) {
+    // Pokud je již schválen, jen znovu odešleme init data
+    if (this.p2pClients.has(conn.peer)) {
+      this.sendInitToClient(conn);
+      return;
+    }
+
     this.pendingP2PConn = { conn, data };
+
+    // Uvolnit pointer lock kurzoru, aby hostitel mohl okamžitě kliknout myší
+    if (document.exitPointerLock) {
+      try { document.exitPointerLock(); } catch(e) {}
+    }
+
     const popup = document.getElementById('p2pRequestPopup');
     const text = document.getElementById('p2pRequestText');
     if (popup && text) {
-      text.innerHTML = `Hráč <strong>${this.escape(data.nickname || 'Hráč')}</strong> se chce připojit do tvého světa.`;
+      text.innerHTML = `
+        <div style="font-size:16px;font-weight:800;color:#34d399;margin-bottom:4px;">
+          ${this.escape(data.nickname || 'Přítel')}
+        </div>
+        <div style="font-size:13.5px;color:#e2e8f0;line-height:1.45;">
+          žádá o připojení do tvého světa.
+        </div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:8px;background:rgba(255,255,255,0.06);padding:4px 8px;border-radius:6px;">
+          ⌨ Stiskni <strong>[Y]</strong> pro povolení nebo <strong>[N]</strong> pro odmítnutí
+        </div>
+      `;
       popup.style.display = 'block';
-      if (typeof playClickSound === 'function') playClickSound();
+      popup.style.zIndex = '9999999';
+    }
+
+    if (typeof playClickSound === 'function') playClickSound();
+
+    if (typeof addChatMessage === 'function') {
+      addChatMessage('Systém', `🔔 Hráč "${data.nickname || 'Přítel'}" poslal žádost o připojení! Klikni na [Povolit] na obrazovce nebo stiskni [Y].`, 'system');
+    }
+    if (typeof toast === 'function') {
+      toast(`Žádost o připojení: ${data.nickname || 'Hráč'}`);
     }
   }
 
@@ -300,29 +379,10 @@ class NetworkManager {
     // Přidat klienta do schválených
     this.p2pClients.set(conn.peer, conn);
 
-    // 1. Odeslat klientovi potvrzení, seed světa a stávající bloky
-    const hostNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hostitel';
-    conn.send({
-      type: 'init',
-      playerId: conn.peer,
-      serverName: `Svět hráče ${hostNick}`,
-      seed: this.activeGame.seed || 12345,
-      isOp: false,
-      worldDeltas: this.worldDeltas,
-      players: [
-        {
-          id: 'host',
-          nickname: hostNick,
-          isOp: true,
-          x: P.x, y: P.y, z: P.z,
-          yaw: typeof yaw !== 'undefined' ? yaw : 0,
-          skin: this.getLocalPlayerSkin(),
-          equipment: this.getLocalEquippedMap()
-        }
-      ]
-    });
+    // Odeslat klientovi potvrzení, seed a existující svět
+    this.sendInitToClient(conn);
 
-    // 2. Vytvořit model hráče u hostitele s jeho reálným skinem
+    // Vytvořit model hráče u hostitele
     this.spawnRemotePlayer({
       id: conn.peer,
       nickname: data.nickname || 'Hráč',
@@ -340,6 +400,31 @@ class NetworkManager {
     if (typeof toast === 'function') {
       toast(`Hráč ${data.nickname} se připojil.`);
     }
+  }
+
+  sendInitToClient(conn) {
+    const hostNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hostitel';
+    const currentSeed = (typeof SEED !== 'undefined') ? SEED : (this.activeGame?.seed || 12345);
+
+    conn.send({
+      type: 'init',
+      playerId: conn.peer,
+      serverName: `Svět hráče ${hostNick}`,
+      seed: currentSeed,
+      isOp: false,
+      worldDeltas: this.worldDeltas,
+      players: [
+        {
+          id: 'host',
+          nickname: hostNick,
+          isOp: true,
+          x: P.x, y: P.y, z: P.z,
+          yaw: typeof yaw !== 'undefined' ? yaw : 0,
+          skin: this.getLocalPlayerSkin(),
+          equipment: this.getLocalEquippedMap()
+        }
+      ]
+    });
   }
 
   // Odmítnutí připojení hostitelem
@@ -404,13 +489,6 @@ class NetworkManager {
       return;
     }
 
-    // Zobrazit modal čekání na schválení hostitelem (hráč nesmí vstoupit dříve, než hostitel povolí!)
-    const waitingModal = document.getElementById('p2pWaitingModal');
-    if (waitingModal) {
-      waitingModal.style.display = 'flex';
-      waitingModal.hidden = false;
-    }
-
     // Zastavit pohyb hráče dokud není schválen
     if (typeof P !== 'undefined') {
       P.moveX = 0; P.moveZ = 0; P.vx = 0; P.vz = 0;
@@ -419,59 +497,107 @@ class NetworkManager {
     const targetPeerId = `vox-world-${cleanNum}`;
     this.showNetStatus(`Připojuji se k příteli (${roomCode})…`, 'connecting');
 
+    const statusDetail = document.getElementById('p2pClientStatusDetail');
+    if (statusDetail) statusDetail.textContent = `Hledám hostitele (${roomCode})…`;
+
+    const PEER_CONFIG = {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
+    };
+
     try {
-      this.peer = new Peer({ debug: 1 });
+      this.peer = new Peer(PEER_CONFIG);
     } catch (e) {
       this.showNetStatus(`P2P chyba: ${e.message}`, 'error', true);
+      if (statusDetail) statusDetail.textContent = `Chyba P2P: ${e.message}`;
       return;
     }
 
-    this.peer.on('open', () => {
-      this.p2pHostConn = this.peer.connect(targetPeerId);
+    this.peer.on('open', (myId) => {
+      console.log(`[P2P Client] Peer aktivní s ID: ${myId}. Spojuji se s: ${targetPeerId}`);
+      if (statusDetail) statusDetail.textContent = `Navazuji spojení s hostitelem ${roomCode}…`;
+
+      this.p2pHostConn = this.peer.connect(targetPeerId, { reliable: true });
+
+      const sendJoin = () => {
+        if (this.approved) {
+          if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+          return;
+        }
+        if (this.p2pHostConn && this.p2pHostConn.open) {
+          console.log('[P2P Client] Odesílám joinRequest...');
+          const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
+          this.p2pHostConn.send({
+            type: 'joinRequest',
+            nickname: nickname,
+            skin: this.getLocalPlayerSkin(),
+            equipment: this.getLocalEquippedMap()
+          });
+          if (statusDetail) statusDetail.textContent = 'Žádost odeslána. Čekám na schválení hostitelem…';
+        }
+      };
 
       this.p2pHostConn.on('open', () => {
-        this.showNetStatus('Odeslána žádost o připojení. Čekám na schválení hostitelem…', 'connecting');
-
-        const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
-        const skin = this.getLocalPlayerSkin();
-        const equipment = this.getLocalEquippedMap();
-
-        this.p2pHostConn.send({
-          type: 'joinRequest',
-          nickname: nickname,
-          skin: skin,
-          equipment: equipment
-        });
+        console.log('[P2P Client] WebRTC kanál s hostitelem OTEVŘEN!');
+        sendJoin();
+        // Pravidelné opakování žádosti každých 1.5s pro jistotu spolehlivého doručení
+        if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+        this.joinRetryTimer = setInterval(sendJoin, 1500);
       });
 
       this.p2pHostConn.on('data', (msg) => {
+        console.log('[P2P Client] Přijata zpráva od hostitele:', msg.type);
         if (msg.type === 'rejected') {
-          if (waitingModal) waitingModal.style.display = 'none';
+          if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
           alert(msg.message || 'Hostitel odmítl žádost o připojení.');
           window.location.replace('../index.html');
           return;
+        }
+        if (msg.type === 'init') {
+          if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+          this.approved = true;
+          if (statusDetail) statusDetail.textContent = 'Vstup schválen! Generuji svět…';
+          if (typeof window.approveP2PJoin === 'function') {
+            window.approveP2PJoin(msg.seed, msg.worldDeltas);
+          }
         }
         this.handleServerMessage(msg);
       });
 
       this.p2pHostConn.on('close', () => {
         this.connected = false;
-        if (waitingModal) waitingModal.style.display = 'none';
+        if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
         if (this.syncTimer) clearInterval(this.syncTimer);
         this.showNetStatus('Spojení s hostitelem bylo ukončeno.', 'error', true);
       });
 
       this.p2pHostConn.on('error', (err) => {
         console.warn('[P2P Client Conn Error]', err);
-        if (waitingModal) waitingModal.style.display = 'none';
-        this.showNetStatus('Nelze se spojit s hostitelem. Zkontroluj kód a zda je hostitel ve hře.', 'error', true);
       });
     });
 
     this.peer.on('error', (err) => {
       console.warn('[P2P Client Peer Error]', err);
-      if (waitingModal) waitingModal.style.display = 'none';
-      this.showNetStatus('Chyba spojení s přítelem: ' + err.message, 'error', true);
+      if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+
+      if (err.type === 'peer-unavailable') {
+        if (statusDetail) {
+          statusDetail.innerHTML = `
+            <span style="color:#f87171;font-weight:700;">Hostitel s kódem ${roomCode} není online.</span><br>
+            <span style="color:#94a3b8;font-size:12px;">Ujisti se, že hostitel má spuštěný svět a kód je správný.</span>
+          `;
+        }
+        this.showNetStatus(`Hostitel ${roomCode} nebyl nalezen. Zkontroluj kód.`, 'error', true);
+      } else {
+        if (statusDetail) statusDetail.textContent = `Chyba spojení: ${err.message}`;
+        this.showNetStatus(`Chyba spojení: ${err.message}`, 'error', true);
+      }
     });
   }
 
@@ -587,9 +713,15 @@ class NetworkManager {
     switch (msg.type) {
       case 'init':
         this.connected = true;
+        this.approved = true;
         this.playerId = msg.playerId;
         this.isOp = !!msg.isOp;
         this.hideNetStatus();
+
+        // 1. Spustit generování světa u klienta se správným seedem hostitele
+        if (typeof window.approveP2PJoin === 'function' && msg.seed) {
+          window.approveP2PJoin(msg.seed, msg.worldDeltas);
+        }
 
         // Skrýt čekací modal po schválení hostitelem
         const waitingModal = document.getElementById('p2pWaitingModal');
@@ -611,7 +743,20 @@ class NetworkManager {
         }
 
         if (Array.isArray(msg.players)) {
-          msg.players.forEach(p => this.spawnRemotePlayer(p));
+          msg.players.forEach(p => {
+            if (p.id !== this.playerId && p.id !== 'self') {
+              this.spawnRemotePlayer(p);
+            }
+          });
+
+          // Teleportovat klienta blízko k hostiteli
+          const host = msg.players.find(p => p.id === 'host') || msg.players[0];
+          if (host && typeof host.x === 'number' && typeof P !== 'undefined') {
+            P.x = host.x + 2;
+            P.y = host.y + 0.2;
+            P.z = host.z + 2;
+            P.vx = 0; P.vy = 0; P.vz = 0;
+          }
         }
 
         // Kontrola, aby hráč při připojení nespawnul ve vodě
@@ -892,7 +1037,7 @@ class NetworkManager {
   // 7. Event listenery tlačítek v rozhraní
   // ===========================================================================
   bindP2PUI() {
-    window.addEventListener('DOMContentLoaded', () => {
+    const doBind = () => {
       // 1. Tlačítko v pauza menu (ESC)
       const escP2PBtn = document.getElementById('escOpenP2P');
       if (escP2PBtn) {
@@ -928,7 +1073,29 @@ class NetworkManager {
 
       const rejectBtn = document.getElementById('p2pRejectBtn');
       if (rejectBtn) rejectBtn.onclick = () => this.rejectPendingP2P();
-    });
+
+      // 5. Klávesové zkratky pro hostitele: [Y] / [Z] / [Enter] = schválit, [N] / [Escape] = odmítnout
+      window.addEventListener('keydown', (e) => {
+        if (!this.pendingP2PConn) return;
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+          return;
+        }
+
+        if (e.code === 'KeyY' || e.code === 'KeyZ' || e.key === 'y' || e.key === 'Y' || e.key === 'z' || e.key === 'Z' || e.code === 'Enter') {
+          e.preventDefault();
+          this.acceptPendingP2P();
+        } else if (e.code === 'KeyN' || e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          this.rejectPendingP2P();
+        }
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doBind);
+    } else {
+      doBind();
+    }
   }
 
   escape(str) {

@@ -156,16 +156,16 @@
   </div>
 
   <!-- Žádost o připojení hráče (Floating Approval Popup) -->
-  <div id="p2pRequestPopup" style="display:none;position:fixed;top:24px;right:24px;z-index:999999;background:rgba(15,23,42,0.95);border:2px solid #10b981;border-radius:16px;padding:18px 22px;box-shadow:0 12px 36px rgba(0,0,0,0.7);backdrop-filter:blur(14px);max-width:320px;color:#fff;font-family:'Outfit',sans-serif;">
-    <div style="font-weight:800;font-size:15px;color:#34d399;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <span>🔔</span> Žádost o připojení
+  <div id="p2pRequestPopup" style="display:none;position:fixed;top:28px;right:28px;z-index:99999999;background:rgba(15,23,42,0.96);border:2px solid #10b981;border-radius:18px;padding:20px 24px;box-shadow:0 16px 50px rgba(0,0,0,0.85), 0 0 30px rgba(16,185,129,0.35);backdrop-filter:blur(16px);max-width:340px;color:#fff;font-family:'Outfit',sans-serif;pointer-events:auto;animation:bounceIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);">
+    <div style="font-weight:800;font-size:16px;color:#34d399;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="font-size:20px;">🔔</span> Žádost o připojení do světa
     </div>
-    <div id="p2pRequestText" style="font-size:13.5px;color:#e2e8f0;margin-bottom:14px;line-height:1.45;">
+    <div id="p2pRequestText" style="font-size:14px;color:#e2e8f0;margin-bottom:16px;line-height:1.5;">
       Hráč se chce připojit do tvého světa.
     </div>
     <div style="display:flex;gap:10px;">
-      <button id="p2pAcceptBtn" style="flex:1;padding:8px 14px;border-radius:10px;background:#10b981;color:#042318;font-weight:800;border:none;cursor:pointer;font-family:inherit;">Povolit</button>
-      <button id="p2pRejectBtn" style="flex:1;padding:8px 14px;border-radius:10px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;font-weight:700;cursor:pointer;font-family:inherit;">Odmítnout</button>
+      <button id="p2pAcceptBtn" style="flex:1;padding:10px 16px;border-radius:12px;background:#10b981;color:#042318;font-weight:800;font-size:14px;border:none;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(16,185,129,0.4);transition:all 0.2s;">✔ Povolit (Y)</button>
+      <button id="p2pRejectBtn" style="flex:1;padding:10px 16px;border-radius:12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;transition:all 0.2s;">✕ Odmítnout (N)</button>
     </div>
   </div>
 
@@ -340,13 +340,46 @@
     </div>
   </div>
 
-  <div id="load">Generuji svět…<div id="bar"><i></i></div>
+  <div id="load">
+    <div id="loadContent" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+      Generuji svět…<div id="bar"><i></i></div>
+    </div>
   </div>
+  <script>
+    // Okamžitá kontrola P2P klienta ještě před spuštěním generování světa
+    (function() {
+      try {
+        var act = JSON.parse(localStorage.getItem('voxel_active_game') || '{}');
+        var urlParams = new URLSearchParams(window.location.search);
+        var p2pParam = urlParams.get('p2p');
+        if (p2pParam) {
+          act = { mode: 'p2p_client', p2pRoomCode: p2pParam.toUpperCase().startsWith('VOX-') ? p2pParam.toUpperCase() : ('VOX-' + p2pParam) };
+        }
+        if (act && act.mode === 'p2p_client') {
+          var lc = document.getElementById('loadContent');
+          if (lc) {
+            lc.innerHTML = `
+              <div style="font-size:48px;margin-bottom:12px;animation:spin 3s linear infinite;">⏳</div>
+              <div style="font-size:22px;font-weight:800;color:#38bdf8;margin-bottom:8px;">Čekám na schválení hostitelem…</div>
+              <div style="font-size:14px;color:#94a3b8;max-width:440px;line-height:1.6;margin-bottom:18px;">
+                Žádost o připojení ke světu (${act.p2pRoomCode || 'P2P'}) byla odeslána.<br>
+                <strong style="color:#f1f5f9;">Svět se začne stahovat a načítat až ve chvíli, kdy hostitel tvůj vstup schválí.</strong>
+              </div>
+              <div id="p2pClientStatusDetail" style="font-size:13px;color:#38bdf8;margin-bottom:20px;font-weight:600;">Navazuji spojení s hostitelem…</div>
+              <button onclick="window.location.replace('../index.html')" style="padding:10px 24px;border-radius:10px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;color:#fca5a5;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.2s;">
+                ✕ Zrušit a vrátit se do menu
+              </button>
+            `;
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
 
   <!-- Knihovny a Moduly -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="../js/storage.js?v=4"></script>
-  <script src="../js/config.js?v=3"></script>
+  <script src="../js/storage.js?v=5"></script>
+  <script src="../js/config.js?v=4"></script>
   <script src="../js/textures.js?v=3"></script>
   <script src="../js/world.js?v=3"></script>
   <script src="../js/voxelBuilder.js?v=3"></script>
@@ -360,10 +393,11 @@
   <script src="../js/emotes.js?v=3"></script>
   <script src="../js/cursor.js?v=3"></script>
   <script src="../js/chat.js?v=3"></script>
-  <script src="../js/game.js?v=3"></script>
-  <!-- PeerJS pro Peer-to-Peer (WebRTC) multiplayer -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="../js/network.js?v=4"></script>
+  <!-- PeerJS pro Peer-to-Peer (WebRTC) multiplayer s lokální zálohou -->
+  <script src="../js/peerjs.min.js"></script>
+  <script>if (typeof Peer === 'undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\\/script>');</script>
+  <script src="../js/network.js?v=5"></script>
+  <script src="../js/game.js?v=4"></script>
 </body>
 
 </html>

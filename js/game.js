@@ -212,14 +212,44 @@ updatePlayerAppearance();
 renderHB();
 applyHeld();
 
+// ---------- Kontrola P2P Režimu a Čekání na Schválení Hostitelem ----------
+const activeGameInfo = (typeof GameStorage !== 'undefined') ? GameStorage.getActiveGame() : null;
+window.isP2PWaitingApproval = !!(activeGameInfo && activeGameInfo.mode === 'p2p_client');
+
+window.approveP2PJoin = function(hostSeed, hostDeltas) {
+  window.isP2PWaitingApproval = false;
+  if (typeof setWorldSeed === 'function') {
+    setWorldSeed(hostSeed);
+  }
+  // Vyčistit předchozí chunk stav, aby se načetl čistý hostitelův svět se správným seedem
+  if (typeof chunks !== 'undefined') chunks.clear();
+  if (typeof queue !== 'undefined') queue.length = 0;
+  if (typeof lastC !== 'undefined') lastC = '';
+  ready = false;
+
+  const loadContent = document.getElementById('loadContent');
+  if (loadContent) {
+    loadContent.innerHTML = `<span style="color:#34d399;font-weight:700;margin-bottom:12px;font-size:16px;">Vstup schválen hostitelem! Generuji svět…</span><div id="bar"><i style="width:0%"></i></div>`;
+    bar = document.querySelector('#bar i');
+  }
+};
+
 // ---------- Herní Smyčka (Animation Loop) ----------
-const hud = document.getElementById('hud'), bar = document.querySelector('#bar i'), load = document.getElementById('load');
+const hud = document.getElementById('hud'), load = document.getElementById('load');
+let bar = document.querySelector('#bar i');
 let last = performance.now(), acc = 0, frames = 0, fps = 0, bankLean = 0, narutoBlend = 0, swimBlend = 0, airPhase = 0;
 
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+
+  // Pokud se hráč připojuje k příteli (P2P klient), svět se NESMÍ začít generovat ani načítat,
+  // dokud hostitel nepotvrdí žádost o připojení!
+  if (window.isP2PWaitingApproval) {
+    renderer.render(scene, cam);
+    return;
+  }
 
   manage();
 
@@ -233,11 +263,14 @@ function loop(now) {
         if (c && c.meshed) ok++;
       }
     }
-    bar.style.width = (ok / need * 100) + '%';
+    if (!bar) bar = document.querySelector('#bar i');
+    if (bar) bar.style.width = (ok / need * 100) + '%';
     if (ok >= need) {
       ready = true;
-      load.style.opacity = 0;
-      setTimeout(() => load.remove(), 600);
+      if (load) {
+        load.style.opacity = 0;
+        setTimeout(() => load.remove(), 600);
+      }
     }
     renderer.render(scene, cam);
     return;
