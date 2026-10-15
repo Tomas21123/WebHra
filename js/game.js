@@ -215,8 +215,10 @@ renderHB();
 applyHeld();
 
 // ---------- Kontrola P2P Režimu a Čekání na Schválení Hostitelem ----------
+const urlParams = new URLSearchParams(window.location.search);
+const hasP2PUrl = !!urlParams.get('p2p');
 const activeGameInfo = (typeof GameStorage !== 'undefined') ? GameStorage.getActiveGame() : null;
-window.isP2PWaitingApproval = !!(activeGameInfo && activeGameInfo.mode === 'p2p_client');
+window.isP2PWaitingApproval = hasP2PUrl || !!(activeGameInfo && activeGameInfo.mode === 'p2p_client');
 
 window.approveP2PJoin = function(hostSeed, hostDeltas, players) {
   window.isP2PWaitingApproval = false;
