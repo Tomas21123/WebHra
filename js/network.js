@@ -447,7 +447,10 @@ class NetworkManager {
           nickname: hostNick,
           isOp: true,
           x: P.x, y: P.y, z: P.z,
+          bodyYaw: (typeof model !== 'undefined') ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0),
           yaw: typeof yaw !== 'undefined' ? yaw : 0,
+          pitch: typeof pitch !== 'undefined' ? pitch : 0,
+          emote: (typeof currentEmote !== 'undefined') ? currentEmote : null,
           skin: this.getLocalPlayerSkin(),
           equipment: this.getLocalEquippedMap()
         }
@@ -721,6 +724,9 @@ class NetworkManager {
   sendPlayerTransform() {
     if (!this.connected || typeof P === 'undefined') return;
 
+    const currentBodyYaw = (typeof model !== 'undefined') ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0);
+    const activeEmote = (typeof currentEmote !== 'undefined') ? currentEmote : null;
+
     if (this.isP2PHost) {
       // Host odesílá svou polohu s id: 'host' a type: 'playerMove' všem připojeným klientům
       this.broadcastP2P({
@@ -729,8 +735,10 @@ class NetworkManager {
         x: P.x,
         y: P.y,
         z: P.z,
+        bodyYaw: currentBodyYaw,
         yaw: typeof yaw !== 'undefined' ? yaw : 0,
         pitch: typeof pitch !== 'undefined' ? pitch : 0,
+        emote: activeEmote,
         heldItem: typeof heldId !== 'undefined' ? heldId : null,
         isRolling: typeof isRolling !== 'undefined' ? isRolling : false,
         attacking: typeof attacking !== 'undefined' ? attacking : false
@@ -744,8 +752,10 @@ class NetworkManager {
       x: P.x,
       y: P.y,
       z: P.z,
+      bodyYaw: currentBodyYaw,
       yaw: typeof yaw !== 'undefined' ? yaw : 0,
       pitch: typeof pitch !== 'undefined' ? pitch : 0,
+      emote: activeEmote,
       heldItem: typeof heldId !== 'undefined' ? heldId : null,
       isRolling: typeof isRolling !== 'undefined' ? isRolling : false,
       attacking: typeof attacking !== 'undefined' ? attacking : false
@@ -899,6 +909,11 @@ class NetworkManager {
     group.position.set(playerData.x || 0, playerData.y || 80, playerData.z || 0);
     scene.add(group);
 
+    const initialBodyYaw = (typeof playerData.bodyYaw === 'number')
+      ? playerData.bodyYaw
+      : ((typeof playerData.yaw === 'number') ? Math.atan2(-Math.sin(playerData.yaw), -Math.cos(playerData.yaw)) : 0);
+    group.rotation.y = initialBodyYaw;
+
     this.remotePlayers.set(playerData.id, {
       id: playerData.id,
       nickname: playerData.nickname || 'Hráč',
@@ -908,8 +923,11 @@ class NetworkManager {
       targetX: playerData.x || 0,
       targetY: playerData.y || 80,
       targetZ: playerData.z || 0,
+      targetBodyYaw: initialBodyYaw,
       targetYaw: playerData.yaw || 0,
       targetPitch: playerData.pitch || 0,
+      emote: playerData.emote || null,
+      emoteTimer: 0,
       phase: 0
     });
   }
@@ -964,9 +982,27 @@ class NetworkManager {
     if (typeof data.x === 'number') p.targetX = data.x;
     if (typeof data.y === 'number') p.targetY = data.y;
     if (typeof data.z === 'number') p.targetZ = data.z;
+
+    // bodyYaw určuje skutečný směr otočení těla postavy
+    if (typeof data.bodyYaw === 'number') {
+      p.targetBodyYaw = data.bodyYaw;
+    } else if (typeof data.yaw === 'number') {
+      p.targetBodyYaw = Math.atan2(-Math.sin(data.yaw), -Math.cos(data.yaw));
+    }
+
     if (typeof data.yaw === 'number') p.targetYaw = data.yaw;
     if (typeof data.pitch === 'number') p.targetPitch = data.pitch;
     if (typeof data.heldItem !== 'undefined') p.heldItem = data.heldItem;
+
+    if (typeof data.emote !== 'undefined') {
+      if (p.emote !== data.emote) {
+        if (!data.emote && p.rig && typeof resetRigEmote === 'function') {
+          resetRigEmote(p.rig);
+        }
+        p.emote = data.emote;
+        p.emoteTimer = 0;
+      }
+    }
   }
 
   removeRemotePlayer(id) {
@@ -1000,35 +1036,50 @@ class NetworkManager {
         g.position.z += dz * factor;
       }
 
-      // Plynulá rotace těla (interpolace úhlu bez skákání)
-      let diffYaw = (p.targetYaw || 0) - g.rotation.y;
+      // Plynulá rotace těla podle skutečného směru postavy (bodyYaw)
+      const targetBody = (typeof p.targetBodyYaw === 'number') ? p.targetBodyYaw : (p.targetYaw || 0);
+      let diffYaw = targetBody - g.rotation.y;
       while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
       while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
       g.rotation.y += diffYaw * Math.min(1, dt * 14);
 
-      // Náklon hlavy nahoru / dolů podle pohledu
-      if (p.rig && p.rig.head) {
-        p.rig.head.rotation.x = Math.max(-0.85, Math.min(0.85, p.targetPitch || 0));
-      }
+      // Pokud hráč provádí emote (tanec, mávání, ukázání, sed...)
+      if (p.emote && typeof applyEmoteAnimation === 'function') {
+        p.emoteTimer = (p.emoteTimer || 0) + dt;
+        applyEmoteAnimation(p.rig, p.emote, p.emoteTimer, performance.now());
+      } else {
+        // Relativní otočení hlavy podle kamery (kam se hráč dívá vzhledem k tělu)
+        if (p.rig && p.rig.head) {
+          // Náklon nahoru / dolů (pitch)
+          p.rig.head.rotation.x = Math.max(-0.6, Math.min(0.9, p.targetPitch || 0));
 
-      // Animace končetin: pouze pokud se reálně hýbe (rychlost/vzdálenost > 0.05)
-      if (p.rig && p.rig.arms && p.rig.legs) {
-        if (dist > 0.05) {
-          p.phase += dt * 12;
-          const armSwing = Math.sin(p.phase) * 0.7;
-          const legSwing = Math.sin(p.phase) * 0.8;
-          p.rig.arms[0].rotation.x = armSwing;
-          p.rig.arms[1].rotation.x = -armSwing;
-          p.rig.legs[0].rotation.x = -legSwing;
-          p.rig.legs[1].rotation.x = legSwing;
-        } else {
-          // Zastavení: plynulý návrat rukou i nohou do klidové polohy podél těla
-          p.phase = 0;
-          for (let i = 0; i < 2; i++) {
-            p.rig.arms[i].rotation.x *= 0.75;
-            p.rig.legs[i].rotation.x *= 0.75;
-            if (Math.abs(p.rig.arms[i].rotation.x) < 0.005) p.rig.arms[i].rotation.x = 0;
-            if (Math.abs(p.rig.legs[i].rotation.x) < 0.005) p.rig.legs[i].rotation.x = 0;
+          // Otáčení hlavy do stran (yaw vzhledem k tělu)
+          const camLookAngle = Math.atan2(-Math.sin(p.targetYaw || 0), -Math.cos(p.targetYaw || 0));
+          let headYawRel = camLookAngle - g.rotation.y;
+          while (headYawRel < -Math.PI) headYawRel += Math.PI * 2;
+          while (headYawRel > Math.PI) headYawRel -= Math.PI * 2;
+          p.rig.head.rotation.y = Math.max(-1.25, Math.min(1.25, headYawRel));
+        }
+
+        // Animace končetin: pouze pokud se reálně hýbe (rychlost/vzdálenost > 0.05)
+        if (p.rig && p.rig.arms && p.rig.legs) {
+          if (dist > 0.05) {
+            p.phase += dt * 12;
+            const armSwing = Math.sin(p.phase) * 0.7;
+            const legSwing = Math.sin(p.phase) * 0.8;
+            p.rig.arms[0].rotation.x = armSwing;
+            p.rig.arms[1].rotation.x = -armSwing;
+            p.rig.legs[0].rotation.x = -legSwing;
+            p.rig.legs[1].rotation.x = legSwing;
+          } else {
+            // Zastavení: plynulý návrat rukou i nohou do klidové polohy podél těla
+            p.phase = 0;
+            for (let i = 0; i < 2; i++) {
+              p.rig.arms[i].rotation.x *= 0.75;
+              p.rig.legs[i].rotation.x *= 0.75;
+              if (Math.abs(p.rig.arms[i].rotation.x) < 0.005) p.rig.arms[i].rotation.x = 0;
+              if (Math.abs(p.rig.legs[i].rotation.x) < 0.005) p.rig.legs[i].rotation.x = 0;
+            }
           }
         }
       }

@@ -722,77 +722,8 @@ function loop(now) {
   // --- ANIMACE EMOTŮ (Gesta, Tance, Sed na zadek) ---
   if (typeof currentEmote !== 'undefined' && currentEmote !== null) {
     emoteTimer += dt;
-    const et = emoteTimer;
-
-    if (currentEmote === 'dance67') {
-      // Mávání rukama 67 (TikTok meme tanec - divoké mávání paží a groovující trup a hlava)
-      const sp67 = 13;
-      body.position.y = -Math.abs(Math.sin(et * sp67)) * 0.06;
-      torso.rotation.z = Math.sin(et * sp67 * 0.5) * 0.16;
-      torso.rotation.x = 0.08;
-      torso.rotation.y = 0;
-
-      head.rotation.z = Math.sin(et * sp67 * 0.5) * 0.25;
-      head.rotation.x = -Math.abs(Math.sin(et * sp67)) * 0.2;
-      head.rotation.y = 0;
-
-      arms[0].rotation.x = -1.2 + Math.sin(et * sp67) * 0.95;
-      arms[0].rotation.z = -0.3 + Math.cos(et * sp67) * 0.35;
-      arms[0].rotation.y = 0.2;
-
-      arms[1].rotation.x = -1.2 - Math.sin(et * sp67) * 0.95;
-      arms[1].rotation.z = 0.3 - Math.cos(et * sp67) * 0.35;
-      arms[1].rotation.y = -0.2;
-
-      legs[0].rotation.x = Math.sin(et * sp67 * 0.5) * 0.15;
-      legs[1].rotation.x = -Math.sin(et * sp67 * 0.5) * 0.15;
-      legs[0].rotation.z = -0.04 + Math.sin(et * sp67 * 0.5) * 0.1;
-      legs[1].rotation.z = 0.04 + Math.sin(et * sp67 * 0.5) * 0.1;
-    } else if (currentEmote === 'wave') {
-      // Zamávání rukou jako pozdrav (pravá ruka nahoře, kývání do stran, přátelský náklon)
-      body.position.y = 0;
-      torso.rotation.set(0, 0, 0);
-      head.rotation.set(-0.08 + Math.sin(et * 5) * 0.05, 0, -0.12);
-
-      arms[1].rotation.x = -2.25;
-      arms[1].rotation.z = 0.55 + Math.sin(et * 10) * 0.35;
-      arms[1].rotation.y = 0.18;
-      arms[0].rotation.set(0, 0, -0.12);
-
-      legs[0].rotation.set(0, 0, -0.04);
-      legs[1].rotation.set(0, 0, 0.04);
-    } else if (currentEmote === 'point') {
-      // Ukázání rukou dopředu
-      body.position.y = 0;
-      torso.rotation.set(0.04, 0.08, 0);
-      head.rotation.set(0, 0, 0);
-
-      arms[1].rotation.set(-1.57, 0.04, 0.08);
-      arms[0].rotation.set(-0.3, 0.2, -0.3);
-
-      legs[0].rotation.set(0, 0, -0.04);
-      legs[1].rotation.set(0, 0, 0.04);
-    } else if (currentEmote === 'sit') {
-      // Sed na zem na zadek:
-      // Spustíme celé tělo tak, aby hýždě (kyčle v 8*VX = 0.4m) dosedly přímo na zem (y = 0)
-      body.position.set(0, -8 * VX, 0);
-      body.rotation.set(0, 0, 0);
-
-      // Nohy směřují vodorovně dopředu po zemi
-      legs[0].rotation.set(-1.57, -0.12, -0.04);
-      legs[1].rotation.set(-1.57, 0.12, 0.04);
-
-      // Trup sedí vzpřímeně na kyčlích s mírným přirozeným uvolněným náklonem
-      torso.position.set(0, 8 * VX, 0);
-      torso.rotation.set(0.06, 0, 0);
-
-      // Hlava sedí na krku
-      head.position.set(0, 11 * VX, 0);
-      head.rotation.set(0.04 + Math.sin(now * 0.002) * 0.03, 0, 0);
-
-      // Ruce spočívají přirozeně položené dlaněmi na stehnech / kolenou
-      arms[0].rotation.set(-0.95, 0.22, -0.12);
-      arms[1].rotation.set(-0.95, -0.22, 0.12);
+    if (typeof applyEmoteAnimation === 'function') {
+      applyEmoteAnimation(playerRig, currentEmote, emoteTimer, now);
     }
   }
 

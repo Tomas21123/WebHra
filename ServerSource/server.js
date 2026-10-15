@@ -402,8 +402,10 @@ if (WebSocketServer) {
           player.x = msg.x ?? player.x;
           player.y = msg.y ?? player.y;
           player.z = msg.z ?? player.z;
+          player.bodyYaw = msg.bodyYaw ?? player.bodyYaw;
           player.yaw = msg.yaw ?? player.yaw;
           player.pitch = msg.pitch ?? player.pitch;
+          player.emote = msg.emote ?? null;
           player.heldItem = msg.heldItem ?? player.heldItem;
           player.isRolling = !!msg.isRolling;
           player.attacking = !!msg.attacking;
@@ -415,8 +417,10 @@ if (WebSocketServer) {
             x: player.x,
             y: player.y,
             z: player.z,
+            bodyYaw: player.bodyYaw,
             yaw: player.yaw,
             pitch: player.pitch,
+            emote: player.emote,
             heldItem: player.heldItem,
             isRolling: player.isRolling,
             attacking: player.attacking
