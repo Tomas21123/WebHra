@@ -4,6 +4,10 @@ const chatHistory = [];
 let chatHistoryIdx = -1;
 let chatFadeTimeout = null;
 
+// Autocomplete stav
+let currentSuggestions = [];
+let selectedSuggestionIdx = -1;
+
 // Získání uživatelského jména přihlášeného hráče
 function getPlayerNickname() {
   try {
@@ -27,6 +31,21 @@ function escapeChatHtml(str) {
             .replace(/'/g, '&#039;');
 }
 
+// Získání přezdívek všech připojených online hráčů
+function getOnlinePlayerNicknames() {
+  const nicks = [];
+  try {
+    if (window.networkManager && window.networkManager.remotePlayers) {
+      for (const [, p] of window.networkManager.remotePlayers) {
+        if (p && p.nickname && !nicks.includes(p.nickname)) {
+          nicks.push(p.nickname);
+        }
+      }
+    }
+  } catch (e) {}
+  return nicks;
+}
+
 // Přidání zprávy do chatu
 function addChatMessage(sender, text, type = 'user') {
   const box = $('chatBox');
@@ -37,10 +56,15 @@ function addChatMessage(sender, text, type = 'user') {
   row.className = `chat-msg ${type}`;
 
   if (type === 'user') {
-    // Přesný formát podle zadání: "(Hracuv NickName) -> (zpráva kterou hráč napsal)"
+    // Běžná zpráva hráče: viditelná pro odesílatele i všechny ostatní
     const nick = escapeChatHtml(sender || getPlayerNickname());
     const msg = escapeChatHtml(text);
     row.innerHTML = `<span class="chat-nick">(${nick})</span> <span class="chat-arrow">-&gt;</span> <span class="chat-body">${msg}</span>`;
+  } else if (type === 'command') {
+    // Příkaz zadaný hráčem: viditelný POUZE pro odesílatele, který ho zadal!
+    const nick = escapeChatHtml(sender || getPlayerNickname());
+    const msg = escapeChatHtml(text);
+    row.innerHTML = `<span class="chat-nick">(${nick})</span> <span class="chat-arrow">-&gt;</span> <span class="chat-body chat-cmd-text">${msg}</span>`;
   } else if (type === 'system') {
     row.innerHTML = `<span class="chat-tag sys">[Systém]</span> <span class="chat-body">${text}</span>`;
   } else if (type === 'error') {
@@ -70,28 +94,379 @@ function addChatMessage(sender, text, type = 'user') {
   }
 }
 
+// =============================================================================
+// NAŠEPTÁVAČ PŘÍKAZŮ (COMMAND AUTOCOMPLETE)
+// =============================================================================
+
+const COMMAND_DEFS = [
+  {
+    cmd: 'help',
+    syntax: '/help',
+    desc: 'Zobrazí přehled všech dostupných příkazů',
+    getSuggestions: () => []
+  },
+  {
+    cmd: 'tp',
+    syntax: '/tp <hráč | x z | x y z>',
+    desc: 'Teleportuje k hráči nebo na souřadnice',
+    getSuggestions: (args) => {
+      const suggestions = [];
+      const onlinePlayers = getOnlinePlayerNicknames();
+
+      if (args.length <= 1) {
+        const prefix = (args[0] || '').toLowerCase();
+
+        // 1. Nabídnout online hráče
+        if (onlinePlayers.length > 0) {
+          onlinePlayers
+            .filter(n => !prefix || n.toLowerCase().startsWith(prefix))
+            .forEach(n => {
+              suggestions.push({
+                insert: `/tp ${n}`,
+                display: n,
+                syntax: `/tp ${n}`,
+                desc: `Teleport k hráči ${n}`
+              });
+            });
+        } else {
+          if (!prefix || '<hráč>'.startsWith(prefix)) {
+            suggestions.push({
+              insert: `/tp `,
+              display: '<jméno_hráče>',
+              syntax: `/tp <hráč>`,
+              desc: 'Zadej jméno hráče pro teleport'
+            });
+          }
+        }
+
+        // 2. Nabídnout souřadnice
+        if (!prefix || '~'.startsWith(prefix)) {
+          suggestions.push({
+            insert: '/tp ~ ~ ~',
+            display: '~ ~ ~',
+            syntax: '/tp ~ ~ ~',
+            desc: 'Relativní souřadnice k tvé aktuální pozici'
+          });
+        }
+
+        if (!prefix || '0'.startsWith(prefix)) {
+          const curBX = typeof P !== 'undefined' ? Math.round(P.x / S) : 0;
+          const curBZ = typeof P !== 'undefined' ? Math.round(P.z / S) : 0;
+          suggestions.push({
+            insert: `/tp ${curBX} ${curBZ}`,
+            display: `${curBX} ${curBZ}`,
+            syntax: '/tp <x> <z>',
+            desc: 'Tvé aktuální souřadnice (povrch)'
+          });
+        }
+      } else if (args.length === 2) {
+        // Zadán X parametr, napovědět Z
+        const x = args[0];
+        const curBZ = typeof P !== 'undefined' ? Math.round(P.z / S) : 0;
+        suggestions.push({
+          insert: `/tp ${x} ${curBZ}`,
+          display: `${x} ${curBZ}`,
+          syntax: `/tp ${x} <z>`,
+          desc: 'Cílová souřadnice Z (výška se dopočítá automaticky)'
+        });
+        suggestions.push({
+          insert: `/tp ${x} 80 ${curBZ}`,
+          display: `${x} 80 ${curBZ}`,
+          syntax: `/tp ${x} <y> <z>`,
+          desc: 'Zadání s přesnou výškou Y a souřadnicí Z'
+        });
+      } else if (args.length === 3) {
+        const x = args[0];
+        const y = args[1];
+        const curBZ = typeof P !== 'undefined' ? Math.round(P.z / S) : 0;
+        suggestions.push({
+          insert: `/tp ${x} ${y} ${curBZ}`,
+          display: `${x} ${y} ${curBZ}`,
+          syntax: `/tp ${x} ${y} <z>`,
+          desc: 'Cílová souřadnice Z'
+        });
+      }
+      return suggestions;
+    }
+  },
+  {
+    cmd: 'spawn',
+    syntax: '/spawn',
+    desc: 'Teleportuje na výchozí bod (spawn) světa',
+    getSuggestions: () => []
+  },
+  {
+    cmd: 'locate',
+    syntax: '/locate <biom>',
+    desc: 'Vyhledá nejbližší biom a vypíše souřadnice',
+    getSuggestions: (args) => {
+      const biomes = [
+        { name: 'les', desc: 'Horský les a zelené louky' },
+        { name: 'poust', desc: 'Vyprahlá poušť a písečné duny' },
+        { name: 'snih', desc: 'Sněžná tundra a ledové štíty' },
+        { name: 'hory', desc: 'Skalnaté pohoří a vrcholky' },
+        { name: 'plaz', desc: 'Písečné pobřeží a pláže' },
+        { name: 'more', desc: 'Hluboké moře a oceány' },
+        { name: 'prales', desc: 'Tropický deštný prales' }
+      ];
+      const prefix = (args[0] || '').toLowerCase();
+      return biomes
+        .filter(b => !prefix || b.name.startsWith(prefix))
+        .map(b => ({
+          insert: `/locate ${b.name}`,
+          display: b.name,
+          syntax: `/locate ${b.name}`,
+          desc: b.desc
+        }));
+    }
+  },
+  {
+    cmd: 'heal',
+    syntax: '/heal',
+    desc: 'Doplní životy (HP), staminu a kyslík na 100 %',
+    getSuggestions: () => []
+  },
+  {
+    cmd: 'time',
+    syntax: '/time <den | noc | 0.0-1.0>',
+    desc: 'Změní denní dobu herního světa',
+    getSuggestions: (args) => {
+      const times = [
+        { name: 'den', desc: 'Nastaví slunečný den (poledne)' },
+        { name: 'noc', desc: 'Nastaví noční hvězdnou oblohu' }
+      ];
+      const prefix = (args[0] || '').toLowerCase();
+      return times
+        .filter(t => !prefix || t.name.startsWith(prefix))
+        .map(t => ({
+          insert: `/time ${t.name}`,
+          display: t.name,
+          syntax: `/time ${t.name}`,
+          desc: t.desc
+        }));
+    }
+  },
+  {
+    cmd: 'give',
+    syntax: '/give <předmět>',
+    desc: 'Přidá vybraný voxelový předmět nebo zbraň',
+    getSuggestions: (args) => {
+      const prefix = (args[0] || '').toLowerCase();
+      const items = (typeof INV !== 'undefined') ? INV : [
+        { id: 'sword', name: 'Ocelový meč' },
+        { id: 'wood', name: 'Dubové dřevo' },
+        { id: 'stone', name: 'Kamenný blok' },
+        { id: 'torch', name: 'Pochodeň' }
+      ];
+      return items
+        .filter(it => !prefix || it.id.toLowerCase().startsWith(prefix) || it.name.toLowerCase().startsWith(prefix))
+        .map(it => ({
+          insert: `/give ${it.id}`,
+          display: it.id,
+          syntax: `/give ${it.id}`,
+          desc: it.name
+        }));
+    }
+  },
+  {
+    cmd: 'list',
+    syntax: '/list',
+    desc: 'Vypíše seznam všech připojených hráčů',
+    getSuggestions: () => []
+  },
+  {
+    cmd: 'clear',
+    syntax: '/clear',
+    desc: 'Vymaže historii zpráv v chatovacím okně',
+    getSuggestions: () => []
+  },
+  {
+    cmd: 'op',
+    syntax: '/op <hráč>',
+    desc: 'Udělit hráči práva operátora (OP)',
+    getSuggestions: (args) => {
+      const prefix = (args[0] || '').toLowerCase();
+      return getOnlinePlayerNicknames()
+        .filter(n => !prefix || n.toLowerCase().startsWith(prefix))
+        .map(n => ({
+          insert: `/op ${n}`,
+          display: n,
+          syntax: `/op ${n}`,
+          desc: `Udělit OP práva hráči ${n}`
+        }));
+    }
+  },
+  {
+    cmd: 'deop',
+    syntax: '/deop <hráč>',
+    desc: 'Odebrat práva operátora (OP)',
+    getSuggestions: (args) => {
+      const prefix = (args[0] || '').toLowerCase();
+      return getOnlinePlayerNicknames()
+        .filter(n => !prefix || n.toLowerCase().startsWith(prefix))
+        .map(n => ({
+          insert: `/deop ${n}`,
+          display: n,
+          syntax: `/deop ${n}`,
+          desc: `Odebrat OP práva hráči ${n}`
+        }));
+    }
+  },
+  {
+    cmd: 'kick',
+    syntax: '/kick <hráč>',
+    desc: 'Vyhodit hráče ze světa',
+    getSuggestions: (args) => {
+      const prefix = (args[0] || '').toLowerCase();
+      return getOnlinePlayerNicknames()
+        .filter(n => !prefix || n.toLowerCase().startsWith(prefix))
+        .map(n => ({
+          insert: `/kick ${n}`,
+          display: n,
+          syntax: `/kick ${n}`,
+          desc: `Vyhodit hráče ${n}`
+        }));
+    }
+  }
+];
+
+// Aktualizace našeptávače podle aktuálního textu v inputu
+function updateChatAutocomplete() {
+  const input = $('chatInput');
+  const container = $('chatAutocomplete');
+  if (!input || !container) return;
+
+  const val = input.value;
+
+  // Našeptávač se zobrazuje pouze při psaní příkazů začínajících lomítkem '/'
+  if (!val.startsWith('/')) {
+    hideChatAutocomplete();
+    return;
+  }
+
+  const withoutSlash = val.slice(1);
+  const parts = withoutSlash.split(/\s+/);
+  const cmdQuery = (parts[0] || '').toLowerCase();
+  const hasSpace = withoutSlash.includes(' ');
+
+  if (!hasSpace) {
+    // Uživatel píše název příkazu (např. /, /t, /tp, /h, /he)
+    const matches = COMMAND_DEFS.filter(def => def.cmd.startsWith(cmdQuery));
+    currentSuggestions = matches.map(def => ({
+      insert: `/${def.cmd} `,
+      display: `/${def.cmd}`,
+      syntax: def.syntax,
+      desc: def.desc
+    }));
+  } else {
+    // Příkaz je zvolen, napovídáme jeho parametry (např. /tp [jméno], /locate [biom])
+    const def = COMMAND_DEFS.find(d => d.cmd === cmdQuery);
+    if (def && typeof def.getSuggestions === 'function') {
+      const args = parts.slice(1);
+      // Pokud vstup končí mezerou a poslední prvek není prázdný řetězec, přidáme prázdný parametr pro další argument
+      if (val.endsWith(' ') && args[args.length - 1] !== '') {
+        args.push('');
+      }
+      currentSuggestions = def.getSuggestions(args);
+    } else {
+      currentSuggestions = [];
+    }
+  }
+
+  if (selectedSuggestionIdx >= currentSuggestions.length) {
+    selectedSuggestionIdx = currentSuggestions.length > 0 ? 0 : -1;
+  }
+
+  renderChatAutocomplete();
+}
+
+// Vykreslení návrhů v okně našeptávače
+function renderChatAutocomplete() {
+  const container = $('chatAutocomplete');
+  if (!container) return;
+
+  if (currentSuggestions.length === 0) {
+    hideChatAutocomplete();
+    return;
+  }
+
+  container.hidden = false;
+  let html = '';
+  currentSuggestions.forEach((s, idx) => {
+    const isSel = idx === selectedSuggestionIdx ? ' selected' : '';
+    html += `
+      <div class="chat-ac-item${isSel}" data-idx="${idx}">
+        <span class="chat-ac-cmd">${escapeChatHtml(s.display)}</span>
+        ${s.syntax ? `<span class="chat-ac-syntax">${escapeChatHtml(s.syntax)}</span>` : ''}
+        <span class="chat-ac-desc">${escapeChatHtml(s.desc || '')}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+
+  // Interakce kliknutím myši
+  container.querySelectorAll('.chat-ac-item').forEach(el => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Zabránit ztrátě fokusu z inputu
+      const idx = parseInt(el.getAttribute('data-idx'), 10);
+      applyAutocomplete(idx);
+    });
+  });
+
+  // Odrolovat na vybraný prvek
+  const selEl = container.querySelector('.chat-ac-item.selected');
+  if (selEl) {
+    selEl.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+// Aplikování vybraného návrhu do inputu
+function applyAutocomplete(idx) {
+  const input = $('chatInput');
+  if (!input || idx < 0 || idx >= currentSuggestions.length) return;
+
+  const s = currentSuggestions[idx];
+  input.value = s.insert;
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  selectedSuggestionIdx = -1;
+  updateChatAutocomplete();
+}
+
+function hideChatAutocomplete() {
+  const container = $('chatAutocomplete');
+  if (container) {
+    container.innerHTML = '';
+    container.hidden = true;
+  }
+  currentSuggestions = [];
+  selectedSuggestionIdx = -1;
+}
+
+// =============================================================================
+// OTEVŘENÍ, ZAVŘENÍ A ODESÍLÁNÍ CHATU
+// =============================================================================
+
 // Otevření konzole a chatu
 function openChat(initialChar = '') {
   if (typeof escOpen !== 'undefined' && escOpen) return;
   if (typeof charOpen !== 'undefined' && charOpen) return;
   if (typeof invOpen !== 'undefined' && invOpen) return;
 
-  // Pokud je otevřená minimapa nebo emoty, zavřít je pro psaní do konzole
   if (typeof emoteOpen !== 'undefined' && emoteOpen && typeof closeEmotes === 'function') {
     closeEmotes();
   }
 
   chatOpen = true;
   chatHistoryIdx = -1;
+  selectedSuggestionIdx = -1;
 
-  // Uvolnit kurzor ze 3D pohledu
   try {
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
   } catch (e) {}
 
-  // Zastavit aktuální pohyb postavy, aby hráč neodjel při psaní
   if (typeof keys !== 'undefined') {
     for (const k in keys) keys[k] = 0;
   }
@@ -119,6 +494,8 @@ function openChat(initialChar = '') {
     if (initialChar) {
       input.setSelectionRange(initialChar.length, initialChar.length);
     }
+    // Okamžitě aktualizovat našeptávač (např. pokud byl chat otevřen lomítkem '/')
+    updateChatAutocomplete();
   }
 
   if (msgs) msgs.scrollTop = msgs.scrollHeight;
@@ -128,6 +505,7 @@ function openChat(initialChar = '') {
 function closeChat(focusGame = true) {
   chatOpen = false;
   chatHistoryIdx = -1;
+  hideChatAutocomplete();
 
   const box = $('chatBox');
   const inputRow = $('chatInputRow');
@@ -140,14 +518,12 @@ function closeChat(focusGame = true) {
   }
   if (box) {
     box.classList.remove('chat-active');
-    // Nastavit odpočet pro vyblednutí zpráv
     if (chatFadeTimeout) clearTimeout(chatFadeTimeout);
     chatFadeTimeout = setTimeout(() => {
       if (!chatOpen && box) box.classList.add('chat-faded');
     }, 8500);
   }
 
-  // Vrátit focus zpět do hry
   if (focusGame) {
     try {
       (window.cv || (window.renderer && renderer.domElement))?.focus?.();
@@ -166,25 +542,38 @@ function sendChatMessage() {
     return;
   }
 
-  // Uložit do historie příkazů
+  // Uložit do lokální historie odeslaných řádků
   if (chatHistory.length === 0 || chatHistory[chatHistory.length - 1] !== raw) {
     chatHistory.push(raw);
     if (chatHistory.length > 50) chatHistory.shift();
   }
 
+  hideChatAutocomplete();
+
   if (raw.startsWith('/')) {
-    // Příkaz: v multiplayeru odeslat na server, v singleplayeru lokálně
-    if (window.networkManager && window.networkManager.connected) {
+    // -------------------------------------------------------------------------
+    // PŘÍKAZ (začíná lomítkem):
+    // Zobrazuje se v historii POUZE hráči, který jej zadal!
+    // Ostatním hráčům se v chatu vůbec nezobrazí.
+    // -------------------------------------------------------------------------
+    addChatMessage(getPlayerNickname(), raw, 'command');
+
+    if (window.networkManager && window.networkManager.socket && window.networkManager.socket.readyState === WebSocket.OPEN) {
+      // Dedikovaný WebSocket multiplayer server
       window.networkManager.sendChatMessage(raw);
     } else {
+      // Singleplayer nebo Peer-to-Peer klient/host
       executeCommand(raw);
     }
   } else {
-    // Běžná zpráva hráče: v multiplayeru odeslat všem, v singleplayeru lokálně
+    // -------------------------------------------------------------------------
+    // BĚŽNÁ ZPRÁVA:
+    // Zobrazuje se v historii odesílateli i VŠEM ostatním hráčům!
+    // -------------------------------------------------------------------------
+    addChatMessage(getPlayerNickname(), raw, 'user');
+
     if (window.networkManager && window.networkManager.connected) {
       window.networkManager.sendChatMessage(raw);
-    } else {
-      addChatMessage(getPlayerNickname(), raw, 'user');
     }
   }
 
@@ -227,14 +616,12 @@ function findNearestBiome(query) {
   const px = Math.floor(P.x / S);
   const pz = Math.floor(P.z / S);
 
-  // Zda je hráč již uvnitř daného biomu
   const curH = height(px, pz);
   const curB = biome(px, pz, curH);
   if (matcher(px, pz, curH, curB)) {
     return { x: px, y: curH, z: pz, dist: 0, name: targetName, alreadyHere: true };
   }
 
-  // Spirálové vyhledávání po 16 blocích (1 chunk) do okruhu 3200 bloků
   const step = 16;
   const maxRadius = 3200;
 
@@ -307,22 +694,72 @@ function executeCommand(cmdStr) {
     case 'tp':
     case 'teleport': {
       if (args.length < 1) {
-        addChatMessage(null, 'Použití: <code>/tp &lt;X&gt; &lt;Z&gt;</code> nebo <code>/tp &lt;X&gt; &lt;Y&gt; &lt;Z&gt;</code> (lze použít i ~ pro relativní pozici).', 'info');
+        addChatMessage(null, 'Použití: <code>/tp &lt;jméno hráče&gt;</code> nebo <code>/tp &lt;X&gt; &lt;Z&gt;</code> nebo <code>/tp &lt;X&gt; &lt;Y&gt; &lt;Z&gt;</code>.', 'info');
         return;
       }
 
+      // 1. /tp <jmenohrace> - Teleport k jinému hráči
+      if (args.length === 1) {
+        const targetQuery = args[0].trim().toLowerCase();
+        let targetPlayer = null;
+
+        // Prohledat připojené vzdálené hráče v síťovém manažeru
+        if (window.networkManager && window.networkManager.remotePlayers) {
+          for (const [, p] of window.networkManager.remotePlayers) {
+            if (p && p.nickname && p.nickname.trim().toLowerCase() === targetQuery) {
+              targetPlayer = p;
+              break;
+            }
+          }
+          if (!targetPlayer) {
+            for (const [, p] of window.networkManager.remotePlayers) {
+              if (p && p.nickname && p.nickname.trim().toLowerCase().includes(targetQuery)) {
+                targetPlayer = p;
+                break;
+              }
+            }
+          }
+        }
+
+        if (targetPlayer) {
+          const tx = targetPlayer.group ? targetPlayer.group.position.x : (targetPlayer.targetX || 0);
+          const ty = targetPlayer.group ? targetPlayer.group.position.y : (targetPlayer.targetY || 80);
+          const tz = targetPlayer.group ? targetPlayer.group.position.z : (targetPlayer.targetZ || 0);
+
+          P.x = tx;
+          P.y = ty + 0.15;
+          P.z = tz;
+          P.vx = 0;
+          P.vy = 0;
+          P.vz = 0;
+
+          if (typeof lastC !== 'undefined') lastC = '';
+          if (typeof markExploredAroundPlayer === 'function') markExploredAroundPlayer();
+          if (typeof mmNeedsRebuild !== 'undefined') mmNeedsRebuild = true;
+
+          const tbX = Math.round(P.x / S);
+          const tbY = Math.round(P.y / S);
+          const tbZ = Math.round(P.z / S);
+
+          addChatMessage(null, `Úspěšně teleportován k hráči <strong>${escapeChatHtml(targetPlayer.nickname)}</strong> na pozici [${tbX}, ${tbY}, ${tbZ}].`, 'system');
+          if (typeof toast === 'function') {
+            toast(`Teleport k hráči: ${targetPlayer.nickname}`);
+          }
+          return;
+        }
+
+        addChatMessage(null, `Hráč "<strong>${escapeChatHtml(args[0])}</strong>" nebyl ve světě nalezen. Zadej správné jméno nebo souřadnice (např. <code>/tp 150 250</code>).`, 'error');
+        return;
+      }
+
+      // 2. /tp <X> <Z> nebo /tp <X> <Y> <Z>
       const curBX = Math.floor(P.x / S);
       const curBY = Math.floor(P.y / S);
       const curBZ = Math.floor(P.z / S);
 
       let targetBX, targetBY, targetBZ;
 
-      if (args.length === 1) {
-        // Jedna hodnota: neplatné
-        addChatMessage(null, 'Musíš zadat alespoň dvě souřadnice X a Z (např. <code>/tp 100 200</code>).', 'error');
-        return;
-      } else if (args.length === 2) {
-        // /tp X Z -> automatická bezpečná výška povrchu
+      if (args.length === 2) {
         targetBX = parseCoordinate(args[0], curBX);
         targetBZ = parseCoordinate(args[1], curBZ);
         if (isNaN(targetBX) || isNaN(targetBZ)) {
@@ -331,7 +768,6 @@ function executeCommand(cmdStr) {
         }
         targetBY = Math.max(height(targetBX, targetBZ), SEA) + 2;
       } else {
-        // /tp X Y Z
         targetBX = parseCoordinate(args[0], curBX);
         targetBY = parseCoordinate(args[1], curBY);
         targetBZ = parseCoordinate(args[2], curBZ);
@@ -341,12 +777,10 @@ function executeCommand(cmdStr) {
         }
       }
 
-      // Bezpečné meze světa
       targetBX = Math.max(-50000, Math.min(50000, targetBX));
       targetBZ = Math.max(-50000, Math.min(50000, targetBZ));
       targetBY = Math.max(2, Math.min(300, targetBY));
 
-      // Teleportace hráče ve Three.js světě
       P.x = targetBX * S + S / 2;
       P.y = targetBY * S + 0.1;
       P.z = targetBZ * S + S / 2;
@@ -354,18 +788,9 @@ function executeCommand(cmdStr) {
       P.vy = 0;
       P.vz = 0;
 
-      // Resetovat chunk tracker, aby se okamžitě vygeneroval nový terén v cíli
-      if (typeof lastC !== 'undefined') {
-        lastC = '';
-      }
-
-      // Zaznamenat do mapy
-      if (typeof markExploredAroundPlayer === 'function') {
-        markExploredAroundPlayer();
-      }
-      if (typeof mmNeedsRebuild !== 'undefined') {
-        mmNeedsRebuild = true;
-      }
+      if (typeof lastC !== 'undefined') lastC = '';
+      if (typeof markExploredAroundPlayer === 'function') markExploredAroundPlayer();
+      if (typeof mmNeedsRebuild !== 'undefined') mmNeedsRebuild = true;
 
       addChatMessage(null, `Úspěšně teleportován na souřadnice <strong>X: ${targetBX}, Y: ${targetBY}, Z: ${targetBZ}</strong>.`, 'system');
       if (typeof toast === 'function') {
@@ -385,7 +810,7 @@ function executeCommand(cmdStr) {
 
       const spXb = Math.round(SPX / S);
       const spYb = Math.round(SPY / S);
-      addChatMessage(null, `Teleportován na počáteční spawn svět (X: ${spXb}, Y: ${spYb}, Z: 1).`, 'system');
+      addChatMessage(null, `Teleportován na výchozí spawn světa (X: ${spXb}, Y: ${spYb}, Z: 1).`, 'system');
       if (typeof toast === 'function') toast('Teleportován na spawn');
       break;
     }
@@ -401,6 +826,61 @@ function executeCommand(cmdStr) {
       break;
     }
 
+    case 'time': {
+      if (args.length === 0) {
+        addChatMessage(null, 'Použití: <code>/time &lt;den | noc | hodnota 0.0 - 1.0&gt;</code>.', 'info');
+        return;
+      }
+      const sub = (args[0] || '').toLowerCase();
+      let tVal = 0.5;
+      if (sub === 'noc' || sub === 'night') tVal = 0.0;
+      else if (sub === 'den' || sub === 'day') tVal = 0.5;
+      else if (!isNaN(parseFloat(sub))) tVal = parseFloat(sub);
+
+      if (typeof worldTime !== 'undefined') worldTime = tVal;
+      addChatMessage(null, `Čas světa byl nastaven na <strong>${sub === 'noc' ? 'noc' : sub === 'den' ? 'den' : tVal}</strong>.`, 'system');
+      if (typeof toast === 'function') toast(`Čas nastaven: ${sub}`);
+      break;
+    }
+
+    case 'give': {
+      if (args.length === 0) {
+        addChatMessage(null, 'Použití: <code>/give &lt;id_předmětu&gt;</code> (např. <code>/give sword</code>, <code>/give wood</code>).', 'info');
+        return;
+      }
+      const itemId = args[0].toLowerCase();
+      const it = (typeof INV !== 'undefined') ? INV.find(x => x.id === itemId || x.id.includes(itemId)) : null;
+      if (it) {
+        if (typeof HB !== 'undefined') {
+          let emptySlot = HB.indexOf(null);
+          if (emptySlot === -1 && HB.length < (typeof MAXHB !== 'undefined' ? MAXHB : 9)) {
+            HB.push(it.id);
+            emptySlot = HB.length - 1;
+          } else if (emptySlot !== -1) {
+            HB[emptySlot] = it.id;
+          } else {
+            HB[0] = it.id;
+            emptySlot = 0;
+          }
+          if (typeof renderHB === 'function') renderHB();
+          if (typeof selSlot === 'function') selSlot(emptySlot);
+          addChatMessage(null, `Předmět <strong>${escapeChatHtml(it.name)}</strong> byl přidán do tvé lišty.`, 'system');
+          if (typeof toast === 'function') toast(`Získáno: ${it.name}`);
+        }
+      } else {
+        addChatMessage(null, `Neznámý předmět "${escapeChatHtml(args[0])}".`, 'error');
+      }
+      break;
+    }
+
+    case 'list': {
+      const players = getOnlinePlayerNicknames();
+      const myNick = getPlayerNickname();
+      const all = [myNick + ' (Ty)', ...players];
+      addChatMessage(null, `<strong>Hráči ve světě (${all.length}):</strong> ${all.map(escapeChatHtml).join(', ')}`, 'info');
+      break;
+    }
+
     case 'clear': {
       const msgs = $('chatMessages');
       if (msgs) msgs.innerHTML = '';
@@ -412,10 +892,14 @@ function executeCommand(cmdStr) {
       addChatMessage(
         null,
         `<strong>Dostupné příkazy konzole:</strong><br>` +
-        `• <code>/locate &lt;biom&gt;</code> – Vyhledá biom (les, poust, snih, hory, plaz, more, prales) a vypíše souřadnice<br>` +
-        `• <code>/tp &lt;X&gt; [Y] &lt;Z&gt;</code> – Teleportuje na dané souřadnice (např. /tp 200 400)<br>` +
-        `• <code>/spawn</code> – Teleportuje hráče zpět na spawn<br>` +
-        `• <code>/heal</code> – Okamžitě doplní životy (HP) a staminu na 100 %<br>` +
+        `• <code>/tp &lt;jméno hráče&gt;</code> – Teleportuje přímo k vybranému hráči<br>` +
+        `• <code>/tp &lt;X&gt; [Y] &lt;Z&gt;</code> – Teleportuje na dané souřadnice světa<br>` +
+        `• <code>/locate &lt;biom&gt;</code> – Vyhledá biom (les, poust, snih, hory, plaz, more, prales)<br>` +
+        `• <code>/spawn</code> – Teleportuje hráče zpět na výchozí spawn<br>` +
+        `• <code>/heal</code> – Okamžitě doplní životy (HP), staminu a kyslík na 100 %<br>` +
+        `• <code>/time &lt;den | noc&gt;</code> – Nastaví denní dobu světa<br>` +
+        `• <code>/give &lt;předmět&gt;</code> – Přidá voxelový předmět do lišty<br>` +
+        `• <code>/list</code> – Vypíše seznam připojených hráčů<br>` +
         `• <code>/clear</code> – Vymaže historii zpráv v konzoli<br>` +
         `• <code>/help</code> – Zobrazí tento přehled příkazů`,
         'info'
@@ -436,31 +920,36 @@ function initChatListeners() {
   const btnSend = $('chatSendBtn');
 
   if (input) {
+    // Reaktivní našeptávač při každém stisku klávesy
+    input.addEventListener('input', () => {
+      updateChatAutocomplete();
+    });
+
     input.addEventListener('keydown', e => {
       // Zamezit probublávání do hry (WASD, mezerník apod.)
       e.stopPropagation();
 
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendChatMessage();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        closeChat();
-      } else if (e.key === 'ArrowUp') {
-        // Navigace historií nahoru
-        e.preventDefault();
-        if (chatHistory.length > 0) {
-          if (chatHistoryIdx === -1) {
-            chatHistoryIdx = chatHistory.length - 1;
-          } else if (chatHistoryIdx > 0) {
-            chatHistoryIdx--;
-          }
-          input.value = chatHistory[chatHistoryIdx] || '';
-          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+      const acContainer = $('chatAutocomplete');
+      const isAcVisible = acContainer && !acContainer.hidden && currentSuggestions.length > 0;
+
+      if (e.key === 'Tab') {
+        // Klávesa TAB: doplní vybraný nebo první návrh našeptávače
+        if (isAcVisible) {
+          e.preventDefault();
+          const targetIdx = selectedSuggestionIdx >= 0 ? selectedSuggestionIdx : 0;
+          applyAutocomplete(targetIdx);
+          return;
         }
       } else if (e.key === 'ArrowDown') {
-        // Navigace historií dolů
         e.preventDefault();
+        if (isAcVisible) {
+          // Navigace dolů v nabídce našeptávače
+          selectedSuggestionIdx = (selectedSuggestionIdx + 1) % currentSuggestions.length;
+          renderChatAutocomplete();
+          return;
+        }
+
+        // Navigace historií zpráv dolů
         if (chatHistoryIdx !== -1) {
           if (chatHistoryIdx < chatHistory.length - 1) {
             chatHistoryIdx++;
@@ -470,7 +959,42 @@ function initChatListeners() {
             input.value = '';
           }
           setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          updateChatAutocomplete();
         }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (isAcVisible) {
+          // Navigace nahoru v nabídce našeptávače
+          if (selectedSuggestionIdx <= 0) {
+            selectedSuggestionIdx = currentSuggestions.length - 1;
+          } else {
+            selectedSuggestionIdx--;
+          }
+          renderChatAutocomplete();
+          return;
+        }
+
+        // Navigace historií zpráv nahoru
+        if (chatHistory.length > 0) {
+          if (chatHistoryIdx === -1) {
+            chatHistoryIdx = chatHistory.length - 1;
+          } else if (chatHistoryIdx > 0) {
+            chatHistoryIdx--;
+          }
+          input.value = chatHistory[chatHistoryIdx] || '';
+          setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+          updateChatAutocomplete();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (isAcVisible) {
+          hideChatAutocomplete();
+        } else {
+          closeChat();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        sendChatMessage();
       }
     });
 
@@ -492,7 +1016,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     addChatMessage(
       null,
-      `Vítej ve světě! Stiskni <strong>[T]</strong> pro otevření chatu nebo <strong>[/]</strong> pro zadání příkazů (např. <code>/help</code>, <code>/locate</code>, <code>/tp</code>).`,
+      `Vítej ve světě! Stiskni <strong>[T]</strong> pro otevření chatu nebo <strong>[/]</strong> pro zadání příkazů (např. <code>/help</code>, <code>/tp</code>, <code>/locate</code>).`,
       'info'
     );
   }, 1200);

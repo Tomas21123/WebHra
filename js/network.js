@@ -529,6 +529,11 @@ class NetworkManager {
 
       case 'chat':
         if (typeof addChatMessage === 'function') {
+          const myNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : '';
+          const senderClean = (msg.sender || '').replace(/^👑\s*/, '').trim();
+          if (!msg.isSystem && myNick && senderClean.toLowerCase() === myNick.toLowerCase()) {
+            break;
+          }
           const type = msg.isSystem ? 'system' : 'user';
           const prefix = msg.isOp ? '👑 ' : '';
           addChatMessage(prefix + msg.sender, msg.text, type);

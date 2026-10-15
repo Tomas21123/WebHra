@@ -460,7 +460,7 @@ if (WebSocketServer) {
             sender: player.nickname,
             text: text,
             isOp: player.isOp
-          });
+          }, ws); // Vyloučit odesílatele, protože si zprávu zobrazil lokálně
           return;
         }
 
@@ -544,66 +544,8 @@ function handlePlayerCommand(ws, player, cmdString) {
     return;
   }
 
-  // Příkazy vyžadující OP práva
-  if (!player.isOp) {
-    sendNotice('Neznámý příkaz nebo nemáš práva operátora (OP).');
-    return;
-  }
-
-  if (cmd === 'kick') {
-    const targetNick = (args[0] || '').toLowerCase();
-    for (const [targetWs, p] of clients) {
-      if (p.nickname.toLowerCase() === targetNick) {
-        targetWs.send(JSON.stringify({ type: 'kicked', reason: 'Byl jsi vyhozen operátorem ' + player.nickname }));
-        targetWs.close();
-        broadcast({ type: 'chat', sender: 'Systém', text: `Hráč ${p.nickname} byl vyhozen.`, isSystem: true });
-        return;
-      }
-    }
-    sendNotice(`Hráč "${args[0]}" nebyl nalezen.`);
-    return;
-  }
-
-  if (cmd === 'op') {
-    const targetNick = (args[0] || '').trim().toLowerCase();
-    if (!targetNick) { sendNotice('Použití: /op <nick>'); return; }
-    ops.add(targetNick);
-    saveOps();
-    for (const [targetWs, p] of clients) {
-      if (p.nickname.toLowerCase() === targetNick) {
-        p.isOp = true;
-        targetWs.send(JSON.stringify({ type: 'opStatus', isOp: true }));
-        targetWs.send(JSON.stringify({ type: 'chat', sender: 'Systém', text: 'Byla ti udělena práva operátora (OP)! 👑', isSystem: true }));
-      }
-    }
-    sendNotice(`Hráči "${args[0]}" byla udělena práva OP.`);
-    return;
-  }
-
-  if (cmd === 'deop') {
-    const targetNick = (args[0] || '').trim().toLowerCase();
-    ops.delete(targetNick);
-    saveOps();
-    for (const [targetWs, p] of clients) {
-      if (p.nickname.toLowerCase() === targetNick) {
-        p.isOp = false;
-        targetWs.send(JSON.stringify({ type: 'opStatus', isOp: false }));
-        targetWs.send(JSON.stringify({ type: 'chat', sender: 'Systém', text: 'Tvá práva operátora byla odebrána.', isSystem: true }));
-      }
-    }
-    sendNotice(`Hráči "${args[0]}" byla odebrána práva OP.`);
-    return;
-  }
-
   if (cmd === 'tp') {
-    if (args.length === 3) {
-      const x = parseFloat(args[0]), y = parseFloat(args[1]), z = parseFloat(args[2]);
-      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-        ws.send(JSON.stringify({ type: 'teleport', x, y, z }));
-        sendNotice(`Teleportován na: [${x}, ${y}, ${z}].`);
-        return;
-      }
-    } else if (args.length === 1) {
+    if (args.length === 1) {
       const targetNick = args[0].toLowerCase();
       for (const [, p] of clients) {
         if (p.nickname.toLowerCase() === targetNick) {
@@ -612,8 +554,29 @@ function handlePlayerCommand(ws, player, cmdString) {
           return;
         }
       }
+      sendNotice(`Hráč "${args[0]}" nebyl nalezen.`);
+      return;
     }
-    sendNotice('Použití: /tp <x> <y> <z> nebo /tp <nick>');
+    // Pro teleport na konkrétní souřadnice vyžadovat OP
+    if (!player.isOp) {
+      sendNotice('Pro teleportaci na zadané souřadnice musíš být operátor (OP).');
+      return;
+    }
+    if (args.length === 3) {
+      const x = parseFloat(args[0]), y = parseFloat(args[1]), z = parseFloat(args[2]);
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        ws.send(JSON.stringify({ type: 'teleport', x, y, z }));
+        sendNotice(`Teleportován na: [${x}, ${y}, ${z}].`);
+        return;
+      }
+    }
+    sendNotice('Použití: /tp <nick> nebo /tp <x> <y> <z>');
+    return;
+  }
+
+  // Příkazy vyžadující OP práva
+  if (!player.isOp) {
+    sendNotice('Neznámý příkaz nebo nemáš práva operátora (OP).');
     return;
   }
 
