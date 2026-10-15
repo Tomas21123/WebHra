@@ -506,52 +506,55 @@ function animateFullCharacterRig(rig, s, dt, now) {
       hand.position.set(0, -8 * VX_VAL, 0);
       hand.rotation.set(0, 0, 0);
     } else if (heldId === 'spear') {
-      // 2. Realistický bodný útok kopím (Dlouhý obouruční výpad přímo dopředu)
-      // 0.0 - 0.25: Nápřah vzad s přípravou hrotu
-      // 0.25 - 0.60: Explozivní výpad oběma rukama přímo do cíle
+      // 2. Realistický obouruční bodný útok kopím PŘÍMO PŘED SEBE
+      // 0.0 - 0.25: Nápřah vzad (zatažení ratiště dozadu k boku)
+      // 0.25 - 0.60: Explozivní výpad oběma rukama přímo do cíle před hráčem
       // 0.60 - 1.00: Plynulé stažení kopí zpět do střehu
-      let thrustProgress = 0;
+      let thrust = 0;
       if (p < 0.25) {
         const t = p / 0.25;
-        thrustProgress = -t * 0.28;
-        torso.rotation.y -= t * 0.16;
+        thrust = -t * 0.22; // Zatažení o 22cm vzad pro nápřah
+        torso.rotation.y -= t * 0.18;
         torso.rotation.x -= t * 0.06;
       } else if (p < 0.6) {
         const t = (p - 0.25) / 0.35;
-        thrustProgress = -0.28 + t * 0.98; // až +0.70m vpřed!
-        torso.rotation.y = -0.16 + t * 0.38;
+        thrust = -0.22 + t * 1.12; // Prudký výpad až o +90cm DOPŘEDU před hráče!
+        torso.rotation.y = -0.18 + t * 0.44;
         torso.rotation.x = -0.06 + t * 0.26;
       } else {
         const t = (p - 0.6) / 0.4;
-        thrustProgress = 0.70 * (1 - t);
-        torso.rotation.y = 0.22 * (1 - t);
+        thrust = 0.90 * (1 - t);
+        torso.rotation.y = 0.26 * (1 - t);
         torso.rotation.x = 0.20 * (1 - t);
       }
 
-      arms[1].rotation.x = -1.57 - thrustProgress * 0.12;
-      arms[1].rotation.y = 0.08 - thrustProgress * 0.14;
-      arms[1].rotation.z = 0.08;
+      // Pravá ruka drží zadní ratiště u pasu a tlačí jej přímo dopředu
+      arms[1].rotation.x = -0.45 - Math.max(0, thrust) * 0.35;
+      arms[1].rotation.y = -0.12 + Math.max(0, thrust) * 0.15;
+      arms[1].rotation.z = 0.10;
 
-      arms[0].rotation.x = -1.52 - thrustProgress * 0.15;
-      arms[0].rotation.y = 0.24 - thrustProgress * 0.18;
-      arms[0].rotation.z = -0.12;
+      // Levá ruka pevně podpírá a vede ratiště kopí vpředu
+      arms[0].rotation.x = -0.75 - Math.max(0, thrust) * 0.25;
+      arms[0].rotation.y = 0.30 - Math.max(0, thrust) * 0.15;
+      arms[0].rotation.z = -0.14;
 
-      hand.rotation.set(-1.48, 0, 0);
-      hand.position.set(0, -8 * VX_VAL - thrustProgress * 0.35, thrustProgress * 0.75);
+      // Hrot kopí míří přímo dopředu (+Z) a bodá hluboko před postavu
+      hand.rotation.set(-0.12, 0, 0);
+      hand.position.set(0, -8 * VX_VAL, thrust * 0.85);
     } else if (heldId === 'dagger') {
-      // 3. Rychlé zákeřné bodnutí dýkou (Combo 0: hluboký bod, Combo 1: bleskový řez)
+      // 3. Rychlé zákeřné bodnutí dýkou (Combo 0: hluboký bod vpřed, Combo 1: bleskový řez)
       if (attackCombo === 0) {
         const stab = Math.sin(p * Math.PI);
-        arms[1].rotation.x = -1.58 - stab * 0.25;
+        arms[1].rotation.x = -0.65 - stab * 0.45;
         arms[1].rotation.y = -0.18 * stab;
         arms[1].rotation.z = 0.08;
-        arms[0].rotation.x = -1.25;
+        arms[0].rotation.x = -1.15; // Levá ruka kryje hrudník
         arms[0].rotation.y = -0.32;
         arms[0].rotation.z = 0.25;
         torso.rotation.y += stab * 0.22;
         torso.rotation.x += stab * 0.15;
-        hand.rotation.set(-1.4, 0, 0);
-        hand.position.set(0, -8 * VX_VAL, stab * 0.45);
+        hand.rotation.set(-0.15, 0, 0);
+        hand.position.set(0, -8 * VX_VAL, stab * 0.55);
       } else {
         const slice = Math.sin(p * Math.PI);
         arms[1].rotation.x = -1.45;
