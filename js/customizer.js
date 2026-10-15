@@ -261,7 +261,7 @@ if (escOpenP2PBtn) {
 $('escCharEdit').onclick = () => { closeEscMenu(); openCharEditor(); };
 $('escInv').onclick = () => { closeEscMenu(); toggleInv(); };
 $('escRespawn').onclick = () => {
-  P.x = SPX; P.z = 0.5; P.y = SPY; P.vx = P.vy = P.vz = 0; G.hp = 100; G.st = 100;
+  P.x = SPX; P.z = (typeof SPZ !== 'undefined') ? SPZ : 0.5; P.y = SPY; P.vx = P.vy = P.vz = 0; G.hp = 100; G.st = 100;
   closeEscMenu();
   toast('Pozice byla obnovena!');
 };

@@ -801,7 +801,7 @@ function executeCommand(cmdStr) {
 
     case 'spawn': {
       P.x = SPX;
-      P.z = 0.5;
+      P.z = (typeof SPZ !== 'undefined') ? SPZ : 0.5;
       P.y = SPY;
       P.vx = 0; P.vy = 0; P.vz = 0;
       if (typeof lastC !== 'undefined') lastC = '';
@@ -810,7 +810,8 @@ function executeCommand(cmdStr) {
 
       const spXb = Math.round(SPX / S);
       const spYb = Math.round(SPY / S);
-      addChatMessage(null, `Teleportován na výchozí spawn světa (X: ${spXb}, Y: ${spYb}, Z: 1).`, 'system');
+      const spZb = Math.round(P.z / S);
+      addChatMessage(null, `Teleportován na výchozí spawn světa (X: ${spXb}, Y: ${spYb}, Z: ${spZb}).`, 'system');
       if (typeof toast === 'function') toast('Teleportován na spawn');
       break;
     }

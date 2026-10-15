@@ -13,6 +13,7 @@ class NetworkManager {
     this.worldDeltas = {};
     this.syncTimer = null;
     this.autoSaveTimer = null;
+    this.autoSaveBadgeTimer = null;
 
     // P2P (WebRTC přes PeerJS) stav
     this.peer = null;
@@ -25,6 +26,34 @@ class NetworkManager {
     // Inicializace po načtení
     this.init();
     this.bindP2PUI();
+  }
+
+  // Získání aktuálního vzhledu postavy s bezpečnými výchozími hodnotami (žádný bílý objekt!)
+  getLocalPlayerSkin() {
+    if (typeof playerCustom !== 'undefined' && playerCustom && playerCustom.skinColor) {
+      return playerCustom;
+    }
+    try {
+      const saved = localStorage.getItem('voxel_char_custom');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    if (typeof DEFAULT_CUSTOM !== 'undefined') return DEFAULT_CUSTOM;
+    return {
+      skinColor: '#f5cfb3',
+      hairStyle: 'short',
+      hairColor: '#3e271a',
+      eyeColor: '#2980b9',
+      facialHair: 'none',
+      underwearColor: '#23395d',
+      underwearStyle: 'boxers'
+    };
+  }
+
+  getLocalEquippedMap() {
+    if (typeof getEquippedMap === 'function') {
+      return getEquippedMap();
+    }
+    return {};
   }
 
   init() {
@@ -70,6 +99,32 @@ class NetworkManager {
               if (ps.hp) G.hp = ps.hp;
               if (ps.st) G.st = ps.st;
             }
+            if (ps.hotbar && typeof HB !== 'undefined') {
+              HB.length = 0;
+              ps.hotbar.forEach(item => HB.push(item));
+              if (typeof renderHB === 'function') renderHB();
+            }
+            if (ps.equipped && typeof EQ !== 'undefined') {
+              EQ.length = 0;
+              ps.equipped.forEach(item => EQ.push(item));
+            }
+            if (ps.custom && typeof playerCustom !== 'undefined') {
+              Object.assign(playerCustom, ps.custom);
+              if (typeof updatePlayerAppearance === 'function') updatePlayerAppearance();
+            }
+
+            // Ochrana před spawnem ve vodě
+            const pbx = Math.floor(P.x / S);
+            const pbz = Math.floor(P.z / S);
+            const sh = (typeof height === 'function') ? height(pbx, pbz) : 80;
+            if (P.y <= (SEA + 1) * S || sh < SEA + 2) {
+              if (typeof findSafeSpawnCoords === 'function') {
+                const safe = findSafeSpawnCoords();
+                P.x = safe.x; P.y = safe.y; P.z = safe.z;
+                P.vx = 0; P.vy = 0; P.vz = 0;
+              }
+            }
+
             if (typeof toast === 'function') {
               toast(`Svět "${savedWorld.name}" načten.`);
             }
@@ -78,10 +133,10 @@ class NetworkManager {
       });
     }
 
-    // Automatické ukládání singleplayeru každých 6 sekund
+    // Automatické ukládání postupu přesně každých 5 sekund
     this.autoSaveTimer = setInterval(() => {
       this.saveSingleplayerWorld();
-    }, 6000);
+    }, 5000);
 
     window.addEventListener('beforeunload', () => {
       this.saveSingleplayerWorld();
@@ -100,10 +155,28 @@ class NetworkManager {
       yaw: typeof yaw !== 'undefined' ? yaw : 0,
       pitch: typeof pitch !== 'undefined' ? pitch : 0,
       hp: typeof G !== 'undefined' ? G.hp : 100,
-      st: typeof G !== 'undefined' ? G.st : 100
+      st: typeof G !== 'undefined' ? G.st : 100,
+      hotbar: (typeof HB !== 'undefined') ? [...HB] : [],
+      equipped: (typeof EQ !== 'undefined') ? [...EQ] : [],
+      custom: this.getLocalPlayerSkin()
     };
 
     GameStorage.updateWorldData(worldId, playerState, this.worldDeltas);
+    this.showAutoSaveBadge();
+  }
+
+  showAutoSaveBadge() {
+    const el = document.getElementById('autoSaveIndicator');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.opacity = '1';
+    if (this.autoSaveBadgeTimer) clearTimeout(this.autoSaveBadgeTimer);
+    this.autoSaveBadgeTimer = setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        if (el.style.opacity === '0') el.style.display = 'none';
+      }, 600);
+    }, 1200);
   }
 
   // ===========================================================================
@@ -143,7 +216,7 @@ class NetworkManager {
       return;
     }
 
-    this.peer.on('open', (id) => {
+    this.peer.on('open', () => {
       this.isP2PHost = true;
       this.connected = true;
       this.hideNetStatus();
@@ -162,17 +235,24 @@ class NetworkManager {
       if (!this.syncTimer) {
         this.syncTimer = setInterval(() => this.sendPlayerTransform(), 50);
       }
+
+      // Ukládání světa hostitele každých 5 sekund
+      if (!this.autoSaveTimer) {
+        this.autoSaveTimer = setInterval(() => this.saveSingleplayerWorld(), 5000);
+      }
     });
 
     // Příchozí spojení od jiného hráče
     this.peer.on('connection', (conn) => {
       conn.on('data', (data) => {
         if (data.type === 'joinRequest') {
-          // Zobrazit dialog se schválením připojení
+          // Zobrazit dialog se schválením připojení (klient zatím NEVSTUPUJE do světa!)
           this.promptJoinRequest(conn, data);
         } else {
-          // Běžné herní zprávy od klienta
-          this.handleP2PClientMessage(conn, data);
+          // Zpracovat herní zprávy POUZE pro schválené klienty!
+          if (this.p2pClients.has(conn.peer)) {
+            this.handleP2PClientMessage(conn, data);
+          }
         }
       });
 
@@ -189,7 +269,6 @@ class NetworkManager {
     this.peer.on('error', (err) => {
       console.warn('[P2P Host Error]', err);
       if (err.type === 'unavailable-id') {
-        // Pokud byl kód náhodou obsazen, zkusíme nový
         this.startP2PHost();
       } else {
         this.showNetStatus(`P2P chyba: ${err.message}`, 'error');
@@ -218,6 +297,7 @@ class NetworkManager {
     const popup = document.getElementById('p2pRequestPopup');
     if (popup) popup.style.display = 'none';
 
+    // Přidat klienta do schválených
     this.p2pClients.set(conn.peer, conn);
 
     // 1. Odeslat klientovi potvrzení, seed světa a stávající bloky
@@ -236,17 +316,19 @@ class NetworkManager {
           isOp: true,
           x: P.x, y: P.y, z: P.z,
           yaw: typeof yaw !== 'undefined' ? yaw : 0,
-          skin: (typeof currentCustomization !== 'undefined') ? currentCustomization : {}
+          skin: this.getLocalPlayerSkin(),
+          equipment: this.getLocalEquippedMap()
         }
       ]
     });
 
-    // 2. Vytvořit model hráče u hostitele
+    // 2. Vytvořit model hráče u hostitele s jeho reálným skinem
     this.spawnRemotePlayer({
       id: conn.peer,
       nickname: data.nickname || 'Hráč',
       skin: data.skin || {},
-      x: P.x + 2, y: P.y + 1, z: P.z + 2,
+      equipment: data.equipment || {},
+      x: P.x + 2, y: P.y + 0.2, z: P.z + 2,
       isOp: false
     });
 
@@ -275,9 +357,10 @@ class NetworkManager {
 
   // Zpracování zpráv od klienta na hostiteli
   handleP2PClientMessage(conn, msg) {
+    if (!this.p2pClients.has(conn.peer)) return;
+
     if (msg.type === 'move') {
       this.updateRemotePlayer(Object.assign({ id: conn.peer }, msg));
-      // Přeposlat ostatním klientům
       this.broadcastP2P(Object.assign({ id: conn.peer }, msg), conn.peer);
     } else if (msg.type === 'blockChange') {
       this.onRemoteBlockChange(msg.x, msg.y, msg.z, msg.blockType);
@@ -321,6 +404,18 @@ class NetworkManager {
       return;
     }
 
+    // Zobrazit modal čekání na schválení hostitelem (hráč nesmí vstoupit dříve, než hostitel povolí!)
+    const waitingModal = document.getElementById('p2pWaitingModal');
+    if (waitingModal) {
+      waitingModal.style.display = 'flex';
+      waitingModal.hidden = false;
+    }
+
+    // Zastavit pohyb hráče dokud není schválen
+    if (typeof P !== 'undefined') {
+      P.moveX = 0; P.moveZ = 0; P.vx = 0; P.vz = 0;
+    }
+
     const targetPeerId = `vox-world-${cleanNum}`;
     this.showNetStatus(`Připojuji se k příteli (${roomCode})…`, 'connecting');
 
@@ -338,17 +433,20 @@ class NetworkManager {
         this.showNetStatus('Odeslána žádost o připojení. Čekám na schválení hostitelem…', 'connecting');
 
         const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
-        const skin = (typeof currentCustomization !== 'undefined') ? currentCustomization : {};
+        const skin = this.getLocalPlayerSkin();
+        const equipment = this.getLocalEquippedMap();
 
         this.p2pHostConn.send({
           type: 'joinRequest',
           nickname: nickname,
-          skin: skin
+          skin: skin,
+          equipment: equipment
         });
       });
 
       this.p2pHostConn.on('data', (msg) => {
         if (msg.type === 'rejected') {
+          if (waitingModal) waitingModal.style.display = 'none';
           alert(msg.message || 'Hostitel odmítl žádost o připojení.');
           window.location.replace('../index.html');
           return;
@@ -358,18 +456,21 @@ class NetworkManager {
 
       this.p2pHostConn.on('close', () => {
         this.connected = false;
+        if (waitingModal) waitingModal.style.display = 'none';
         if (this.syncTimer) clearInterval(this.syncTimer);
         this.showNetStatus('Spojení s hostitelem bylo ukončeno.', 'error', true);
       });
 
       this.p2pHostConn.on('error', (err) => {
         console.warn('[P2P Client Conn Error]', err);
+        if (waitingModal) waitingModal.style.display = 'none';
         this.showNetStatus('Nelze se spojit s hostitelem. Zkontroluj kód a zda je hostitel ve hře.', 'error', true);
       });
     });
 
     this.peer.on('error', (err) => {
       console.warn('[P2P Client Peer Error]', err);
+      if (waitingModal) waitingModal.style.display = 'none';
       this.showNetStatus('Chyba spojení s přítelem: ' + err.message, 'error', true);
     });
   }
@@ -404,12 +505,14 @@ class NetworkManager {
       this.showNetStatus(`Připojeno k serveru! Ověřuji hráče…`, 'success');
 
       const nickname = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hráč';
-      const skin = (typeof currentCustomization !== 'undefined') ? currentCustomization : {};
+      const skin = this.getLocalPlayerSkin();
+      const equipment = this.getLocalEquippedMap();
 
       this.send({
         type: 'join',
         nickname: nickname,
-        skin: skin
+        skin: skin,
+        equipment: equipment
       });
 
       this.syncTimer = setInterval(() => {
@@ -488,8 +591,18 @@ class NetworkManager {
         this.isOp = !!msg.isOp;
         this.hideNetStatus();
 
+        // Skrýt čekací modal po schválení hostitelem
+        const waitingModal = document.getElementById('p2pWaitingModal');
+        if (waitingModal) {
+          waitingModal.style.display = 'none';
+          waitingModal.hidden = true;
+        }
+
         if (typeof addChatMessage === 'function') {
           addChatMessage('Systém', `Vítej ve světě "${msg.serverName}"! ${msg.isOp ? '👑 Máš práva operátora (OP).' : ''}`, 'info');
+        }
+        if (typeof toast === 'function') {
+          toast('Připojení schváleno! Vítej ve světě.');
         }
 
         if (msg.worldDeltas) {
@@ -499,6 +612,20 @@ class NetworkManager {
 
         if (Array.isArray(msg.players)) {
           msg.players.forEach(p => this.spawnRemotePlayer(p));
+        }
+
+        // Kontrola, aby hráč při připojení nespawnul ve vodě
+        if (typeof P !== 'undefined') {
+          const pbx = Math.floor(P.x / S);
+          const pbz = Math.floor(P.z / S);
+          const sh = (typeof height === 'function') ? height(pbx, pbz) : 80;
+          if (P.y <= (SEA + 1) * S || sh < SEA + 2) {
+            if (typeof findSafeSpawnCoords === 'function') {
+              const safe = findSafeSpawnCoords();
+              P.x = safe.x; P.y = safe.y; P.z = safe.z;
+              P.vx = 0; P.vy = 0; P.vz = 0;
+            }
+          }
         }
 
         // Pokud jsme P2P klient, spustit odesílání polohy
@@ -562,22 +689,27 @@ class NetworkManager {
     const rig = createCharacterRig();
     const group = rig.root;
 
-    const custom = playerData.skin || {};
-    const voxels = generateCharacterVoxels(custom, {});
+    // Bezpečný vzhled postavy bez chybějících částí těla (žádný bílý objekt!)
+    const fallbackCustom = (typeof DEFAULT_CUSTOM !== 'undefined') ? DEFAULT_CUSTOM : {
+      skinColor: '#f5cfb3',
+      hairStyle: 'short',
+      hairColor: '#3e271a',
+      eyeColor: '#2980b9',
+      facialHair: 'none',
+      underwearColor: '#23395d',
+      underwearStyle: 'boxers'
+    };
+    const custom = Object.assign({}, fallbackCustom, playerData.skin || {});
+    const eqMap = playerData.equipment || {};
 
-    setVoxGroupMesh(rig.torso, voxels.torso, 0, 8, 0, true);
-    setVoxGroupMesh(rig.head, voxels.head, 0, 16, 0, true);
-    setVoxGroupMesh(rig.legs[0], voxels.legL, -2.1, 7, 0, true);
-    setVoxGroupMesh(rig.legs[1], voxels.legR, 2.1, 7, 0, true);
-    setVoxGroupMesh(rig.arms[0], voxels.armL, -5.3, 14, 0, true);
-    setVoxGroupMesh(rig.arms[1], voxels.armR, 5.3, 14, 0, true);
-
-    if (typeof attachWeaponsToHand === 'function') {
-      attachWeaponsToHand(rig.hand);
+    // Oficiální generátor kompletní postavy z character.js
+    if (typeof updateCharacterRig === 'function') {
+      updateCharacterRig(rig, custom, eqMap);
     }
 
-    const nametag = this.createNametagSprite(playerData.nickname, playerData.isOp);
-    nametag.position.set(0, 2.2, 0);
+    // Jmenovka nad hlavou hráče
+    const nametag = this.createNametagSprite(playerData.nickname || 'Hráč', playerData.isOp);
+    nametag.position.set(0, 2.3, 0);
     group.add(nametag);
 
     group.position.set(playerData.x || 0, playerData.y || 80, playerData.z || 0);
@@ -585,7 +717,7 @@ class NetworkManager {
 
     this.remotePlayers.set(playerData.id, {
       id: playerData.id,
-      nickname: playerData.nickname,
+      nickname: playerData.nickname || 'Hráč',
       group: group,
       rig: rig,
       nametag: nametag,
@@ -604,13 +736,21 @@ class NetworkManager {
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = 'rgba(10, 15, 25, 0.75)';
-    ctx.beginPath();
-    ctx.roundRect(10, 12, 236, 40, 12);
-    ctx.fill();
-    ctx.strokeStyle = isOp ? 'rgba(251, 191, 36, 0.8)' : 'rgba(56, 189, 248, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Bezpečné vykreslení štítku
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.78)';
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(10, 12, 236, 40, 10);
+      ctx.fill();
+      ctx.strokeStyle = isOp ? 'rgba(251, 191, 36, 0.85)' : 'rgba(56, 189, 248, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillRect(10, 12, 236, 40);
+      ctx.strokeStyle = isOp ? '#fbbf24' : '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 12, 236, 40);
+    }
 
     ctx.font = 'bold 22px Outfit, sans-serif';
     ctx.textAlign = 'center';
@@ -620,8 +760,14 @@ class NetworkManager {
     ctx.fillText(label, 128, 32);
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
     texture.minFilter = THREE.LinearFilter;
-    const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+    const mat = new THREE.SpriteMaterial({
+      map: texture,
+      depthTest: true,
+      depthWrite: false,
+      transparent: true
+    });
     const sprite = new THREE.Sprite(mat);
     sprite.scale.set(1.8, 0.45, 1);
     return sprite;
@@ -662,19 +808,21 @@ class NetworkManager {
       g.position.z += dz * Math.min(1, dt * 14);
       g.rotation.y = p.targetYaw;
 
-      if (dist > 0.04) {
-        p.phase += dt * 12;
-        const armSwing = Math.sin(p.phase) * 0.7;
-        const legSwing = Math.sin(p.phase) * 0.8;
-        p.rig.arms[0].rotation.x = armSwing;
-        p.rig.arms[1].rotation.x = -armSwing;
-        p.rig.legs[0].rotation.x = -legSwing;
-        p.rig.legs[1].rotation.x = legSwing;
-      } else {
-        p.rig.arms[0].rotation.x *= 0.85;
-        p.rig.arms[1].rotation.x *= 0.85;
-        p.rig.legs[0].rotation.x *= 0.85;
-        p.rig.legs[1].rotation.x *= 0.85;
+      if (p.rig && p.rig.arms && p.rig.legs) {
+        if (dist > 0.04) {
+          p.phase += dt * 12;
+          const armSwing = Math.sin(p.phase) * 0.7;
+          const legSwing = Math.sin(p.phase) * 0.8;
+          p.rig.arms[0].rotation.x = armSwing;
+          p.rig.arms[1].rotation.x = -armSwing;
+          p.rig.legs[0].rotation.x = -legSwing;
+          p.rig.legs[1].rotation.x = legSwing;
+        } else {
+          p.rig.arms[0].rotation.x *= 0.85;
+          p.rig.arms[1].rotation.x *= 0.85;
+          p.rig.legs[0].rotation.x *= 0.85;
+          p.rig.legs[1].rotation.x *= 0.85;
+        }
       }
     }
   }

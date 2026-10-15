@@ -36,7 +36,7 @@ let config = {
   seed: 12345,
   motd: "Vítej ve Voxelovém RPG světě!",
   pvp: true,
-  saveIntervalSeconds: 15,
+  saveIntervalSeconds: 5,
   adminPassword: "admin",
   enableWebAdmin: true
 };

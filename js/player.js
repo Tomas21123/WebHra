@@ -1,11 +1,48 @@
-const P = { x: 0.5, y: 0, z: 0.5, vx: 0, vy: 0, vz: 0, ground: false, moveX: 0, moveZ: 0 };
-let sx = 0;
-for (; sx < 3000; sx += 6) {
-  const hh = height(sx, 0);
-  if (hh >= SEA + 4 && biome(sx, 0, hh) === 0) break;
+// Bezpečné vyhledání suchozemského bodu pro spawn (nikdy ve vodě!)
+function findSafeSpawnCoords() {
+  const step = 8;
+  const maxR = 3000;
+  for (let r = 0; r <= maxR; r += step) {
+    if (r === 0) {
+      const h0 = height(0, 0);
+      if (h0 >= SEA + 3) {
+        return { x: 0.5, y: (h0 + 1.5) * S, z: 0.5 };
+      }
+      continue;
+    }
+    const sampleStep = Math.max(8, Math.floor(r / 10));
+    for (let i = -r; i <= r; i += sampleStep) {
+      const candidates = [
+        [i, -r],
+        [i, r],
+        [-r, i],
+        [r, i]
+      ];
+      for (const [bx, bz] of candidates) {
+        const h = height(bx, bz);
+        // Musí být bezpečně alespoň 3 bloky nad hladinou moře (SEA)
+        if (h >= SEA + 3) {
+          const b = biome(bx, bz, h);
+          // Preferovat pevninu (les, hory, sníh, džungle)
+          if (b === 0 || b === 2 || b === 3 || h >= SEA + 4) {
+            return {
+              x: bx * S + S / 2,
+              y: (h + 1.5) * S,
+              z: bz * S + S / 2
+            };
+          }
+        }
+      }
+    }
+  }
+  return { x: 0.5, y: (SEA + 8) * S, z: 0.5 };
 }
-const SPX = sx * S + 0.5, SPY = Math.max(height(sx, 0), SEA) * S + 3;
-P.x = SPX; P.y = SPY;
+
+const safeSpawn = findSafeSpawnCoords();
+const SPX = safeSpawn.x;
+const SPY = safeSpawn.y;
+const SPZ = safeSpawn.z;
+const P = { x: SPX, y: SPY, z: SPZ, vx: 0, vy: 0, vz: 0, ground: false, moveX: 0, moveZ: 0 };
 
 let yaw = 0, pitch = 0.45, dist = 6, face = 0, phase = 0;
 let isSprinting = false, airBlend = 0, landingSquash = 0, wasGround = true;
@@ -157,7 +194,7 @@ function physics(dt) {
   }
 
   if (wb(P.y + 0.2) === 11) {
-    P.x = SPX; P.z = 0.5; P.y = SPY; P.vx = P.vy = P.vz = 0;
+    P.x = SPX; P.z = SPZ; P.y = SPY; P.vx = P.vy = P.vz = 0;
   }
 
   let fx = 0, fz = 0;
@@ -338,6 +375,6 @@ function physics(dt) {
   }
 
   if (P.y < -20) {
-    P.x = SPX; P.z = 0.5; P.y = SPY; P.vy = 0;
+    P.x = SPX; P.z = SPZ; P.y = SPY; P.vy = 0;
   }
 }
