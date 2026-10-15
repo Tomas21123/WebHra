@@ -402,13 +402,24 @@ if (WebSocketServer) {
           player.x = msg.x ?? player.x;
           player.y = msg.y ?? player.y;
           player.z = msg.z ?? player.z;
+          player.vx = msg.vx ?? 0;
+          player.vy = msg.vy ?? 0;
+          player.vz = msg.vz ?? 0;
+          player.ground = typeof msg.ground !== 'undefined' ? !!msg.ground : true;
+          player.inWater = typeof msg.inWater !== 'undefined' ? !!msg.inWater : false;
+          player.isSprinting = typeof msg.isSprinting !== 'undefined' ? !!msg.isSprinting : false;
+          player.isForwardSprint = typeof msg.isForwardSprint !== 'undefined' ? !!msg.isForwardSprint : false;
           player.bodyYaw = msg.bodyYaw ?? player.bodyYaw;
           player.yaw = msg.yaw ?? player.yaw;
           player.pitch = msg.pitch ?? player.pitch;
           player.emote = msg.emote ?? null;
           player.heldItem = msg.heldItem ?? player.heldItem;
           player.isRolling = !!msg.isRolling;
+          player.rollTimer = msg.rollTimer ?? 0;
           player.attacking = !!msg.attacking;
+          player.attackTime = msg.attackTime ?? 0;
+          player.attackDuration = msg.attackDuration ?? 0.26;
+          player.attackCombo = msg.attackCombo ?? 0;
 
           // Přeposlat ostatním hráčům
           broadcast({
@@ -417,13 +428,24 @@ if (WebSocketServer) {
             x: player.x,
             y: player.y,
             z: player.z,
+            vx: player.vx,
+            vy: player.vy,
+            vz: player.vz,
+            ground: player.ground,
+            inWater: player.inWater,
+            isSprinting: player.isSprinting,
+            isForwardSprint: player.isForwardSprint,
             bodyYaw: player.bodyYaw,
             yaw: player.yaw,
             pitch: player.pitch,
             emote: player.emote,
             heldItem: player.heldItem,
             isRolling: player.isRolling,
-            attacking: player.attacking
+            rollTimer: player.rollTimer,
+            attacking: player.attacking,
+            attackTime: player.attackTime,
+            attackDuration: player.attackDuration,
+            attackCombo: player.attackCombo
           }, ws);
           return;
         }

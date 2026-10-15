@@ -30,10 +30,12 @@
       }
     } catch (e) {}
 
-    // Vyčištění URL na GitHub Pages, aby zůstalo pouze čisté /play/
-    if (window.location.pathname.endsWith('/index.html')) {
-      const cleanPath = window.location.pathname.replace(/\/index\.html$/i, '') + '/';
-      window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
+    // Vyčištění URL na GitHub Pages, aby zůstalo pouze čisté /play/ (pouze na webových serverech, ne na file://)
+    if (window.location.protocol !== 'file:' && window.location.pathname.endsWith('/index.html')) {
+      try {
+        const cleanPath = window.location.pathname.replace(/\/index\.html$/i, '') + '/';
+        window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
+      } catch (e) {}
     }
   </script>
   <div id="hud"></div>
@@ -383,8 +385,8 @@
   <script src="../js/textures.js?v=3"></script>
   <script src="../js/world.js?v=3"></script>
   <script src="../js/voxelBuilder.js?v=3"></script>
-  <script src="../js/items.js?v=3"></script>
-  <script src="../js/character.js?v=3"></script>
+  <script src="../js/items.js?v=4"></script>
+  <script src="../js/character.js?v=4"></script>
   <script src="../js/inventory.js?v=3"></script>
   <script src="../js/customizer.js?v=3"></script>
   <script src="../js/audio.js?v=3"></script>
@@ -396,8 +398,8 @@
   <!-- PeerJS pro Peer-to-Peer (WebRTC) multiplayer s lokální zálohou -->
   <script src="../js/peerjs.min.js"></script>
   <script>if (typeof Peer === 'undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\\/script>');</script>
-  <script src="../js/network.js?v=9"></script>
-  <script src="../js/game.js?v=6"></script>
+  <script src="../js/network.js?v=10"></script>
+  <script src="../js/game.js?v=7"></script>
 </body>
 
 </html>

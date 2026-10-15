@@ -133,6 +133,18 @@ function attachWeaponsToHand(targetHand) {
   }
 }
 
+function createWeaponInstances() {
+  const o = {};
+  for (const k in W3) {
+    if (W3[k]) {
+      const clone = W3[k].clone();
+      clone.visible = false;
+      o[k] = clone;
+    }
+  }
+  return o;
+}
+
 function applyHeld() {
   for (const k in W3) W3[k].visible = (k === heldId);
 }

@@ -329,18 +329,7 @@ function loop(now) {
     ui();
   }
 
-  // --- Pokročilá Animace Postavy ---
-  if (!wasGround && P.ground) { landingSquash = 0.14; }
-  wasGround = P.ground;
-
-  if (!P.ground) {
-    airBlend = Math.min(1, airBlend + dt * 9);
-    airPhase += dt * (Math.abs(P.vy) > 2.5 ? 9.0 : 6.0);
-  } else {
-    airBlend = Math.max(0, airBlend - dt * 11);
-  }
-  landingSquash = Math.max(0, landingSquash - dt * 1.6);
-
+  // --- Synchronizovaná Animace Postavy ---
   const mv = Math.hypot(P.vx, P.vz);
   const isMoving = mv > 0.15;
 
@@ -362,451 +351,79 @@ function loop(now) {
     P.renderY = P.y;
   }
 
-  // Pozice a rotace modelu
+  // Pozice modelu
   model.position.set(P.x, P.renderY, P.z);
+
+  // Přirozené pootočení těla k pohledu kamery, pokud hráč stojí na místě a otočí hlavu příliš daleko
+  const camLookAngle = Math.atan2(-Math.sin(yaw), -Math.cos(yaw));
+  let headYawDiff = camLookAngle - model.rotation.y;
+  while (headYawDiff < -Math.PI) headYawDiff += Math.PI * 2;
+  while (headYawDiff > Math.PI) headYawDiff -= Math.PI * 2;
+  if (!isMoving && Math.abs(headYawDiff) > 1.25) {
+    face = camLookAngle;
+  }
+
   let da = face - model.rotation.y;
   da = Math.atan2(Math.sin(da), Math.cos(da));
   model.rotation.y += da * Math.min(1, dt * 12);
 
-  // --- NÁKLON DO SMĚRU POHYBU (BANKING & STRAFE) ---
-  // Postava se naklání do zatáček (da) a při úkroku do stran (A/D = P.moveX)
-  const turnBank = isMoving ? -da * 0.42 : 0;
-  const strafeBank = (P.moveX || 0) * 0.18 * Math.min(1, mv / 2.2);
-  const targetBank = turnBank + strafeBank;
-  bankLean += (targetBank - bankLean) * Math.min(1, dt * 9);
-
-  // --- NARUTO RUN (SPRINT DOPŘEDU) ---
-  // Při sprintu dopředu (Shift + W) se postava přikrčí, hluboce nakloní o ~37° a natáhne obě ruce za záda
   const isForwardSprint = isSprinting && isMoving && (P.moveZ || 0) > 0.1 && P.ground;
-  if (isForwardSprint) {
-    narutoBlend = Math.min(1, narutoBlend + dt * 8.0);
-  } else {
-    narutoBlend = Math.max(0, narutoBlend - dt * 6.5);
+
+  if (!playerRig.animState) {
+    playerRig.animState = {
+      phase: 0,
+      airPhase: 0,
+      airBlend: 0,
+      swimBlend: 0,
+      narutoBlend: 0,
+      bankLean: 0,
+      landingSquash: 0,
+      wasGround: true,
+      lastBodyYaw: model.rotation.y
+    };
   }
 
-  // Zvýšení kadence kroků při sprintu
-  if (isMoving && P.ground) {
-    phase += mv * dt * (isSprinting ? 2.3 : 1.4);
-  } else if (!P.ground) {
-    phase += dt * 1.8;
-  }
-
-  // 1. Nohy (při chůzi/běhu švih, při výskoku a letu živá dynamická animace)
-  const legSwingAmp = (isSprinting ? (1.3 + narutoBlend * 0.2) : 0.85);
-  const legSwing = Math.sin(phase) * Math.min(1.2, mv / 3.0) * legSwingAmp;
-
-  // Dynamický pohyb nohou ve vzduchu (při stoupání skokový krok / pedálování, při pádu kmitání v protivětru)
-  let airLeg0, airLeg1, airLegZ0 = -0.14, airLegZ1 = 0.14;
-  if (isMoving && mv > 0.3) {
-    // Skok v pohybu: cyklický atletický krok v letu
-    const stride = Math.sin(airPhase);
-    airLeg0 = -0.42 + stride * 0.58;
-    airLeg1 = -0.42 - stride * 0.58;
-    airLegZ0 = -0.12; airLegZ1 = 0.12;
-  } else if (P.vy > 1.2) {
-    // Výskok vzhůru: přikrčení s dynamickým nožním pedálováním
-    airLeg0 = -0.65 + Math.sin(airPhase * 1.2) * 0.22;
-    airLeg1 = -0.45 - Math.sin(airPhase * 1.2) * 0.22;
-  } else if (P.vy < -1.2) {
-    // Volný pád dolů: nohy kmitají v protivětru a chystají se na dopad
-    airLeg0 = -0.2 + Math.sin(airPhase * 1.4) * 0.28;
-    airLeg1 = -0.2 - Math.sin(airPhase * 1.4) * 0.28;
-    airLegZ0 = -0.18 + Math.sin(airPhase * 0.8) * 0.05;
-    airLegZ1 = 0.18 - Math.sin(airPhase * 0.8) * 0.05;
-  } else {
-    // Vrchol skoku (apex)
-    airLeg0 = -0.52 + Math.sin(airPhase) * 0.12;
-    airLeg1 = -0.48 - Math.sin(airPhase) * 0.12;
-  }
-
-  legs[0].rotation.x = legSwing * (1 - airBlend) + airLeg0 * airBlend;
-  legs[1].rotation.x = -legSwing * (1 - airBlend) + airLeg1 * airBlend;
-  legs[0].rotation.z = -0.04 * (1 - airBlend) + airLegZ0 * airBlend;
-  legs[1].rotation.z = 0.04 * (1 - airBlend) + airLegZ1 * airBlend;
-
-  // 2. Trup & hlava (kolíbání, vertikální pružení, předklon, boční náklon, aerodynamický náklon ve vzduchu)
-  const walkBob = Math.abs(Math.sin(phase)) * Math.min(1, mv / 3.2) * (isSprinting ? 0.06 : 0.035);
-  const idleBreathe = Math.sin(now * 0.003) * 0.006;
-  const squashOffset = landingSquash * 0.16;
-  const narutoCrouch = narutoBlend * 0.09;
-  const airBob = Math.sin(airPhase) * 0.035 * airBlend;
-
-  body.position.set(0, -walkBob + (isMoving ? 0 : idleBreathe) - squashOffset - narutoCrouch + airBob, 0);
-  body.rotation.set(0, 0, (bankLean * 0.35) * (1 - airBlend));
-
-  torso.position.set(0, 8 * VX, 0);
-  head.position.set(0, 11 * VX, 0);
-  legs[0].position.set(-2.5 * VX, 8 * VX, 0);
-  legs[1].position.set(2.5 * VX, 8 * VX, 0);
-  arms[0].position.set(-5.5 * VX, 8 * VX, 0.5 * VX);
-  arms[1].position.set(5.5 * VX, 8 * VX, 0.5 * VX);
-
-  // Boční náklon těla do pohybu (bankLean) + jemné kolíbání
-  const bodyRoll = Math.sin(phase) * Math.min(1, mv / 3.2) * (isSprinting ? 0.07 : 0.05);
-  torso.rotation.z = (bodyRoll * 0.35) * (1 - airBlend);
-  torso.rotation.y = Math.sin(phase) * Math.min(1, mv / 3.2) * (isSprinting ? 0.03 : 0.07);
-
-  // Předozadní náklon: chůze/běh vs. dynamický náklon ve skoku / pádu
-  const backLean = (P.moveZ || 0) < -0.1 ? -0.12 * Math.min(1, mv / 2.5) : 0;
-  const normForwardLean = 0.14 * Math.min(1, mv / 3.0);
-  const narutoPitch = 0.65; // ~37° ninja předklon
-  const forwardLean = (normForwardLean * (1 - narutoBlend) + narutoPitch * narutoBlend) + backLean;
-
-  const airLeanPitch = P.vy > 1.0 ? (0.16 + Math.min(0.2, mv * 0.05)) : (-0.08 + Math.min(0.2, -P.vy * 0.012));
-  torso.rotation.x = forwardLean * (1 - airBlend) + airLeanPitch * airBlend;
-  // Hlava sedí na trupu, takže rotace kompenzuje předklon a dívá se vpřed podél cesty
-  head.rotation.x = -torso.rotation.x * 0.85 + (P.vy < -1 ? 0.18 : (P.vy > 1 ? -0.1 : 0)) * airBlend;
-  head.rotation.z = -bankLean * 0.25 - (bodyRoll * 0.25) * (1 - airBlend);
-  head.rotation.y = 0;
-
-  // 3. Ruce – Levá ruka (dynamické balancování a mávání ve vzduchu)
-  const armSwingL = -Math.sin(phase) * Math.min(1, mv / 3.2) * (isSprinting ? 1.15 : 0.75);
-  const narutoArmX0 = 1.24 + Math.sin(phase * 1.4) * 0.06;
-  const narutoArmZ0 = -0.26 - Math.sin(phase * 1.4) * 0.03;
-  const narutoArmY0 = 0.14;
-
-  let airArmX0, airArmZ0;
-  if (P.vy > 1.0) {
-    // Výskok vzhůru: paže se dynamicky zvedají pro získání výšky
-    airArmX0 = -0.85 + Math.sin(airPhase) * 0.32;
-    airArmZ0 = -0.38 - Math.sin(airPhase * 0.8) * 0.12;
-  } else if (P.vy < -1.0) {
-    // Pád: mávání / balancování pažemi ve větru
-    airArmX0 = -0.32 + Math.sin(airPhase * 1.3) * 0.28;
-    airArmZ0 = -0.52 - Math.cos(airPhase * 1.3) * 0.2;
-  } else {
-    airArmX0 = -0.6 + Math.sin(airPhase) * 0.15;
-    airArmZ0 = -0.42;
-  }
-
-  const normalArmX0 = armSwingL * (1 - airBlend) + airArmX0 * airBlend;
-  const normalArmZ0 = -0.12 * (1 - airBlend) + airArmZ0 * airBlend;
-
-  arms[0].rotation.x = normalArmX0 * (1 - narutoBlend) + narutoArmX0 * narutoBlend;
-  arms[0].rotation.z = normalArmZ0 * (1 - narutoBlend) + narutoArmZ0 * narutoBlend;
-  arms[0].rotation.y = (0) * (1 - narutoBlend) + narutoArmY0 * narutoBlend;
-  arms[0].rotation.y = (0) * (1 - narutoBlend) + narutoArmY0 * narutoBlend;
+  const anim = playerRig.animState;
+  anim.x = P.x;
+  anim.y = P.y;
+  anim.z = P.z;
+  anim.vx = P.vx;
+  anim.vy = P.vy;
+  anim.vz = P.vz;
+  anim.mv = mv;
+  anim.ground = P.ground;
+  anim.inWater = P.inWater;
+  anim.isSprinting = isSprinting;
+  anim.isForwardSprint = isForwardSprint;
+  anim.strafeX = P.moveX || 0;
+  anim.moveZ = P.moveZ || 0;
+  anim.bodyYaw = model.rotation.y;
+  anim.lookYaw = yaw;
+  anim.lookPitch = pitch;
+  anim.heldId = heldId;
+  anim.attacking = attacking;
+  anim.attackTime = attackTime;
+  anim.attackDuration = attackDuration;
+  anim.attackCombo = attackCombo;
+  anim.isRolling = isRolling;
+  anim.rollTimer = rollTimer;
+  anim.emote = currentEmote;
+  anim.emoteTimer = emoteTimer;
+  anim.isJumpingInWater = !!keys.Space;
 
   if (attacking) {
     attackTime += dt;
-    const p = Math.min(1, attackTime / attackDuration);
-    if (p >= 1) {
+    if (attackTime >= attackDuration) {
       attacking = false;
       hand.position.set(0, -8 * VX, 0);
       arms[0].rotation.set(0, 0, -0.12);
       arms[1].rotation.set(0, 0, 0.12);
-    } else {
-      if (!heldId) {
-        // --- ÚTOK PĚSTMI (STŘÍDAVÉ ÚDERY) ---
-        const isLeft = (attackCombo === 1);
-        const punchReach = Math.sin(p * Math.PI);
-        if (isLeft) {
-          arms[0].rotation.x = -1.55 + punchReach * 0.25;
-          arms[0].rotation.y = 0.25 * punchReach;
-          arms[0].rotation.z = -0.05;
-          arms[1].rotation.x = -1.1;
-          arms[1].rotation.y = 0.35;
-          arms[1].rotation.z = -0.25;
-          torso.rotation.y += 0.22 * punchReach;
-        } else {
-          arms[1].rotation.x = -1.55 + punchReach * 0.25;
-          arms[1].rotation.y = -0.25 * punchReach;
-          arms[1].rotation.z = 0.05;
-          arms[0].rotation.x = -1.1;
-          arms[0].rotation.y = -0.35;
-          arms[0].rotation.z = 0.25;
-          torso.rotation.y -= 0.22 * punchReach;
-        }
-        hand.position.set(0, -8 * VX, 0);
-      } else if (heldId === 'spear') {
-        // --- KOPÍ (VÝPAD DOPŘEDU) ---
-        const thrust = Math.sin(p * Math.PI);
-        arms[1].rotation.x = -1.35;
-        arms[1].rotation.y = -0.12;
-        arms[1].rotation.z = 0.15;
-        arms[0].rotation.x = -1.25;
-        arms[0].rotation.y = 0.28;
-        arms[0].rotation.z = -0.1;
-        hand.position.set(0, -8 * VX, -thrust * 0.42);
-        torso.rotation.y += thrust * 0.18;
-      } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
-        // --- TĚŽKÉ ZBRANĚ (MOHUTNÝ ŠVIH SHORA DOLŮ A OBLOUKEM) ---
-        const swingSign = attackCombo === 0 ? 1 : -1;
-        if (p < 0.3) {
-          const t = p / 0.3;
-          arms[1].rotation.x = -0.8 - t * 1.3;
-          arms[1].rotation.y = swingSign * t * 0.6;
-          arms[1].rotation.z = 0.2 + swingSign * t * 0.4;
-          arms[0].rotation.x = -0.5 - t * 1.0;
-          arms[0].rotation.y = -swingSign * t * 0.4;
-          torso.rotation.y -= swingSign * t * 0.25;
-        } else if (p < 0.7) {
-          const t = (p - 0.3) / 0.4;
-          arms[1].rotation.x = -2.1 + t * 2.4;
-          arms[1].rotation.y = swingSign * (0.6 - t * 1.2);
-          arms[1].rotation.z = 0.6 - t * 0.8;
-          arms[0].rotation.x = -1.5 + t * 1.6;
-          torso.rotation.y += swingSign * (-0.25 + t * 0.6);
-        } else {
-          const t = (p - 0.7) / 0.3;
-          arms[1].rotation.x = 0.3 * (1 - t) + (-0.78) * t;
-          arms[1].rotation.y = -0.6 * swingSign * (1 - t) + (-0.18) * t;
-          arms[1].rotation.z = 0.18;
-          arms[0].rotation.x = 0.1 * (1 - t) + armSwingL * t;
-        }
-        hand.position.set(0, -8 * VX, 0);
-      } else if (heldId === 'staff_fire') {
-        // --- OHNIVÁ HŮL (VYZVEDNUTÍ A MAGICKÝ ÚDER) ---
-        const cast = Math.sin(p * Math.PI);
-        arms[1].rotation.x = -1.95 + cast * 0.65;
-        arms[1].rotation.y = -0.22;
-        arms[1].rotation.z = 0.25;
-        torso.rotation.x += cast * 0.12;
-        hand.position.set(0, -8 * VX, -cast * 0.2);
-      } else if (heldId === 'bow') {
-        // --- LUK (NÁTAH A VÝSTŘEL) ---
-        const draw = p < 0.5 ? p / 0.5 : 1 - (p - 0.5) / 0.5;
-        arms[0].rotation.x = -1.5; arms[0].rotation.y = 0.45; arms[0].rotation.z = -0.1;
-        arms[1].rotation.x = -1.45; arms[1].rotation.y = -0.5 * draw; arms[1].rotation.z = 0.3;
-        hand.position.set(0, -8 * VX, draw * 0.15);
-      } else {
-        // --- MEČ, DÝKA, KATANA, PALCÁT (RYCHLÉ SEKACÍ KOMBO) ---
-        const swingSign = attackCombo === 0 ? 1 : -1;
-        if (p < 0.25) {
-          const t = p / 0.25;
-          arms[1].rotation.x = -0.7 - t * 0.9;
-          arms[1].rotation.y = swingSign * t * 0.5;
-          arms[1].rotation.z = 0.15 + swingSign * t * 0.35;
-        } else if (p < 0.65) {
-          const t = (p - 0.25) / 0.4;
-          arms[1].rotation.x = -1.6 + t * 1.9;
-          arms[1].rotation.y = swingSign * (0.5 - t * 1.05);
-          arms[1].rotation.z = 0.5 - t * 0.75;
-        } else {
-          const t = (p - 0.65) / 0.35;
-          const targetX = -0.78;
-          arms[1].rotation.x = 0.3 * (1 - t) + targetX * t;
-          arms[1].rotation.y = (-0.55 * swingSign) * (1 - t) + (-0.18) * t;
-          arms[1].rotation.z = 0.18;
-        }
-        hand.position.set(0, -8 * VX, 0);
-        torso.rotation.y += Math.sin(p * Math.PI) * 0.25 * (attackCombo === 0 ? 1 : -1);
-      }
-    }
-  } else {
-    // Pravá ruka (zbraň nebo prázdná – při letu dynamické vyvažování, při Naruto runu aerodynamicky za tělem)
-    const narutoArmX1 = 1.24 - Math.sin(phase * 1.4) * 0.06;
-    const narutoArmZ1 = 0.26 + Math.sin(phase * 1.4) * 0.03;
-    const narutoArmY1 = -0.14;
-
-    let airArmX1, airArmZ1;
-    if (P.vy > 1.0) {
-      airArmX1 = -0.85 - Math.sin(airPhase) * 0.32;
-      airArmZ1 = 0.38 + Math.sin(airPhase * 0.8) * 0.12;
-    } else if (P.vy < -1.0) {
-      airArmX1 = -0.32 - Math.sin(airPhase * 1.3) * 0.28;
-      airArmZ1 = 0.52 + Math.cos(airPhase * 1.3) * 0.2;
-    } else {
-      airArmX1 = -0.6 - Math.sin(airPhase) * 0.15;
-      airArmZ1 = 0.42;
-    }
-
-    if (heldId) {
-      const idleWeaponX = -0.78 + Math.sin(phase) * Math.min(1, mv / 3.2) * 0.18;
-      const normalWeaponX = idleWeaponX * (1 - airBlend) + airArmX1 * 0.5 * airBlend;
-      arms[1].rotation.x = normalWeaponX * (1 - narutoBlend) + narutoArmX1 * narutoBlend;
-      arms[1].rotation.y = -0.18 * (1 - narutoBlend) + narutoArmY1 * narutoBlend;
-      arms[1].rotation.z = (0.18 * (1 - airBlend) + airArmZ1 * 0.5 * airBlend) * (1 - narutoBlend) + narutoArmZ1 * narutoBlend;
-    } else {
-      const armSwingR = Math.sin(phase) * Math.min(1, mv / 3.2) * (isSprinting ? 1.15 : 0.75);
-      const normalArmX1 = armSwingR * (1 - airBlend) + airArmX1 * airBlend;
-      arms[1].rotation.x = normalArmX1 * (1 - narutoBlend) + narutoArmX1 * narutoBlend;
-      arms[1].rotation.y = (0) * (1 - narutoBlend) + narutoArmY1 * narutoBlend;
-      arms[1].rotation.z = (0.12 * (1 - airBlend) + airArmZ1 * airBlend) * (1 - narutoBlend) + narutoArmZ1 * narutoBlend;
     }
   }
 
-  // --- ANIMACE PLAVÁNÍ VE VODĚ ---
-  swimBlend += ((P.inWater ? 1 : 0) - swimBlend) * Math.min(1, dt * 7);
-  if (swimBlend > 0.001) {
-    let swimBodyPitch, swimBodyRoll, swimBob, swimBodyZ;
-    let swimHeadPitch, swimHeadRoll;
-    let swimLeg0, swimLeg1, swimLegZ0, swimLegZ1;
-    let swimArm0X, swimArm0Y, swimArm0Z, swimArm1X, swimArm1Y, swimArm1Z;
-
-    if (mv > 0.12) {
-      // --- KRAUL PŘI POHYBU (Front crawl) ---
-      // Celé tělo leží vodorovně na hladině
-      swimBodyPitch = 1.34; // ~77° náklon celého těla do horizontály
-      swimBodyZ = 0.22; // vyrovnání těžiště
-      swimBob = -0.25 + Math.sin(phase * 2) * 0.035;
-
-      // Přirozený valivý pohyb těla (body roll) z boku na bok s každým kraulovým záběrem
-      swimBodyRoll = Math.sin(phase) * 0.28;
-      swimHeadRoll = -Math.sin(phase) * 0.32; // hlava se natáčí k nadechnutí
-      swimHeadPitch = -1.18; // zvednutí hlavy nad hladinu pro pohled dopředu
-
-      // Kraulový záběr paží v lokálním prostoru trupu (oblouk nad vodou, ponor a záběr)
-      swimArm0X = Math.sin(phase) * 1.65 - 0.42;
-      swimArm0Z = -0.42 + Math.cos(phase) * 0.35;
-      swimArm0Y = Math.sin(phase) * 0.32;
-
-      swimArm1X = -Math.sin(phase) * 1.65 - 0.42;
-      swimArm1Z = 0.42 - Math.cos(phase) * 0.35;
-      swimArm1Y = -Math.sin(phase) * 0.32;
-
-      // Rychlý kmit nohou (flutter kicks) – nohy jsou vodorovně za tělem
-      swimLeg0 = Math.sin(phase * 3.8) * 0.42;
-      swimLeg1 = -Math.sin(phase * 3.8) * 0.42;
-      swimLegZ0 = -0.06;
-      swimLegZ1 = 0.06;
-    } else {
-      // --- DRŽENÍ SE NA HLADINĚ / ŠLAPÁNÍ VODY (Treading water) ---
-      // Postava je vzpřímená, do poloviny těla nad hladinou
-      swimBodyPitch = 0.06;
-      swimBodyZ = 0;
-      swimBodyRoll = Math.sin(now * 0.005) * 0.05;
-      swimHeadRoll = 0;
-      swimHeadPitch = -0.06;
-
-      // Rychlost a intenzita mávání: pokud drží mezerník, mává usilovněji pro udržení vztlaku
-      const paddleFreq = keys.Space ? 0.009 : 0.006;
-      swimBob = -0.06 + Math.sin(now * paddleFreq) * 0.04;
-
-      // Mávání rukama (kruhové pádlování dlaněmi do stran a dolů pro udržení vztlaku)
-      swimArm0X = -0.55 + Math.sin(now * paddleFreq) * 0.28;
-      swimArm0Z = -0.52 - Math.cos(now * paddleFreq) * 0.26;
-      swimArm0Y = Math.sin(now * paddleFreq) * 0.22;
-
-      swimArm1X = -0.55 + Math.sin(now * paddleFreq + 0.6) * 0.28;
-      swimArm1Z = 0.52 + Math.cos(now * paddleFreq + 0.6) * 0.26;
-      swimArm1Y = -Math.sin(now * paddleFreq + 0.6) * 0.22;
-
-      // Mávání nohama (střídavé šlapání / nůžkový kmit nohama jako při šlapání vody)
-      swimLeg0 = Math.sin(now * paddleFreq) * 0.48;
-      swimLeg1 = -Math.sin(now * paddleFreq) * 0.48;
-      swimLegZ0 = -0.14 + Math.cos(now * paddleFreq) * 0.08;
-      swimLegZ1 = 0.14 - Math.cos(now * paddleFreq) * 0.08;
-    }
-
-    body.rotation.x = body.rotation.x * (1 - swimBlend) + swimBodyPitch * swimBlend;
-    body.rotation.y = body.rotation.y * (1 - swimBlend) + (swimBodyRoll * 0.4) * swimBlend;
-    body.rotation.z = body.rotation.z * (1 - swimBlend) + swimBodyRoll * swimBlend;
-
-    body.position.y = body.position.y * (1 - swimBlend) + swimBob * swimBlend;
-    body.position.z = body.position.z * (1 - swimBlend) + swimBodyZ * swimBlend;
-
-    torso.rotation.x = torso.rotation.x * (1 - swimBlend) + (mv > 0.12 ? -0.06 : 0.04) * swimBlend;
-    torso.rotation.y = torso.rotation.y * (1 - swimBlend) + 0;
-    torso.rotation.z = torso.rotation.z * (1 - swimBlend) + 0;
-
-    head.rotation.x = head.rotation.x * (1 - swimBlend) + swimHeadPitch * swimBlend;
-    head.rotation.y = head.rotation.y * (1 - swimBlend) + swimHeadRoll * swimBlend;
-
-    legs[0].rotation.x = legs[0].rotation.x * (1 - swimBlend) + swimLeg0 * swimBlend;
-    legs[1].rotation.x = legs[1].rotation.x * (1 - swimBlend) + swimLeg1 * swimBlend;
-    legs[0].rotation.z = legs[0].rotation.z * (1 - swimBlend) + swimLegZ0 * swimBlend;
-    legs[1].rotation.z = legs[1].rotation.z * (1 - swimBlend) + swimLegZ1 * swimBlend;
-
-    arms[0].rotation.x = arms[0].rotation.x * (1 - swimBlend) + swimArm0X * swimBlend;
-    arms[0].rotation.y = arms[0].rotation.y * (1 - swimBlend) + swimArm0Y * swimBlend;
-    arms[0].rotation.z = arms[0].rotation.z * (1 - swimBlend) + swimArm0Z * swimBlend;
-
-    if (!attacking) {
-      arms[1].rotation.x = arms[1].rotation.x * (1 - swimBlend) + swimArm1X * swimBlend;
-      arms[1].rotation.y = arms[1].rotation.y * (1 - swimBlend) + swimArm1Y * swimBlend;
-      arms[1].rotation.z = arms[1].rotation.z * (1 - swimBlend) + swimArm1Z * swimBlend;
-    }
+  if (typeof animateFullCharacterRig === 'function') {
+    animateFullCharacterRig(playerRig, anim, dt, now);
   }
-
-  // --- ANIMACE EMOTŮ (Gesta, Tance, Sed na zadek) ---
-  if (typeof currentEmote !== 'undefined' && currentEmote !== null) {
-    emoteTimer += dt;
-    if (typeof applyEmoteAnimation === 'function') {
-      applyEmoteAnimation(playerRig, currentEmote, emoteTimer, now);
-    }
-  }
-
-  // --- ANIMACE KOTRMELCE / DODGE ROLL (Elden Ring styl – reálný na povrchu země) ---
-  if (typeof isRolling !== 'undefined' && isRolling) {
-    const p = Math.min(1, rollTimer / ROLL_DURATION);
-    hand.position.set(0, -8 * VX, 0);
-
-    if (p < 0.25) {
-      // Fáze 1: Skok střemhlav dopředu (Dive Leap po hlavě)
-      const u = p / 0.25;
-      const easeU = Math.sin(u * Math.PI * 0.5);
-
-      // Celé tělo se nakloní střemhlav dopředu o ~72° (1.26 rad)
-      body.rotation.set(easeU * 1.26, 0, 0);
-      // Mírné nadlehčení při skoku (zůstává na povrchu)
-      body.position.set(0, Math.sin(u * Math.PI) * 0.12, 0);
-
-      torso.rotation.set(-0.15 * (1 - u) + 0.3 * u, 0, 0);
-      head.rotation.set(0.25 * u, 0, 0);
-
-      // Ruce se natahují dopředu a dolů ke ztlumení dopadu a kontaktu se zemí
-      arms[0].rotation.set(-1.65 * easeU, 0.1, -0.15 * easeU);
-      arms[1].rotation.set(-1.65 * easeU, -0.1, 0.15 * easeU);
-
-      // Nohy se natahují vzad za tělo v letu
-      legs[0].rotation.set(0.55 * easeU, 0, -0.05);
-      legs[1].rotation.set(0.65 * easeU, 0, 0.05);
-
-    } else if (p < 0.72) {
-      // Fáze 2: Dopad na ruce/ramena a plné přetočení o 360° (Somersault na zemi)
-      const u = (p - 0.25) / 0.47;
-      // Rotace plynule přetočí postavu přes ramena a záda o plných 360 stupňů (2*PI + 0.35 rad)
-      const rollRot = 1.26 + u * (Math.PI * 2 + 0.35 - 1.26);
-      body.rotation.set(rollRot, 0, 0);
-
-      // DŮLEŽITÉ: Těžiště / kyčle se při kotrmelci NESMÍ zanořit pod zem!
-      // Protože se postava točí kolem pasu a ramena/hlava dosahují cca 0.9m od středu,
-      // kyčle se zvednou (+0.25m až +0.32m), aby záda a ramena klouzaly po povrchu země a nezalézaly pod terén!
-      const rollLiftY = 0.12 * (1 - u) + 0.28 * Math.sin(u * Math.PI) + 0.04 * u;
-      body.position.set(0, rollLiftY, 0);
-
-      // Hlava pevně přitisknutá k hrudi (brada na prsa jako v gymnastice)
-      const chinTuck = 0.25 + 0.65 * Math.sin(u * Math.PI);
-      head.rotation.set(chinTuck, 0, 0);
-      torso.rotation.set(0.3 + 0.35 * Math.sin(u * Math.PI) + 0.1 * u, 0, 0);
-
-      // Sbalení paží do těsného klubíčka (tuck) s plynulým navázáním na Fázi 1 i Fázi 3
-      const armX = -1.65 * (1 - u) + (-0.45) * u + 0.5 * Math.sin(u * Math.PI);
-      const armZ = (-0.15 * (1 - u) + -0.12 * u) - 0.1 * Math.sin(u * Math.PI);
-      arms[0].rotation.set(armX, 0.15 * Math.sin(u * Math.PI), armZ);
-      arms[1].rotation.set(armX, -0.15 * Math.sin(u * Math.PI), -armZ);
-
-      // Sbalení nohou a příprava na došlap
-      const leg0X = (0.55 * (1 - u) + -0.6 * u) - 1.65 * Math.sin(u * Math.PI);
-      const leg1X = (0.65 * (1 - u) + 0.4 * u) - 1.95 * Math.sin(u * Math.PI);
-      legs[0].rotation.set(leg0X, 0, -0.06);
-      legs[1].rotation.set(leg1X, 0, 0.06);
-
-    } else {
-      // Fáze 3: Dojezd na nohy, rozbalení a plynulý přechod do běhu (Recovery)
-      const u = (p - 0.72) / 0.28;
-      const easeOut = Math.sin(u * Math.PI * 0.5);
-
-      // Dokončení rotace do vzpřímeného postoje
-      body.rotation.set((1 - easeOut) * 0.35, 0, 0);
-      body.position.set(0, 0.04 * (1 - easeOut), 0);
-
-      torso.rotation.set(0.4 * (1 - easeOut), 0, 0);
-      head.rotation.set(0.25 * (1 - easeOut), 0, 0);
-
-      // Nohy dosedají na zem a přecházejí do běžeckého kroku
-      legs[0].rotation.set(-0.6 * (1 - easeOut), 0, -0.04 * (1 - easeOut));
-      legs[1].rotation.set(0.4 * (1 - easeOut), 0, 0.04 * (1 - easeOut));
-
-      // Ruce se vracejí do rovnovážné polohy pro běh
-      arms[0].rotation.set(-0.45 * (1 - easeOut), 0, -0.12 * (1 - easeOut));
-      arms[1].rotation.set(-0.45 * (1 - easeOut), 0, 0.12 * (1 - easeOut));
-    }
-  }
-
-  // 4. Simulace pláště
-  animateCape(playerRig, dt, now, mv, P.vy, false);
 
   // Kamera
   const cp = Math.cos(pitch);

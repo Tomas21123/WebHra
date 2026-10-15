@@ -726,40 +726,48 @@ class NetworkManager {
 
     const currentBodyYaw = (typeof model !== 'undefined') ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0);
     const activeEmote = (typeof currentEmote !== 'undefined') ? currentEmote : null;
+    const isSpr = (typeof isSprinting !== 'undefined') ? !!isSprinting : false;
+    const isFwdSpr = !!(isSpr && (P.moveZ || 0) > 0.1 && P.ground);
+    const isRoll = (typeof isRolling !== 'undefined') ? !!isRolling : false;
+    const rTimer = (typeof rollTimer !== 'undefined') ? rollTimer : 0;
+    const isAtk = (typeof attacking !== 'undefined') ? !!attacking : false;
+    const aTime = (typeof attackTime !== 'undefined') ? attackTime : 0;
+    const aDur = (typeof attackDuration !== 'undefined') ? attackDuration : 0.26;
+    const aCombo = (typeof attackCombo !== 'undefined') ? attackCombo : 0;
+    const hId = (typeof heldId !== 'undefined') ? heldId : null;
 
-    if (this.isP2PHost) {
-      // Host odesílá svou polohu s id: 'host' a type: 'playerMove' všem připojeným klientům
-      this.broadcastP2P({
-        type: 'playerMove',
-        id: 'host',
-        x: P.x,
-        y: P.y,
-        z: P.z,
-        bodyYaw: currentBodyYaw,
-        yaw: typeof yaw !== 'undefined' ? yaw : 0,
-        pitch: typeof pitch !== 'undefined' ? pitch : 0,
-        emote: activeEmote,
-        heldItem: typeof heldId !== 'undefined' ? heldId : null,
-        isRolling: typeof isRolling !== 'undefined' ? isRolling : false,
-        attacking: typeof attacking !== 'undefined' ? attacking : false
-      });
-      return;
-    }
-
-    // Klient posílá move na server nebo hostiteli
-    this.send({
-      type: 'move',
+    const payload = {
       x: P.x,
       y: P.y,
       z: P.z,
+      vx: P.vx || 0,
+      vy: P.vy || 0,
+      vz: P.vz || 0,
+      ground: !!P.ground,
+      inWater: !!P.inWater,
+      isSprinting: isSpr,
+      isForwardSprint: isFwdSpr,
       bodyYaw: currentBodyYaw,
       yaw: typeof yaw !== 'undefined' ? yaw : 0,
       pitch: typeof pitch !== 'undefined' ? pitch : 0,
       emote: activeEmote,
-      heldItem: typeof heldId !== 'undefined' ? heldId : null,
-      isRolling: typeof isRolling !== 'undefined' ? isRolling : false,
-      attacking: typeof attacking !== 'undefined' ? attacking : false
-    });
+      heldItem: hId,
+      isRolling: isRoll,
+      rollTimer: rTimer,
+      attacking: isAtk,
+      attackTime: aTime,
+      attackDuration: aDur,
+      attackCombo: aCombo
+    };
+
+    if (this.isP2PHost) {
+      // Host odesílá svou polohu s id: 'host' a type: 'playerMove' všem připojeným klientům
+      this.broadcastP2P(Object.assign({ type: 'playerMove', id: 'host' }, payload));
+      return;
+    }
+
+    // Klient posílá move na server nebo hostiteli
+    this.send(Object.assign({ type: 'move' }, payload));
   }
 
   // Společné zpracování zpráv (ze serveru i z P2P)
@@ -906,6 +914,16 @@ class NetworkManager {
     nametag.position.set(0, 2.3, 0);
     group.add(nametag);
 
+    // Vytvořit sadu zbraní pro ruku vzdáleného hráče
+    let remoteWeapons = null;
+    if (typeof createWeaponInstances === 'function') {
+      remoteWeapons = createWeaponInstances();
+      for (const k in remoteWeapons) {
+        rig.hand.add(remoteWeapons[k]);
+        remoteWeapons[k].visible = (k === (playerData.heldItem || null));
+      }
+    }
+
     group.position.set(playerData.x || 0, playerData.y || 80, playerData.z || 0);
     scene.add(group);
 
@@ -919,6 +937,7 @@ class NetworkManager {
       nickname: playerData.nickname || 'Hráč',
       group: group,
       rig: rig,
+      weapons: remoteWeapons,
       nametag: nametag,
       targetX: playerData.x || 0,
       targetY: playerData.y || 80,
@@ -926,9 +945,31 @@ class NetworkManager {
       targetBodyYaw: initialBodyYaw,
       targetYaw: playerData.yaw || 0,
       targetPitch: playerData.pitch || 0,
+      vx: playerData.vx || 0,
+      vy: playerData.vy || 0,
+      vz: playerData.vz || 0,
+      ground: (typeof playerData.ground !== 'undefined') ? !!playerData.ground : true,
+      inWater: (typeof playerData.inWater !== 'undefined') ? !!playerData.inWater : false,
+      isSprinting: !!playerData.isSprinting,
+      isForwardSprint: !!playerData.isForwardSprint,
+      heldItem: playerData.heldItem || null,
+      isRolling: !!playerData.isRolling,
+      rollTimer: playerData.rollTimer || 0,
+      attacking: !!playerData.attacking,
+      attackTime: playerData.attackTime || 0,
+      attackDuration: playerData.attackDuration || 0.26,
+      attackCombo: playerData.attackCombo || 0,
       emote: playerData.emote || null,
       emoteTimer: 0,
-      phase: 0
+      phase: 0,
+      airPhase: 0,
+      airBlend: 0,
+      swimBlend: 0,
+      narutoBlend: 0,
+      bankLean: 0,
+      landingSquash: 0,
+      wasGround: true,
+      lastBodyYaw: initialBodyYaw
     });
   }
 
@@ -992,7 +1033,25 @@ class NetworkManager {
 
     if (typeof data.yaw === 'number') p.targetYaw = data.yaw;
     if (typeof data.pitch === 'number') p.targetPitch = data.pitch;
-    if (typeof data.heldItem !== 'undefined') p.heldItem = data.heldItem;
+    if (typeof data.vx === 'number') p.vx = data.vx;
+    if (typeof data.vy === 'number') p.vy = data.vy;
+    if (typeof data.vz === 'number') p.vz = data.vz;
+    if (typeof data.ground !== 'undefined') p.ground = !!data.ground;
+    if (typeof data.inWater !== 'undefined') p.inWater = !!data.inWater;
+    if (typeof data.isSprinting !== 'undefined') p.isSprinting = !!data.isSprinting;
+    if (typeof data.isForwardSprint !== 'undefined') p.isForwardSprint = !!data.isForwardSprint;
+    if (typeof data.heldItem !== 'undefined') {
+      p.heldItem = data.heldItem;
+      if (p.weapons) {
+        for (const k in p.weapons) p.weapons[k].visible = (k === p.heldItem);
+      }
+    }
+    if (typeof data.isRolling !== 'undefined') p.isRolling = !!data.isRolling;
+    if (typeof data.rollTimer === 'number') p.rollTimer = data.rollTimer;
+    if (typeof data.attacking !== 'undefined') p.attacking = !!data.attacking;
+    if (typeof data.attackTime === 'number') p.attackTime = data.attackTime;
+    if (typeof data.attackDuration === 'number') p.attackDuration = data.attackDuration;
+    if (typeof data.attackCombo === 'number') p.attackCombo = data.attackCombo;
 
     if (typeof data.emote !== 'undefined') {
       if (p.emote !== data.emote) {
@@ -1015,6 +1074,7 @@ class NetworkManager {
 
   updateAllRemotePlayers(dt) {
     if (this.remotePlayers.size === 0) return;
+    const now = performance.now();
 
     for (const [, p] of this.remotePlayers) {
       const g = p.group;
@@ -1043,45 +1103,34 @@ class NetworkManager {
       while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
       g.rotation.y += diffYaw * Math.min(1, dt * 14);
 
-      // Pokud hráč provádí emote (tanec, mávání, ukázání, sed...)
-      if (p.emote && typeof applyEmoteAnimation === 'function') {
-        p.emoteTimer = (p.emoteTimer || 0) + dt;
-        applyEmoteAnimation(p.rig, p.emote, p.emoteTimer, performance.now());
-      } else {
-        // Relativní otočení hlavy podle kamery (kam se hráč dívá vzhledem k tělu)
-        if (p.rig && p.rig.head) {
-          // Náklon nahoru / dolů (pitch)
-          p.rig.head.rotation.x = Math.max(-0.6, Math.min(0.9, p.targetPitch || 0));
+      // Výpočet rychlosti pohybu pro animátor
+      const packetMv = Math.hypot(p.vx || 0, p.vz || 0);
+      const estMv = dist / Math.max(0.001, dt);
+      const animMv = Math.max(packetMv, (dist > 0.04 ? estMv : 0));
 
-          // Otáčení hlavy do stran (yaw vzhledem k tělu)
-          const camLookAngle = Math.atan2(-Math.sin(p.targetYaw || 0), -Math.cos(p.targetYaw || 0));
-          let headYawRel = camLookAngle - g.rotation.y;
-          while (headYawRel < -Math.PI) headYawRel += Math.PI * 2;
-          while (headYawRel > Math.PI) headYawRel -= Math.PI * 2;
-          p.rig.head.rotation.y = Math.max(-1.25, Math.min(1.25, headYawRel));
+      if (p.attacking) {
+        p.attackTime = (p.attackTime || 0) + dt;
+        if (p.attackTime >= (p.attackDuration || 0.26)) {
+          p.attacking = false;
         }
+      }
+      if (p.isRolling) {
+        p.rollTimer = (p.rollTimer || 0) + dt;
+        if (p.rollTimer >= 0.55) {
+          p.isRolling = false;
+        }
+      }
 
-        // Animace končetin: pouze pokud se reálně hýbe (rychlost/vzdálenost > 0.05)
-        if (p.rig && p.rig.arms && p.rig.legs) {
-          if (dist > 0.05) {
-            p.phase += dt * 12;
-            const armSwing = Math.sin(p.phase) * 0.7;
-            const legSwing = Math.sin(p.phase) * 0.8;
-            p.rig.arms[0].rotation.x = armSwing;
-            p.rig.arms[1].rotation.x = -armSwing;
-            p.rig.legs[0].rotation.x = -legSwing;
-            p.rig.legs[1].rotation.x = legSwing;
-          } else {
-            // Zastavení: plynulý návrat rukou i nohou do klidové polohy podél těla
-            p.phase = 0;
-            for (let i = 0; i < 2; i++) {
-              p.rig.arms[i].rotation.x *= 0.75;
-              p.rig.legs[i].rotation.x *= 0.75;
-              if (Math.abs(p.rig.arms[i].rotation.x) < 0.005) p.rig.arms[i].rotation.x = 0;
-              if (Math.abs(p.rig.legs[i].rotation.x) < 0.005) p.rig.legs[i].rotation.x = 0;
-            }
-          }
-        }
+      // Příprava stavu pro univerzální animátor postavy
+      p.mv = animMv;
+      p.bodyYaw = g.rotation.y;
+      p.lookYaw = p.targetYaw;
+      p.lookPitch = p.targetPitch;
+      p.heldId = p.heldItem;
+
+      // Spustit identický univerzální animátor pro model vzdáleného hráče!
+      if (typeof animateFullCharacterRig === 'function') {
+        animateFullCharacterRig(p.rig, p, dt, now);
       }
     }
   }
