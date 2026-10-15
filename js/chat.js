@@ -173,11 +173,19 @@ function sendChatMessage() {
   }
 
   if (raw.startsWith('/')) {
-    // Příkaz
-    executeCommand(raw);
+    // Příkaz: v multiplayeru odeslat na server, v singleplayeru lokálně
+    if (window.networkManager && window.networkManager.connected) {
+      window.networkManager.sendChatMessage(raw);
+    } else {
+      executeCommand(raw);
+    }
   } else {
-    // Běžná zpráva hráče
-    addChatMessage(getPlayerNickname(), raw, 'user');
+    // Běžná zpráva hráče: v multiplayeru odeslat všem, v singleplayeru lokálně
+    if (window.networkManager && window.networkManager.connected) {
+      window.networkManager.sendChatMessage(raw);
+    } else {
+      addChatMessage(getPlayerNickname(), raw, 'user');
+    }
   }
 
   closeChat();

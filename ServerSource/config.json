@@ -1,0 +1,11 @@
+{
+  "serverName": "Voxelový Server",
+  "port": 3000,
+  "maxPlayers": 20,
+  "seed": 12345,
+  "motd": "Vítej ve Voxelovém RPG světě!",
+  "pvp": true,
+  "saveIntervalSeconds": 15,
+  "adminPassword": "admin",
+  "enableWebAdmin": true
+}

@@ -823,6 +823,12 @@ function loop(now) {
     if (dz > 200) g.position.z -= 400;
     if (dz < -200) g.position.z += 400;
   }
+
+  // Aktualizace polohy a animací ostatních hráčů v síti (Multiplayer)
+  if (window.networkManager && typeof window.networkManager.updateAllRemotePlayers === 'function') {
+    window.networkManager.updateAllRemotePlayers(dt);
+  }
+
   renderer.render(scene, cam);
 
   // 3D Minimapa (Cube World Style)

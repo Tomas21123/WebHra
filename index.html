@@ -921,6 +921,189 @@
     .btn-demo-login:hover {
       background: rgba(251, 191, 36, 0.35);
     }
+
+    /* Herní Režimy Modal (Singleplayer & Multiplayer) */
+    .modes-card {
+      max-width: 680px;
+      width: 100%;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modes-body {
+      overflow-y: auto;
+      padding-right: 6px;
+      max-height: calc(88vh - 120px);
+    }
+    .modes-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(2, 6, 23, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+    .modes-tab {
+      flex: 1;
+      padding: 11px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      color: #94a3b8;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .modes-tab:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .modes-tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+    .modes-tab.mp.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 116, 144, 0.45));
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .modes-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .entry-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      gap: 14px;
+    }
+    .entry-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(30, 41, 59, 0.8);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .entry-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .entry-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .entry-meta {
+      font-size: 12.5px;
+      color: #94a3b8;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .entry-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .btn-play-entry {
+      padding: 9px 18px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #042318;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 13.5px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    .btn-play-entry:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+      background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+    }
+    .btn-icon-action {
+      padding: 8px 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-icon-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+    .btn-icon-action.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .create-form-box {
+      background: rgba(2, 6, 23, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: alertFadeIn 0.25s ease;
+    }
+    .direct-connect-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .direct-connect-bar input {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(2, 6, 23, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #fff;
+      font-family: monospace;
+      font-size: 13.5px;
+      outline: none;
+    }
+    .direct-connect-bar input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
   </style>
 </head>
 
@@ -1217,12 +1400,119 @@
     </div>
   </div>
 
+  <!-- Modal: Výběr herního režimu (Singleplayer / Multiplayer) -->
+  <div id="modalGameModes" class="modal-overlay">
+    <div class="modal-card modes-card">
+      <div class="modal-head">
+        <div class="modal-title"><span>🗺️</span> Výběr herního režimu</div>
+        <button class="modal-close" id="closeModes">✕</button>
+      </div>
+
+      <!-- Přepínač záložek -->
+      <div class="modes-tabs">
+        <button id="tabSingleplayer" class="modes-tab active">
+          <span>🗡️</span>
+          <span>Hra pro jednoho (Singleplayer)</span>
+        </button>
+        <button id="tabMultiplayer" class="modes-tab mp">
+          <span>🌐</span>
+          <span>Hra pro více hráčů (Multiplayer)</span>
+        </button>
+      </div>
+
+      <div class="modes-body">
+        <!-- ZÁLOŽKA 1: SINGLEPLAYER -->
+        <div id="contentSingleplayer">
+          <div class="modes-toolbar">
+            <button id="btnOpenCreateWorld" class="btn-auth register">
+              <span>✦</span> <span>Vytvořit nový svět</span>
+            </button>
+            <label class="btn-auth" style="cursor:pointer;">
+              <span>📥</span> <span>Importovat ze souboru (.json)</span>
+              <input type="file" id="inputImportWorld" accept=".json" style="display:none;">
+            </label>
+          </div>
+
+          <!-- Formulář pro vytvoření nového světa (skrytý) -->
+          <div id="formCreateWorldBox" class="create-form-box" style="display:none;">
+            <div style="font-weight:700;font-size:14px;color:#34d399;display:flex;justify-content:space-between;">
+              <span>Nový herní svět</span>
+              <span id="closeCreateWorldForm" style="cursor:pointer;color:#94a3b8;">✕</span>
+            </div>
+            <div class="input-wrap">
+              <span class="input-icon">🏷️</span>
+              <input type="text" id="newWorldName" placeholder="Název světa (např. Moje říše)" maxlength="30">
+            </div>
+            <div class="input-wrap">
+              <span class="input-icon">🎲</span>
+              <input type="number" id="newWorldSeed" placeholder="Seed terénu (volitelné, např. 12345)">
+            </div>
+            <button id="btnSubmitCreateWorld" class="btn-play-entry" style="justify-content:center;">
+              <span>Vytvořit a začít hrát</span>
+            </button>
+          </div>
+
+          <!-- Seznam uložených světů -->
+          <div id="worldsList" class="cards-list"></div>
+        </div>
+
+        <!-- ZÁLOŽKA 2: MULTIPLAYER -->
+        <div id="contentMultiplayer" style="display:none;">
+          <!-- Rychlé připojení k libovolné IP -->
+          <div style="font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:6px;">Rychlé připojení k hernímu serveru:</div>
+          <div class="direct-connect-bar">
+            <input type="text" id="directConnectInput" placeholder="IP:port nebo doména (např. localhost:3000 nebo 192.168.1.50:3000)">
+            <button id="btnDirectConnect" class="btn-play-entry">
+              <span>Připojit se</span>
+            </button>
+          </div>
+
+          <div class="modes-toolbar" style="margin-top:16px;">
+            <div style="font-size:14px;font-weight:700;color:#38bdf8;">Uložené servery</div>
+            <button id="btnOpenAddServer" class="btn-auth login">
+              <span>＋</span> <span>Přidat server</span>
+            </button>
+          </div>
+
+          <!-- Formulář pro přidání serveru (skrytý) -->
+          <div id="formAddServerBox" class="create-form-box" style="display:none;">
+            <div style="font-weight:700;font-size:14px;color:#38bdf8;display:flex;justify-content:space-between;">
+              <span>Přidat herní server</span>
+              <span id="closeAddServerForm" style="cursor:pointer;color:#94a3b8;">✕</span>
+            </div>
+            <div class="input-wrap">
+              <span class="input-icon">🏷️</span>
+              <input type="text" id="newServerName" placeholder="Název serveru (např. Kamarádův server)" maxlength="35">
+            </div>
+            <div class="input-wrap">
+              <span class="input-icon">🌐</span>
+              <input type="text" id="newServerAddress" placeholder="Adresa serveru (např. 192.168.1.100:3000)">
+            </div>
+            <button id="btnSubmitAddServer" class="btn-play-entry" style="background:linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);justify-content:center;">
+              <span>Uložit server do seznamu</span>
+            </button>
+          </div>
+
+          <!-- Seznam serverů -->
+          <div id="serversList" class="cards-list"></div>
+
+          <!-- Nápověda pro spuštění serveru -->
+          <div class="offline-demo-box" style="margin-top:14px;">
+            <div style="font-weight:700;color:#fde68a;">💡 Chceš spustit vlastní server pro ostatní?</div>
+            <div>V projektu máš připravenou složku <code>ServerSource</code>. Stačí v ní spustit <code>start.bat</code> (na Windows) nebo <code>./start.sh</code> (na Raspberry Pi 4). Server má i vlastní administraci na <code>http://localhost:3000/admin</code>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Přechodová obrazovka do hry -->
   <div id="portalOverlay" class="portal-transition">
     <div class="portal-spinner"></div>
     <div class="portal-text">Načítám svět…</div>
   </div>
 
+  <script src="js/storage.js?v=4"></script>
   <!-- Three.js pro interaktivní 3D Voxel pozadí -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -1864,7 +2154,266 @@
       }
     });
 
-    // Spuštění hry (pouze pro přihlášené hráče!)
+    // Elementy nového modálu Výběru Herních Režimů
+    const modalGameModes = document.getElementById('modalGameModes');
+    const closeModes = document.getElementById('closeModes');
+    const tabSingleplayer = document.getElementById('tabSingleplayer');
+    const tabMultiplayer = document.getElementById('tabMultiplayer');
+    const contentSingleplayer = document.getElementById('contentSingleplayer');
+    const contentMultiplayer = document.getElementById('contentMultiplayer');
+    const worldsList = document.getElementById('worldsList');
+    const serversList = document.getElementById('serversList');
+
+    // Formuláře
+    const btnOpenCreateWorld = document.getElementById('btnOpenCreateWorld');
+    const formCreateWorldBox = document.getElementById('formCreateWorldBox');
+    const closeCreateWorldForm = document.getElementById('closeCreateWorldForm');
+    const btnSubmitCreateWorld = document.getElementById('btnSubmitCreateWorld');
+    const newWorldName = document.getElementById('newWorldName');
+    const newWorldSeed = document.getElementById('newWorldSeed');
+    const inputImportWorld = document.getElementById('inputImportWorld');
+
+    const btnOpenAddServer = document.getElementById('btnOpenAddServer');
+    const formAddServerBox = document.getElementById('formAddServerBox');
+    const closeAddServerForm = document.getElementById('closeAddServerForm');
+    const btnSubmitAddServer = document.getElementById('btnSubmitAddServer');
+    const newServerName = document.getElementById('newServerName');
+    const newServerAddress = document.getElementById('newServerAddress');
+    const directConnectInput = document.getElementById('directConnectInput');
+    const btnDirectConnect = document.getElementById('btnDirectConnect');
+
+    // Spuštění vybrané hry (portálová animace a přechod do /play/)
+    function launchGame(gameConfig) {
+      if (typeof GameStorage !== 'undefined') {
+        GameStorage.setActiveGame(gameConfig);
+      }
+      playLaunchSound();
+      closeModal(modalGameModes);
+      portalOverlay.classList.add('active');
+      setTimeout(() => {
+        window.location.href = 'play/';
+      }, 650);
+    }
+
+    // Vykreslení seznamu Singleplayer světů
+    function renderWorlds() {
+      if (typeof GameStorage === 'undefined') return;
+      const worlds = GameStorage.getWorlds();
+      worldsList.innerHTML = '';
+
+      if (worlds.length === 0) {
+        worldsList.innerHTML = '<div style="color:#94a3b8;padding:20px;text-align:center;">Nemáš vytvořený žádný svět. Klikni na tlačítko "Vytvořit nový svět".</div>';
+        return;
+      }
+
+      worlds.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'entry-card';
+        card.innerHTML = `
+          <div class="entry-info">
+            <div class="entry-title">
+              <span>🗺️</span> <span>${escapeHtml(w.name)}</span>
+            </div>
+            <div class="entry-meta">
+              <span>Seed: <strong>${w.seed}</strong></span>
+              <span>Poslední hra: ${w.lastPlayed || w.createdAt || '–'}</span>
+            </div>
+          </div>
+          <div class="entry-actions">
+            <button class="btn-play-entry" title="Vstoupit do tohoto světa">
+              <span>▶</span> <span>Hrát</span>
+            </button>
+            <button class="btn-icon-action btn-export" title="Stáhnout zálohu světa (.json)">
+              💾
+            </button>
+            <button class="btn-icon-action danger btn-delete" title="Smazat svět">
+              🗑
+            </button>
+          </div>
+        `;
+
+        card.querySelector('.btn-play-entry').onclick = () => {
+          launchGame({
+            mode: 'singleplayer',
+            worldId: w.id,
+            worldName: w.name,
+            seed: w.seed
+          });
+        };
+
+        card.querySelector('.btn-export').onclick = (e) => {
+          e.stopPropagation();
+          playClickSound();
+          GameStorage.exportWorld(w.id);
+        };
+
+        card.querySelector('.btn-delete').onclick = (e) => {
+          e.stopPropagation();
+          playClickSound();
+          if (confirm(`Opravdu chceš smazat svět "${w.name}"? Tuto akci nelze vrátit.`)) {
+            GameStorage.deleteWorld(w.id);
+            renderWorlds();
+          }
+        };
+
+        worldsList.appendChild(card);
+      });
+      attachButtonSounds();
+    }
+
+    // Vykreslení seznamu Multiplayer serverů
+    function renderServers() {
+      if (typeof GameStorage === 'undefined') return;
+      const servers = GameStorage.getServers();
+      serversList.innerHTML = '';
+
+      if (servers.length === 0) {
+        serversList.innerHTML = '<div style="color:#94a3b8;padding:20px;text-align:center;">Nemáš přidaný žádný server.</div>';
+        return;
+      }
+
+      servers.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'entry-card';
+        card.innerHTML = `
+          <div class="entry-info">
+            <div class="entry-title">
+              <span>🌐</span> <span>${escapeHtml(s.name)}</span>
+            </div>
+            <div class="entry-meta">
+              <span style="font-family:monospace;color:#38bdf8;">${escapeHtml(s.address)}</span>
+              <span>${escapeHtml(s.description || '')}</span>
+            </div>
+          </div>
+          <div class="entry-actions">
+            <button class="btn-play-entry" style="background:linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);color:#fff;" title="Připojit se k serveru">
+              <span>▶</span> <span>Připojit</span>
+            </button>
+            <button class="btn-icon-action danger btn-delete" title="Odebrat server ze seznamu">
+              ✕
+            </button>
+          </div>
+        `;
+
+        card.querySelector('.btn-play-entry').onclick = () => {
+          launchGame({
+            mode: 'multiplayer',
+            serverAddress: s.address,
+            serverName: s.name
+          });
+        };
+
+        card.querySelector('.btn-delete').onclick = (e) => {
+          e.stopPropagation();
+          playClickSound();
+          if (confirm(`Odebrat server "${s.name}" ze seznamu?`)) {
+            GameStorage.deleteServer(s.id);
+            renderServers();
+          }
+        };
+
+        serversList.appendChild(card);
+      });
+      attachButtonSounds();
+    }
+
+    // Přepínání záložek Singleplayer / Multiplayer
+    tabSingleplayer.addEventListener('click', () => {
+      playClickSound();
+      tabSingleplayer.classList.add('active');
+      tabMultiplayer.classList.remove('active');
+      contentSingleplayer.style.display = 'block';
+      contentMultiplayer.style.display = 'none';
+      renderWorlds();
+    });
+
+    tabMultiplayer.addEventListener('click', () => {
+      playClickSound();
+      tabMultiplayer.classList.add('active');
+      tabSingleplayer.classList.remove('active');
+      contentMultiplayer.style.display = 'block';
+      contentSingleplayer.style.display = 'none';
+      renderServers();
+    });
+
+    // Formulář nového světa
+    btnOpenCreateWorld.addEventListener('click', () => {
+      playClickSound();
+      formCreateWorldBox.style.display = 'flex';
+      newWorldName.focus();
+    });
+    closeCreateWorldForm.addEventListener('click', () => {
+      formCreateWorldBox.style.display = 'none';
+    });
+    btnSubmitCreateWorld.addEventListener('click', () => {
+      const name = newWorldName.value.trim() || 'Nový svět';
+      const seed = newWorldSeed.value.trim();
+      const w = GameStorage.createWorld(name, seed);
+      formCreateWorldBox.style.display = 'none';
+      newWorldName.value = '';
+      newWorldSeed.value = '';
+      launchGame({
+        mode: 'singleplayer',
+        worldId: w.id,
+        worldName: w.name,
+        seed: w.seed
+      });
+    });
+
+    // Import světa
+    inputImportWorld.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const imported = GameStorage.importWorld(evt.target.result);
+        if (imported) {
+          renderWorlds();
+          alert(`Svět "${imported.name}" byl úspěšně importován!`);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // Formulář přidání serveru
+    btnOpenAddServer.addEventListener('click', () => {
+      playClickSound();
+      formAddServerBox.style.display = 'flex';
+      newServerName.focus();
+    });
+    closeAddServerForm.addEventListener('click', () => {
+      formAddServerBox.style.display = 'none';
+    });
+    btnSubmitAddServer.addEventListener('click', () => {
+      const name = newServerName.value.trim() || 'Nový server';
+      const addr = newServerAddress.value.trim();
+      if (!addr) {
+        alert('Zadejte prosím adresu serveru (např. localhost:3000 nebo IP:port).');
+        return;
+      }
+      GameStorage.addServer(name, addr);
+      formAddServerBox.style.display = 'none';
+      newServerName.value = '';
+      newServerAddress.value = '';
+      renderServers();
+    });
+
+    // Rychlé připojení k serveru
+    btnDirectConnect.addEventListener('click', () => {
+      const addr = directConnectInput.value.trim();
+      if (!addr) {
+        alert('Zadejte adresu herního serveru.');
+        return;
+      }
+      launchGame({
+        mode: 'multiplayer',
+        serverAddress: addr,
+        serverName: 'Přímé připojení'
+      });
+    });
+
+    // Spuštění hry tlačítkem v hlavním menu
     btnPlay.addEventListener('click', () => {
       if (!currentUser) {
         playClickSound();
@@ -1872,12 +2421,13 @@
         return;
       }
 
-      playLaunchSound();
-      portalOverlay.classList.add('active');
-      setTimeout(() => {
-        window.location.href = 'play/';
-      }, 650);
+      playClickSound();
+      renderWorlds();
+      renderServers();
+      openModal(modalGameModes);
     });
+
+    closeModes.addEventListener('click', () => closeModal(modalGameModes));
 
     // Modály
     function openModal(modal) {
@@ -1898,7 +2448,7 @@
     closeAuth.addEventListener('click', () => closeModal(modalAuth));
 
     // Zavření modálu kliknutím na pozadí
-    [modalControls, modalAbout, modalAuth].forEach(m => {
+    [modalControls, modalAbout, modalAuth, modalGameModes].forEach(m => {
       m.addEventListener('click', (e) => {
         if (e.target === m) closeModal(m);
       });
@@ -1909,8 +2459,9 @@
         closeModal(modalControls);
         closeModal(modalAbout);
         closeModal(modalAuth);
+        closeModal(modalGameModes);
       }
-      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open')) {
+      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open') && !modalGameModes.classList.contains('open')) {
         btnPlay.click();
       }
     });
