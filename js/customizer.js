@@ -260,6 +260,110 @@ if (escOpenP2PBtn) {
 }
 $('escCharEdit').onclick = () => { closeEscMenu(); openCharEditor(); };
 $('escInv').onclick = () => { closeEscMenu(); toggleInv(); };
+
+// Nastavení ve hře
+const escSettingsBtn = $('escSettings');
+if (escSettingsBtn) {
+  escSettingsBtn.onclick = () => {
+    $('escMenu').hidden = true;
+    $('modalInGameSettings').hidden = false;
+    updateInGameSettingsUI();
+  };
+}
+const closeInGameSettingsBtn = $('closeInGameSettings');
+if (closeInGameSettingsBtn) {
+  closeInGameSettingsBtn.onclick = () => {
+    $('modalInGameSettings').hidden = true;
+    $('escMenu').hidden = false;
+  };
+}
+
+// Ovládání hry ve hře
+const escControlsBtn = $('escControls');
+if (escControlsBtn) {
+  escControlsBtn.onclick = () => {
+    $('escMenu').hidden = true;
+    $('modalInGameControls').hidden = false;
+  };
+}
+const closeInGameControlsBtn = $('closeInGameControls');
+if (closeInGameControlsBtn) {
+  closeInGameControlsBtn.onclick = () => {
+    $('modalInGameControls').hidden = true;
+    $('escMenu').hidden = false;
+  };
+}
+
+function updateInGameSettingsUI() {
+  const rdSlider = $('settingRdSlider');
+  const rdVal = $('settingRdVal');
+  if (rdSlider && typeof RD !== 'undefined') {
+    rdSlider.value = RD;
+    if (rdVal) rdVal.textContent = RD + ' chunků';
+  }
+  const fovSlider = $('settingFovSlider');
+  const fovVal = $('settingFovVal');
+  if (fovSlider && typeof cam !== 'undefined') {
+    fovSlider.value = Math.round(cam.fov || 70);
+    if (fovVal) fovVal.textContent = Math.round(cam.fov || 70) + '°';
+  }
+  const soundBtn = $('settingSoundToggle');
+  if (soundBtn) {
+    const isMuted = !!window.soundMuted;
+    soundBtn.textContent = isMuted ? '🔇 Vypnuto' : '🔊 Zapnuto';
+    soundBtn.style.background = isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)';
+    soundBtn.style.borderColor = isMuted ? '#ef4444' : '#10b981';
+    soundBtn.style.color = isMuted ? '#fca5a5' : '#34d399';
+  }
+}
+
+// Slidery v Nastavení
+const settingRdSlider = $('settingRdSlider');
+if (settingRdSlider) {
+  settingRdSlider.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    if (typeof RD !== 'undefined') RD = val;
+    const rdVal = $('settingRdVal');
+    if (rdVal) rdVal.textContent = val + ' chunků';
+    if (typeof setFog === 'function') setFog();
+    try { localStorage.setItem('voxel_setting_rd', val); } catch(err) {}
+  };
+}
+const settingFovSlider = $('settingFovSlider');
+if (settingFovSlider) {
+  settingFovSlider.oninput = (e) => {
+    const val = parseInt(e.target.value);
+    const fovVal = $('settingFovVal');
+    if (fovVal) fovVal.textContent = val + '°';
+    if (typeof cam !== 'undefined') {
+      cam.fov = val;
+      cam.updateProjectionMatrix();
+    }
+    try { localStorage.setItem('voxel_setting_fov', val); } catch(err) {}
+  };
+}
+const settingSoundToggle = $('settingSoundToggle');
+if (settingSoundToggle) {
+  settingSoundToggle.onclick = () => {
+    window.soundMuted = !window.soundMuted;
+    try { localStorage.setItem('voxel_setting_sound', window.soundMuted ? '0' : '1'); } catch(err) {}
+    updateInGameSettingsUI();
+  };
+}
+
+// Načtení uložených nastavení při spuštění
+try {
+  const savedRd = localStorage.getItem('voxel_setting_rd');
+  if (savedRd && typeof RD !== 'undefined') {
+    RD = parseInt(savedRd);
+  }
+  const savedFov = localStorage.getItem('voxel_setting_fov');
+  if (savedFov && typeof cam !== 'undefined') {
+    cam.fov = parseInt(savedFov);
+    cam.updateProjectionMatrix();
+  }
+} catch(e) {}
+
 $('escRespawn').onclick = () => {
   P.x = SPX; P.z = (typeof SPZ !== 'undefined') ? SPZ : 0.5; P.y = SPY; P.vx = P.vy = P.vz = 0; G.hp = 100; G.st = 100;
   closeEscMenu();
@@ -268,6 +372,17 @@ $('escRespawn').onclick = () => {
 const escMainMenuBtn = $('escMainMenu');
 if (escMainMenuBtn) {
   escMainMenuBtn.onclick = () => {
+    if (window.networkManager && window.networkManager.isP2PHost) {
+      try {
+        window.networkManager.broadcastP2P({
+          type: 'hostDisconnect',
+          message: 'Hostitel se odpojil ze světa.'
+        });
+        for (const [, conn] of window.networkManager.p2pClients) {
+          try { conn.close(); } catch(err) {}
+        }
+      } catch(e) {}
+    }
     const p = window.location.pathname;
     const idx = p.indexOf('/play');
     if (idx !== -1) {

@@ -81,40 +81,41 @@ function applyEmoteAnimation(rig, emoteId, et, now) {
   if (!body || !torso || !head || !arms || !legs) return false;
 
   const VX_VAL = (typeof VX !== 'undefined') ? VX : 0.05;
+  const t = (typeof et === 'number' && et > 0) ? et : ((typeof now === 'number' ? now : performance.now()) * 0.001);
 
   if (emoteId === 'dance67') {
     // Tanec 67 (divoké mávání rukama a tancující trup)
     const sp67 = 13;
-    body.position.y = -Math.abs(Math.sin(et * sp67)) * 0.06;
-    torso.rotation.z = Math.sin(et * sp67 * 0.5) * 0.16;
+    body.position.y = -Math.abs(Math.sin(t * sp67)) * 0.06;
+    torso.rotation.z = Math.sin(t * sp67 * 0.5) * 0.16;
     torso.rotation.x = 0.08;
     torso.rotation.y = 0;
 
-    head.rotation.z = Math.sin(et * sp67 * 0.5) * 0.25;
-    head.rotation.x = -Math.abs(Math.sin(et * sp67)) * 0.2;
+    head.rotation.z = Math.sin(t * sp67 * 0.5) * 0.25;
+    head.rotation.x = -Math.abs(Math.sin(t * sp67)) * 0.2;
     head.rotation.y = 0;
 
-    arms[0].rotation.x = -1.2 + Math.sin(et * sp67) * 0.95;
-    arms[0].rotation.z = -0.3 + Math.cos(et * sp67) * 0.35;
+    arms[0].rotation.x = -1.2 + Math.sin(t * sp67) * 0.95;
+    arms[0].rotation.z = -0.3 + Math.cos(t * sp67) * 0.35;
     arms[0].rotation.y = 0.2;
 
-    arms[1].rotation.x = -1.2 - Math.sin(et * sp67) * 0.95;
-    arms[1].rotation.z = 0.3 - Math.cos(et * sp67) * 0.35;
+    arms[1].rotation.x = -1.2 - Math.sin(t * sp67) * 0.95;
+    arms[1].rotation.z = 0.3 - Math.cos(t * sp67) * 0.35;
     arms[1].rotation.y = -0.2;
 
-    legs[0].rotation.x = Math.sin(et * sp67 * 0.5) * 0.15;
-    legs[1].rotation.x = -Math.sin(et * sp67 * 0.5) * 0.15;
-    legs[0].rotation.z = -0.04 + Math.sin(et * sp67 * 0.5) * 0.1;
-    legs[1].rotation.z = 0.04 + Math.sin(et * sp67 * 0.5) * 0.1;
+    legs[0].rotation.x = Math.sin(t * sp67 * 0.5) * 0.15;
+    legs[1].rotation.x = -Math.sin(t * sp67 * 0.5) * 0.15;
+    legs[0].rotation.z = -0.04 + Math.sin(t * sp67 * 0.5) * 0.1;
+    legs[1].rotation.z = 0.04 + Math.sin(t * sp67 * 0.5) * 0.1;
     return true;
   } else if (emoteId === 'wave') {
     // Pozdrav (přátelské zamávání pravou rukou)
     body.position.y = 0;
     torso.rotation.set(0, 0, 0);
-    head.rotation.set(-0.08 + Math.sin(et * 5) * 0.05, 0, -0.12);
+    head.rotation.set(-0.08 + Math.sin(t * 5) * 0.05, 0, -0.12);
 
     arms[1].rotation.x = -2.25;
-    arms[1].rotation.z = 0.55 + Math.sin(et * 10) * 0.35;
+    arms[1].rotation.z = 0.55 + Math.sin(t * 10) * 0.35;
     arms[1].rotation.y = 0.18;
     arms[0].rotation.set(0, 0, -0.12);
 

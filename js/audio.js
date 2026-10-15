@@ -1,7 +1,12 @@
 // ---------- Web Audio API Syntetizér pro Útoky ----------
 let audioCtx = null;
+window.soundMuted = false;
+try {
+  if (localStorage.getItem('voxel_setting_sound') === '0') window.soundMuted = true;
+} catch(e) {}
 
 function playAttackSound(type) {
+  if (window.soundMuted) return;
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -68,6 +73,7 @@ function playAttackSound(type) {
 }
 
 function playRollSound() {
+  if (window.soundMuted) return;
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();

@@ -96,22 +96,24 @@
       z-index: 10;
       width: 100%;
       height: 100%;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
-      padding: 40px 24px;
+      padding: 24px 28px;
       pointer-events: none;
     }
 
     /* Horní lišta */
     .top-bar {
       width: 100%;
-      max-width: 1100px;
+      max-width: 100%;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       pointer-events: auto;
+      padding: 0;
     }
 
     .badge-pill {
@@ -335,13 +337,14 @@
     /* Spodní lišta */
     .bottom-bar {
       width: 100%;
-      max-width: 1100px;
+      max-width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 13px;
       color: var(--text-muted);
       pointer-events: auto;
+      padding: 0;
     }
 
     .features-strip {
@@ -1118,11 +1121,6 @@
   <div class="menu-wrap">
     <!-- Horní lišta -->
     <header class="top-bar">
-      <div class="top-left">
-        <div class="badge-pill">
-          <span></span> Voxel Engine Online
-        </div>
-      </div>
       <div class="top-actions">
         <!-- Auth widget (Přihlášení / Uživatelský profil) -->
         <div id="authWidget" class="auth-widget">
@@ -1166,14 +1164,6 @@
         <button id="btnPlay" class="btn-main-play locked">
           <span class="btn-icon" id="playIcon">🔒</span>
           <span id="playText">Přihlásit se a hrát</span>
-        </button>
-        <div id="playHint" class="play-hint locked">
-          <span>🔒</span> Pro spuštění hry se nejprve přihlaste
-        </div>
-
-        <button id="btnControls" class="btn-sub">
-          <span>🎮</span>
-          <span>Ovládání hry</span>
         </button>
 
         <button id="btnAbout" class="btn-sub">
@@ -1867,8 +1857,10 @@
         btnPlay.classList.remove('locked');
         playIcon.textContent = '▶';
         playText.textContent = 'Hrát hru';
-        playHint.className = 'play-hint unlocked';
-        playHint.innerHTML = `<span>✨</span> Přihlášen jako <strong>${escapeHtml(currentUser.nickname)}</strong> · Hra je připravena`;
+        if (playHint) {
+          playHint.className = 'play-hint unlocked';
+          playHint.innerHTML = `<span>✨</span> Přihlášen jako <strong>${escapeHtml(currentUser.nickname)}</strong> · Hra je připravena`;
+        }
       } else {
         authLoggedOut.style.display = 'flex';
         authLoggedIn.style.display = 'none';
@@ -1876,8 +1868,10 @@
         btnPlay.classList.add('locked');
         playIcon.textContent = '🔒';
         playText.textContent = 'Přihlásit se a hrát';
-        playHint.className = 'play-hint locked';
-        playHint.innerHTML = `<span>🔒</span> Pro spuštění hry se nejprve přihlaste`;
+        if (playHint) {
+          playHint.className = 'play-hint locked';
+          playHint.innerHTML = `<span>🔒</span> Pro spuštění hry se nejprve přihlaste`;
+        }
       }
     }
 
@@ -2476,15 +2470,15 @@
       modal.classList.remove('open');
     }
 
-    btnControls.addEventListener('click', () => openModal(modalControls));
-    closeControls.addEventListener('click', () => closeModal(modalControls));
+    if (btnControls) btnControls.addEventListener('click', () => openModal(modalControls));
+    if (closeControls) closeControls.addEventListener('click', () => closeModal(modalControls));
 
     btnAbout.addEventListener('click', () => openModal(modalAbout));
     closeAbout.addEventListener('click', () => closeModal(modalAbout));
     closeAuth.addEventListener('click', () => closeModal(modalAuth));
 
     // Zavření modálu kliknutím na pozadí
-    [modalControls, modalAbout, modalAuth, modalGameModes].forEach(m => {
+    [modalControls, modalAbout, modalAuth, modalGameModes].filter(Boolean).forEach(m => {
       m.addEventListener('click', (e) => {
         if (e.target === m) closeModal(m);
       });
@@ -2492,12 +2486,12 @@
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeModal(modalControls);
+        if (modalControls) closeModal(modalControls);
         closeModal(modalAbout);
         closeModal(modalAuth);
         closeModal(modalGameModes);
       }
-      if (e.key === 'Enter' && !modalControls.classList.contains('open') && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open') && !modalGameModes.classList.contains('open')) {
+      if (e.key === 'Enter' && (!modalControls || !modalControls.classList.contains('open')) && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open') && !modalGameModes.classList.contains('open')) {
         btnPlay.click();
       }
     });
@@ -2533,6 +2527,17 @@
 
     // Spuštění inicializace uloženého uživatele
     loadSavedUser();
+
+    // Upozornění, pokud byl hráč přesměrován po odpojení hostitele
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('msg') === 'host_disconnected') {
+        setTimeout(() => {
+          alert('Hostitel se odpojil ze světa.');
+          try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
+        }, 150);
+      }
+    } catch(e) {}
   </script>
   <script src="js/cursor.js"></script>
 </body>

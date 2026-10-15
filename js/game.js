@@ -60,6 +60,8 @@ function setFog() {
   cam.updateProjectionMatrix();
   dome.scale.setScalar(cam.far * 0.9);
 }
+window.setFog = setFog;
+window.cam = cam;
 setFog();
 
 addEventListener('resize', () => {
@@ -407,6 +409,11 @@ function loop(now) {
   anim.attackCombo = attackCombo;
   anim.isRolling = isRolling;
   anim.rollTimer = rollTimer;
+  if (typeof currentEmote !== 'undefined' && currentEmote !== null) {
+    emoteTimer += dt;
+  } else {
+    emoteTimer = 0;
+  }
   anim.emote = currentEmote;
   anim.emoteTimer = emoteTimer;
   anim.isJumpingInWater = !!keys.Space;

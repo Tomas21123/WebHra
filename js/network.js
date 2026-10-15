@@ -157,6 +157,9 @@ class NetworkManager {
 
     window.addEventListener('beforeunload', () => {
       this.saveSingleplayerWorld();
+      if (this.isP2PHost) {
+        this.broadcastP2P({ type: 'hostDisconnect', message: 'Hostitel se odpojil ze světa.' });
+      }
     });
 
     // Automaticky připravit P2P hostitelský kanál na pozadí se stálým kódem tohoto světa
@@ -603,7 +606,9 @@ class NetworkManager {
         this.connected = false;
         if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
         if (this.syncTimer) clearInterval(this.syncTimer);
-        this.showNetStatus('Spojení s hostitelem bylo ukončeno.', 'error', true);
+        this.showNetStatus('Hostitel se odpojil ze světa.', 'error', true);
+        alert('Hostitel se odpojil ze světa. Budeš přesměrován do hlavního menu.');
+        window.location.replace('../index.html?msg=host_disconnected');
       });
 
       this.p2pHostConn.on('error', (err) => {
@@ -852,6 +857,15 @@ class NetworkManager {
         this.removeRemotePlayer(msg.id);
         break;
 
+      case 'hostDisconnect':
+        this.connected = false;
+        if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
+        if (this.syncTimer) clearInterval(this.syncTimer);
+        this.showNetStatus('Hostitel se odpojil ze světa.', 'error', true);
+        alert(msg.message || 'Hostitel se odpojil ze světa. Budeš přesměrován do hlavního menu.');
+        window.location.replace('../index.html?msg=host_disconnected');
+        break;
+
       case 'blockChange':
         this.onRemoteBlockChange(msg.x, msg.y, msg.z, msg.blockType);
         break;
@@ -877,6 +891,11 @@ class NetworkManager {
           P.vx = 0; P.vy = 0; P.vz = 0;
           if (typeof toast === 'function') toast('Byl jsi teleportován!');
         }
+        break;
+
+      case 'hostDisconnect':
+        alert(msg.message || 'Hostitel se odpojil ze světa.');
+        window.location.replace('../index.html?msg=host_disconnected');
         break;
     }
   }
@@ -1120,6 +1139,11 @@ class NetworkManager {
           p.isRolling = false;
         }
       }
+      if (p.emote) {
+        p.emoteTimer = (p.emoteTimer || 0) + dt;
+      } else {
+        p.emoteTimer = 0;
+      }
 
       // Příprava stavu pro univerzální animátor postavy
       p.mv = animMv;
@@ -1250,6 +1274,21 @@ class NetworkManager {
         } else if (e.code === 'KeyN' || e.key === 'n' || e.key === 'N') {
           e.preventDefault();
           this.rejectPendingP2P();
+        }
+      });
+
+      // 6. Upozornění klientů při zavření záložky hostitelem
+      window.addEventListener('beforeunload', () => {
+        if (this.isP2PHost) {
+          try {
+            this.broadcastP2P({
+              type: 'hostDisconnect',
+              message: 'Hostitel se odpojil ze světa.'
+            });
+            for (const [, conn] of this.p2pClients) {
+              try { conn.close(); } catch(err) {}
+            }
+          } catch(e) {}
         }
       });
     };
