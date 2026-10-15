@@ -445,6 +445,28 @@ function gen(cx, cz) {
     }
   }
 
+  // Aplikace změn bloků (položené / zničené bloky ze sítě či uloženého světa)
+  if (typeof window !== 'undefined' && window.networkManager && window.networkManager.worldDeltas) {
+    const deltas = window.networkManager.worldDeltas;
+    for (const key of Object.keys(deltas)) {
+      const parts = key.split(',');
+      if (parts.length === 3) {
+        const bx = parseInt(parts[0]), by = parseInt(parts[1]), bz = parseInt(parts[2]);
+        if (Math.floor(bx / CS) === cx && Math.floor(bz / CS) === cz) {
+          const lx = bx - cx * CS, lz = bz - cz * CS;
+          if (by >= 0) {
+            if (by >= H) {
+              const newH = Math.max(by + 48, H + 96), newD = new Uint8Array(256 * newH);
+              newD.set(d); d = newD; H = newH; c.d = d; c.H = H;
+            }
+            d[lx + lz * CS + by * 256] = deltas[key];
+            if (by > maxY) maxY = by;
+          }
+        }
+      }
+    }
+  }
+
   c.d = d; c.H = H; c.maxY = maxY;
   return c;
 }

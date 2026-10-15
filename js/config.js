@@ -16,6 +16,13 @@ let SEED = (() => {
 function setWorldSeed(newSeed) {
   if (typeof newSeed === 'number' || (typeof newSeed === 'string' && !isNaN(parseInt(newSeed)))) {
     SEED = parseInt(newSeed);
+    try {
+      if (typeof GameStorage !== 'undefined') {
+        const act = GameStorage.getActiveGame() || {};
+        act.seed = SEED;
+        GameStorage.setActiveGame(act);
+      }
+    } catch(e) {}
   }
 }
 

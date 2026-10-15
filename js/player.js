@@ -1,22 +1,22 @@
 // Bezpečné vyhledání suchozemského bodu pro spawn (nikdy ve vodě!)
-function findSafeSpawnCoords() {
+function findSafeSpawnCoords(startX = 0, startZ = 0) {
   const step = 8;
   const maxR = 3000;
   for (let r = 0; r <= maxR; r += step) {
     if (r === 0) {
-      const h0 = height(0, 0);
+      const h0 = height(startX, startZ);
       if (h0 >= SEA + 3) {
-        return { x: 0.5, y: (h0 + 1.5) * S, z: 0.5 };
+        return { x: startX * S + S / 2, y: (h0 + 1.5) * S, z: startZ * S + S / 2 };
       }
       continue;
     }
     const sampleStep = Math.max(8, Math.floor(r / 10));
     for (let i = -r; i <= r; i += sampleStep) {
       const candidates = [
-        [i, -r],
-        [i, r],
-        [-r, i],
-        [r, i]
+        [startX + i, startZ - r],
+        [startX + i, startZ + r],
+        [startX - r, startZ + i],
+        [startX + r, startZ + i]
       ];
       for (const [bx, bz] of candidates) {
         const h = height(bx, bz);
@@ -35,13 +35,13 @@ function findSafeSpawnCoords() {
       }
     }
   }
-  return { x: 0.5, y: (SEA + 8) * S, z: 0.5 };
+  return { x: startX * S + S / 2, y: (SEA + 8) * S, z: startZ * S + S / 2 };
 }
 
 const safeSpawn = findSafeSpawnCoords();
-const SPX = safeSpawn.x;
-const SPY = safeSpawn.y;
-const SPZ = safeSpawn.z;
+let SPX = safeSpawn.x;
+let SPY = safeSpawn.y;
+let SPZ = safeSpawn.z;
 const P = { x: SPX, y: SPY, z: SPZ, vx: 0, vy: 0, vz: 0, ground: false, moveX: 0, moveZ: 0 };
 
 let yaw = 0, pitch = 0.45, dist = 6, face = 0, phase = 0;

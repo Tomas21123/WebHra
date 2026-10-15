@@ -136,7 +136,7 @@ class NetworkManager {
             const sh = (typeof height === 'function') ? height(pbx, pbz) : 80;
             if (P.y <= (SEA + 1) * S || sh < SEA + 2) {
               if (typeof findSafeSpawnCoords === 'function') {
-                const safe = findSafeSpawnCoords();
+                const safe = findSafeSpawnCoords(pbx, pbz);
                 P.x = safe.x; P.y = safe.y; P.z = safe.z;
                 P.vx = 0; P.vy = 0; P.vz = 0;
               }
@@ -404,7 +404,17 @@ class NetworkManager {
 
   sendInitToClient(conn) {
     const hostNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hostitel';
-    const currentSeed = (typeof SEED !== 'undefined') ? SEED : (this.activeGame?.seed || 12345);
+    let currentSeed = 12345;
+    if (typeof SEED !== 'undefined' && SEED) {
+      currentSeed = SEED;
+    } else if (this.activeGame && this.activeGame.seed) {
+      currentSeed = parseInt(this.activeGame.seed);
+    } else if (this.activeGame && this.activeGame.worldId && typeof GameStorage !== 'undefined') {
+      const w = GameStorage.getWorld(this.activeGame.worldId);
+      if (w && w.seed) currentSeed = parseInt(w.seed);
+    }
+
+    console.log(`[P2P Host] Odesílám init klientovi: Seed=${currentSeed}, Hráč=${hostNick}, Pos=(${P.x.toFixed(1)}, ${P.y.toFixed(1)}, ${P.z.toFixed(1)}), Bloků=${Object.keys(this.worldDeltas).length}`);
 
     conn.send({
       type: 'init',
@@ -563,9 +573,6 @@ class NetworkManager {
           if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
           this.approved = true;
           if (statusDetail) statusDetail.textContent = 'Vstup schválen! Generuji svět…';
-          if (typeof window.approveP2PJoin === 'function') {
-            window.approveP2PJoin(msg.seed, msg.worldDeltas);
-          }
         }
         this.handleServerMessage(msg);
       });
@@ -718,9 +725,13 @@ class NetworkManager {
         this.isOp = !!msg.isOp;
         this.hideNetStatus();
 
-        // 1. Spustit generování světa u klienta se správným seedem hostitele
+        if (msg.worldDeltas) {
+          this.worldDeltas = Object.assign({}, msg.worldDeltas);
+        }
+
+        // 1. Spustit generování světa u klienta se správným seedem hostitele, deltas a polohou u hostitele
         if (typeof window.approveP2PJoin === 'function' && msg.seed) {
-          window.approveP2PJoin(msg.seed, msg.worldDeltas);
+          window.approveP2PJoin(msg.seed, this.worldDeltas, msg.players);
         }
 
         // Skrýt čekací modal po schválení hostitelem
@@ -738,7 +749,6 @@ class NetworkManager {
         }
 
         if (msg.worldDeltas) {
-          this.worldDeltas = Object.assign({}, msg.worldDeltas);
           this.applyWorldDeltas();
         }
 
@@ -749,27 +759,17 @@ class NetworkManager {
             }
           });
 
-          // Teleportovat klienta blízko k hostiteli
+          // Teleportovat klienta přímo k hostiteli
           const host = msg.players.find(p => p.id === 'host') || msg.players[0];
           if (host && typeof host.x === 'number' && typeof P !== 'undefined') {
-            P.x = host.x + 2;
-            P.y = host.y + 0.2;
-            P.z = host.z + 2;
+            P.x = host.x + 1.5;
+            P.z = host.z + 1.5;
+            const pbx = Math.floor(P.x / S);
+            const pbz = Math.floor(P.z / S);
+            const terrainH = (typeof height === 'function') ? height(pbx, pbz) : 45;
+            P.y = Math.max(host.y + 0.2, (terrainH + 1.5) * S);
             P.vx = 0; P.vy = 0; P.vz = 0;
-          }
-        }
-
-        // Kontrola, aby hráč při připojení nespawnul ve vodě
-        if (typeof P !== 'undefined') {
-          const pbx = Math.floor(P.x / S);
-          const pbz = Math.floor(P.z / S);
-          const sh = (typeof height === 'function') ? height(pbx, pbz) : 80;
-          if (P.y <= (SEA + 1) * S || sh < SEA + 2) {
-            if (typeof findSafeSpawnCoords === 'function') {
-              const safe = findSafeSpawnCoords();
-              P.x = safe.x; P.y = safe.y; P.z = safe.z;
-              P.vx = 0; P.vy = 0; P.vz = 0;
-            }
+            if (typeof lastC !== 'undefined') lastC = '';
           }
         }
 

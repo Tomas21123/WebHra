@@ -216,13 +216,57 @@ applyHeld();
 const activeGameInfo = (typeof GameStorage !== 'undefined') ? GameStorage.getActiveGame() : null;
 window.isP2PWaitingApproval = !!(activeGameInfo && activeGameInfo.mode === 'p2p_client');
 
-window.approveP2PJoin = function(hostSeed, hostDeltas) {
+window.approveP2PJoin = function(hostSeed, hostDeltas, players) {
   window.isP2PWaitingApproval = false;
-  if (typeof setWorldSeed === 'function') {
+
+  // 1. Nastavit hostitelův seed světa
+  if (typeof setWorldSeed === 'function' && hostSeed) {
     setWorldSeed(hostSeed);
+    console.log('[P2P] Seed světa hostitele úspěšně nastaven na:', hostSeed);
   }
-  // Vyčistit předchozí chunk stav, aby se načetl čistý hostitelův svět se správným seedem
-  if (typeof chunks !== 'undefined') chunks.clear();
+
+  // 2. Synchronizovat modifikované bloky hostitele (worldDeltas) ještě před generováním
+  if (hostDeltas && window.networkManager) {
+    window.networkManager.worldDeltas = Object.assign({}, hostDeltas);
+  }
+
+  // 3. Umístit hráče přímo vedle hostitele ještě před tím, než se začnou načítat chunky!
+  if (Array.isArray(players) && typeof P !== 'undefined') {
+    const host = players.find(p => p.id === 'host') || players[0];
+    if (host && typeof host.x === 'number') {
+      P.x = host.x + 1.5;
+      P.z = host.z + 1.5;
+      const pbx = Math.floor(P.x / S);
+      const pbz = Math.floor(P.z / S);
+      const th = (typeof height === 'function') ? height(pbx, pbz) : 45;
+      P.y = Math.max(host.y + 0.2, (th + 1.5) * S);
+      P.renderY = P.y;
+      P.vx = 0; P.vy = 0; P.vz = 0;
+
+      // Aktualizovat i spawn bod, aby případný respawn neházel na (0,0)
+      if (typeof SPX !== 'undefined') {
+        SPX = P.x; SPY = P.y; SPZ = P.z;
+      }
+
+      // Okamžitá aktualizace kamery a modelu
+      if (typeof cam !== 'undefined') {
+        cam.position.set(P.x, P.y + 1.55, P.z);
+      }
+      if (typeof model !== 'undefined') {
+        model.position.set(P.x, P.y, P.z);
+      }
+
+      console.log(`[P2P] Hráč úspěšně umístěn k hostiteli na XYZ: ${P.x.toFixed(1)}, ${P.y.toFixed(1)}, ${P.z.toFixed(1)}`);
+    }
+  }
+
+  // 4. Řádně smazat všechny předchozí 3D meshe z Three.js scény
+  if (typeof chunks !== 'undefined') {
+    for (const [k, c] of chunks) {
+      if (typeof dispose === 'function') dispose(c);
+    }
+    chunks.clear();
+  }
   if (typeof queue !== 'undefined') queue.length = 0;
   if (typeof lastC !== 'undefined') lastC = '';
   ready = false;
