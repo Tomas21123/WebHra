@@ -420,6 +420,10 @@ if (WebSocketServer) {
           player.attackTime = msg.attackTime ?? 0;
           player.attackDuration = msg.attackDuration ?? 0.26;
           player.attackCombo = msg.attackCombo ?? 0;
+          player.isBlocking = !!msg.isBlocking;
+          player.level = msg.level ?? player.level ?? 1;
+          player.hp = msg.hp ?? player.hp ?? 100;
+          player.maxHp = msg.maxHp ?? player.maxHp ?? 100;
 
           // Přeposlat ostatním hráčům
           broadcast({
@@ -445,26 +449,24 @@ if (WebSocketServer) {
             attacking: player.attacking,
             attackTime: player.attackTime,
             attackDuration: player.attackDuration,
-            attackCombo: player.attackCombo
+            attackCombo: player.attackCombo,
+            isBlocking: player.isBlocking,
+            level: player.level,
+            hp: player.hp,
+            maxHp: player.maxHp
           }, ws);
           return;
         }
 
-        // 3. Položení nebo rozbití bloku (Block Edit)
+        // 3. Položení nebo rozbití bloku (Block Edit) - Ignorováno pro Cube World RPG
         if (msg.type === 'blockChange') {
-          const { x, y, z, blockType } = msg;
-          if (typeof x === 'number' && typeof y === 'number' && typeof z === 'number') {
-            const key = `${x},${y},${z}`;
-            worldDeltas[key] = blockType; // 0 = rozbito (vzduch), 1..N = položený blok
+          // Block building and terrain destruction are disabled in Cube World mode.
+          return;
+        }
 
-            // Rozeslat všem (včetně odesílatele pro potvrzení)
-            broadcast({
-              type: 'blockChange',
-              x, y, z,
-              blockType,
-              playerId: player.id
-            });
-          }
+        // 3.5 Vystřelení projektilu (Luk / Magická hůl)
+        if (msg.type === 'projectileSpawn') {
+          broadcast(Object.assign({}, msg, { senderId: player.id }), ws);
           return;
         }
 

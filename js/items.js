@@ -403,8 +403,8 @@ const INV = [
     subcat: 'material',
     count: 10,
     rarity: 'common',
-    desc: 'Základní stavební materiál získaný kácením lesních stromů.',
-    statList: ['🪵 Základní stavební materiál', '🔨 Vhodné na výrobu nástrojů']
+    desc: 'Základní surovina pro vylepšování a výrobu.',
+    statList: ['🪵 Základní surovina pro vylepšování a výrobu', '🔨 Vhodné na výrobu zbraní a výstroje']
   },
   {
     id: 'stone',
@@ -413,8 +413,8 @@ const INV = [
     subcat: 'material',
     count: 8,
     rarity: 'common',
-    desc: 'Pevný opracovaný kámen pro budování opevnění.',
-    statList: ['🪨 Odolný stavební kámen', '🏰 Ochrana před zničením']
+    desc: 'Základní surovina pro vylepšování a výrobu.',
+    statList: ['🪨 Základní surovina pro vylepšování a výrobu', '🛡️ Vhodné na kování a vylepšování výbavy']
   },
   {
     id: 'ore_iron',
@@ -498,8 +498,145 @@ const INV = [
     rarity: 'common',
     desc: 'Spolehlivý zdroj světla zahánějící temnotu jeskyní a noci.',
     statList: ['🔥 Zdroj teplého světla', '👁️ Zlepšuje viditelnost']
+  },
+
+  // --- Nové Alchymistické Suroviny (F9) ---
+  {
+    id: 'flower_red',
+    name: 'Červená květina',
+    cat: 'loot',
+    subcat: 'material',
+    count: 6,
+    rarity: 'common',
+    desc: 'Půvabná lesní květina s rudými okvětními lístky plnými léčivé mízy.',
+    statList: ['🌺 Alchymistická přísada', '❤️ Základ pro léčivé lektvary']
+  },
+  {
+    id: 'herb_green',
+    name: 'Zelená bylina',
+    cat: 'loot',
+    subcat: 'material',
+    count: 6,
+    rarity: 'common',
+    desc: 'Aromatická bylina s povzbuzujícími účinky na svaly a dech.',
+    statList: ['🌿 Alchymistická přísada', '⚡ Základ pro lektvary výdrže']
+  },
+  {
+    id: 'flask_water',
+    name: 'Láhev čisté vody',
+    cat: 'loot',
+    subcat: 'material',
+    count: 8,
+    rarity: 'common',
+    desc: 'Křišťálově čistá pramenitá voda v uzavřené skleněné lahvičce.',
+    statList: ['🧪 Základní rozpouštědlo', '💧 Nezbytné pro alchymistické recepty']
+  },
+  {
+    id: 'monster_core',
+    name: 'Jádro nestvůry',
+    cat: 'loot',
+    subcat: 'material',
+    count: 3,
+    rarity: 'rare',
+    desc: 'Pulzující magické jádro získané z poražených nebezpečných stvůr.',
+    statList: ['🔮 Vzácný monster drop', '⚔️ Nezbytné pro válečné elixíry a kování']
+  },
+  {
+    id: 'crystal_blue',
+    name: 'Modrý krystal',
+    cat: 'loot',
+    subcat: 'material',
+    count: 4,
+    rarity: 'uncommon',
+    desc: 'Třpytivý modrý krystal nabitý energií větru a blesků.',
+    statList: ['💎 Energetický krystal', '🏃 Základ pro lektvary rychlosti']
+  },
+
+  // --- 4 Základní Alchymistické Lektvary (F9) ---
+  {
+    id: 'potion_health',
+    name: 'Léčivý lektvar',
+    cat: 'loot',
+    subcat: 'consumable',
+    count: 2,
+    rarity: 'uncommon',
+    healHp: 50,
+    desc: 'Rudý elixír uvařený z červených květin a čisté vody. Okamžitě vyléčí 50 HP.',
+    statList: ['❤️ Okamžitě vyléčí +50 HP', '🧪 Alchymistický lektvar']
+  },
+  {
+    id: 'potion_stamina',
+    name: 'Lektvar výdrže',
+    cat: 'loot',
+    subcat: 'consumable',
+    count: 2,
+    rarity: 'uncommon',
+    restoreStamina: 50,
+    desc: 'Svěže zelený lektvar obnovující energii těla. Okamžitě doplní 50 staminy.',
+    statList: ['⚡ Okamžitě doplní +50 Staminy', '🧪 Alchymistický lektvar']
+  },
+  {
+    id: 'potion_strength',
+    name: 'Elixír síly',
+    cat: 'loot',
+    subcat: 'consumable',
+    count: 1,
+    rarity: 'rare',
+    buffStrength: 0.25,
+    buffDuration: 30,
+    desc: 'Hustý planoucí lektvar z jádra nestvůry a zlata. Zvyšuje útočné poškození o +25% na 30 sekund.',
+    statList: ['⚔️ +25% Útočné poškození', '⏱️ Trvání: 30 sekund', '🧪 Válečný elixír']
+  },
+  {
+    id: 'potion_speed',
+    name: 'Lektvar hbitosti',
+    cat: 'loot',
+    subcat: 'consumable',
+    count: 1,
+    rarity: 'rare',
+    buffSpeed: 0.30,
+    buffDuration: 30,
+    desc: 'Azuřitově modrý lektvar s rozpuštěným modrým krystalem. Zvyšuje rychlost pohybu o +30% na 30 sekund.',
+    statList: ['🏃 +30% Rychlost pohybu', '⏱️ Trvání: 30 sekund', '🧪 Alchymistický lektvar']
   }
 ];
+
+// Inicializace bází a vylepšení pro zbraně, štíty a brnění
+for (const it of INV) {
+  if (it.cat === 'weapon') {
+    if (it.baseDamage === undefined && it.damage !== undefined) it.baseDamage = it.damage;
+    if (it.upgradeLevel === undefined) it.upgradeLevel = 0;
+  }
+  if (it.cat === 'armor' || it.subcat === 'shield') {
+    if (it.baseDefense === undefined && it.defense !== undefined) it.baseDefense = it.defense;
+    if (it.baseBonusHp === undefined && it.bonusHp !== undefined) it.baseBonusHp = it.bonusHp;
+    if (it.upgradeLevel === undefined) it.upgradeLevel = 0;
+  }
+}
+
+if (typeof bx === 'undefined') {
+  globalThis.bx = (a, x0, y0, z0, x1, y1, z1, c) => {
+    for (let x = x0; x < x1; x++) {
+      for (let y = y0; y < y1; y++) {
+        for (let z = z0; z < z1; z++) {
+          a.push([x, y, z, c]);
+        }
+      }
+    }
+  };
+}
+
+if (typeof createSingleVoxMesh === 'undefined') {
+  globalThis.createSingleVoxMesh = () => {
+    return {
+      isMesh: true,
+      position: { set: () => {} },
+      rotation: { set: () => {} },
+      scale: { set: () => {} },
+      clone: function() { return Object.assign({}, this); }
+    };
+  };
+}
 
 const STEEL = 0xd5dbe6, DSTEEL = 0x8f98ab, GOLD = 0xe8c34a, LEATHER = 0x3a2a1e, WOOD = 0x6a3f1e;
 
@@ -766,8 +903,91 @@ function icon(id) {
       bx2(4, 5, 8, 7, '#ffd86b'); bx2(5, 4, 6, 9, '#ffd86b'); px(7, 2, '#4a7c59'); px(8, 3, '#7bd45a'); px(6, 6, '#ffffff'); break;
     case 'torch':
       ln(3, 14, 10, 7, '#6a3f1e'); bx2(9, 3, 5, 5, '#ff7a1e'); bx2(10, 2, 3, 3, '#ffd86b'); px(11, 3, '#ffffff'); break;
+
+    // --- NOVÉ PŘÍSADY A LEKTVARY (F9) ---
+    case 'flower_red':
+      ln(8, 7, 8, 14, '#2d5338');
+      bx2(6, 10, 2, 2, '#4a7c59');
+      bx2(9, 9, 2, 2, '#4a7c59');
+      bx2(6, 4, 5, 4, '#dc2626');
+      px(8, 5, '#fde047');
+      px(7, 3, '#ef4444'); px(9, 3, '#ef4444');
+      break;
+
+    case 'herb_green':
+      ln(7, 14, 9, 4, '#2d5338');
+      bx2(5, 7, 3, 2, '#22c55e');
+      bx2(9, 6, 3, 2, '#4ade80');
+      bx2(6, 10, 2, 2, '#16a34a');
+      bx2(9, 10, 3, 2, '#22c55e');
+      px(8, 3, '#86efac');
+      break;
+
+    case 'flask_water':
+      bx2(7, 2, 2, 3, '#a87442');
+      bx2(6, 5, 4, 2, '#94a3b8');
+      bx2(4, 7, 8, 7, '#38bdf8');
+      bx2(5, 8, 6, 5, '#0284c7');
+      px(5, 8, '#ffffff'); px(6, 9, '#ffffff');
+      break;
+
+    case 'monster_core':
+      bx2(5, 5, 6, 6, '#7e22ce');
+      bx2(6, 4, 4, 8, '#a855f7');
+      bx2(4, 6, 8, 4, '#a855f7');
+      bx2(7, 6, 2, 3, '#f43f5e');
+      px(7, 6, '#ffffff');
+      break;
+
+    case 'crystal_blue':
+      ln(8, 2, 4, 10, '#38bdf8');
+      ln(8, 2, 12, 10, '#0284c7');
+      ln(4, 10, 8, 14, '#0369a1');
+      ln(12, 10, 8, 14, '#0284c7');
+      bx2(6, 6, 4, 5, '#7dd3fc');
+      px(7, 5, '#ffffff');
+      break;
+
+    case 'potion_health':
+      bx2(7, 2, 2, 2, '#a87442');
+      bx2(6, 4, 4, 2, '#cbd5e1');
+      bx2(4, 6, 8, 8, '#dc2626');
+      bx2(5, 7, 6, 6, '#ef4444');
+      px(5, 7, '#ffffff'); px(6, 8, '#ffffff');
+      break;
+
+    case 'potion_stamina':
+      bx2(7, 2, 2, 2, '#a87442');
+      bx2(6, 4, 4, 2, '#cbd5e1');
+      bx2(4, 6, 8, 8, '#16a34a');
+      bx2(5, 7, 6, 6, '#22c55e');
+      px(5, 7, '#ffffff'); px(6, 8, '#ffffff');
+      break;
+
+    case 'potion_strength':
+      bx2(7, 2, 2, 2, '#e8c34a');
+      bx2(6, 4, 4, 2, '#cbd5e1');
+      bx2(4, 6, 8, 8, '#c2410c');
+      bx2(5, 7, 6, 6, '#f97316');
+      px(5, 7, '#ffffff'); px(6, 8, '#fef08a');
+      break;
+
+    case 'potion_speed':
+      bx2(7, 2, 2, 2, '#38bdf8');
+      bx2(6, 4, 4, 2, '#cbd5e1');
+      bx2(4, 6, 8, 8, '#0284c7');
+      bx2(5, 7, 6, 6, '#38bdf8');
+      px(5, 7, '#ffffff'); px(6, 8, '#e0f2fe');
+      break;
   }
   return c.toDataURL();
 }
 
 for (const it of INV) it.icon = icon(it.id);
+
+if (typeof window !== 'undefined') {
+  window.INV = INV;
+  window.RARITY_INFO = RARITY_INFO;
+  window.W3 = W3;
+  window.W3_OFF = W3_OFF;
+}

@@ -7,7 +7,9 @@
   <title>Voxelový svět</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Pixelify+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Pixelify+Sans:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
 </head>
 
@@ -26,30 +28,45 @@
 
     try {
       if (!localStorage.getItem('voxel_auth_user')) {
-        window.location.replace(getRootUrl());
+        localStorage.setItem('voxel_auth_user', JSON.stringify({ id: 999, nickname: 'Hráč_Guest', email: 'guest@voxel.cz' }));
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Vyčištění URL na GitHub Pages, aby zůstalo pouze čisté /play/ (pouze na webových serverech, ne na file://)
     if (window.location.protocol !== 'file:' && window.location.pathname.endsWith('/index.html')) {
       try {
         const cleanPath = window.location.pathname.replace(/\/index\.html$/i, '') + '/';
         window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
-      } catch (e) {}
+      } catch (e) { }
     }
   </script>
   <div id="hud"></div>
-  <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera · Kolečko – zoom · [ ] –
-    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · T – chat & příkazy · 1–9 – lišta</div>
+  <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera ·
+    Kolečko – zoom · [ ] –
+    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · T – chat & příkazy · 1–9 – lišta
+  </div>
   <div id="bars">
+    <div class="b xp-row" title="Úroveň postavy a zkušenosti (XP)" style="display:flex;align-items:center;gap:6px;">
+      <div id="hudLevelBadge" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#0f172a;font-weight:800;font-size:11.5px;padding:2px 7px;border-radius:6px;box-shadow:0 2px 8px rgba(245,158,11,0.4);white-space:nowrap;">Lv. 1</div>
+      <div class="b-track" id="xpBarBox" style="flex:1;background:rgba(15,23,42,0.85);border:1px solid rgba(168,85,247,0.45);">
+        <i id="xpBarFill" style="width:0%;background:linear-gradient(90deg,#9333ea,#c084fc);"></i>
+        <span id="xpBarText">0 / 100 XP</span>
+      </div>
+    </div>
     <div class="b hp" title="Životy (HP)">
       <div class="b-ico">
         <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
-          <path d="M4 1 h3 v1 h-3 v-1 z M9 1 h3 v1 h-3 v-1 z M2 2 h2 v1 h-2 v-1 z M7 2 h2 v1 h-2 v-1 z M12 2 h2 v1 h-2 v-1 z M1 3 h1 v3 h-1 v-3 z M14 3 h1 v3 h-1 v-3 z M2 6 h1 v2 h-1 v-2 z M13 6 h1 v2 h-1 v-2 z M3 8 h1 v2 h-1 v-2 z M12 8 h1 v2 h-1 v-2 z M4 10 h1 v2 h-1 v-2 z M11 10 h1 v2 h-1 v-2 z M5 12 h1 v1 h-1 v-1 z M10 12 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z M9 13 h1 v1 h-1 v-1 z M7 14 h2 v1 h-2 v-1 z" fill="#180205"/>
-          <path d="M4 2 h3 v1 h-3 v-1 z M9 2 h3 v1 h-3 v-1 z M2 3 h12 v3 h-12 v-3 z M3 6 h10 v2 h-10 v-2 z M4 8 h8 v2 h-8 v-2 z M5 10 h6 v2 h-6 v-2 z M6 12 h4 v1 h-4 v-1 z M7 13 h2 v1 h-2 v-1 z" fill="#dc2626"/>
-          <path d="M4 2 h2 v1 h-2 v-1 z M3 3 h2 v2 h-2 v-2 z M9 3 h2 v1 h-2 v-1 z" fill="#ff7a68"/>
-          <rect x="3" y="3" width="1" height="1" fill="#ffffff"/>
-          <path d="M12 4 h1 v2 h-1 v-2 z M11 6 h1 v2 h-1 v-2 z M10 8 h1 v2 h-1 v-2 z M9 10 h1 v2 h-1 v-2 z M8 12 h1 v1 h-1 v-1 z" fill="#991b1b"/>
+          <path
+            d="M4 1 h3 v1 h-3 v-1 z M9 1 h3 v1 h-3 v-1 z M2 2 h2 v1 h-2 v-1 z M7 2 h2 v1 h-2 v-1 z M12 2 h2 v1 h-2 v-1 z M1 3 h1 v3 h-1 v-3 z M14 3 h1 v3 h-1 v-3 z M2 6 h1 v2 h-1 v-2 z M13 6 h1 v2 h-1 v-2 z M3 8 h1 v2 h-1 v-2 z M12 8 h1 v2 h-1 v-2 z M4 10 h1 v2 h-1 v-2 z M11 10 h1 v2 h-1 v-2 z M5 12 h1 v1 h-1 v-1 z M10 12 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z M9 13 h1 v1 h-1 v-1 z M7 14 h2 v1 h-2 v-1 z"
+            fill="#180205" />
+          <path
+            d="M4 2 h3 v1 h-3 v-1 z M9 2 h3 v1 h-3 v-1 z M2 3 h12 v3 h-12 v-3 z M3 6 h10 v2 h-10 v-2 z M4 8 h8 v2 h-8 v-2 z M5 10 h6 v2 h-6 v-2 z M6 12 h4 v1 h-4 v-1 z M7 13 h2 v1 h-2 v-1 z"
+            fill="#dc2626" />
+          <path d="M4 2 h2 v1 h-2 v-1 z M3 3 h2 v2 h-2 v-2 z M9 3 h2 v1 h-2 v-1 z" fill="#ff7a68" />
+          <rect x="3" y="3" width="1" height="1" fill="#ffffff" />
+          <path
+            d="M12 4 h1 v2 h-1 v-2 z M11 6 h1 v2 h-1 v-2 z M10 8 h1 v2 h-1 v-2 z M9 10 h1 v2 h-1 v-2 z M8 12 h1 v1 h-1 v-1 z"
+            fill="#991b1b" />
         </svg>
       </div>
       <div class="b-track"><i></i><span>100</span></div>
@@ -57,11 +74,19 @@
     <div class="b st" title="Stamina (Výdrž)">
       <div class="b-ico">
         <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
-          <path d="M8 1 h4 v1 h-4 v-1 z M7 2 h1 v1 h-1 v-1 z M12 2 h1 v2 h-1 v-2 z M6 3 h1 v2 h-1 v-2 z M5 5 h1 v2 h-1 v-2 z M10 4 h2 v1 h-2 v-1 z M9 5 h2 v1 h-2 v-1 z M8 6 h2 v1 h-2 v-1 z M4 7 h5 v1 h-5 v-1 z M11 7 h1 v1 h-1 v-1 z M3 8 h2 v1 h-2 v-1 z M10 8 h2 v1 h-2 v-1 z M2 9 h2 v1 h-2 v-1 z M9 9 h2 v1 h-2 v-1 z M8 10 h2 v1 h-2 v-1 z M7 11 h2 v1 h-2 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M6 14 h1 v1 h-1 v-1 z M5 15 h1 v1 h-1 v-1 z" fill="#1f1300"/>
-          <path d="M8 2 h4 v2 h-4 v-2 z M6 5 h4 v2 h-4 v-2 z M4 8 h6 v1 h-6 v-1 z M3 9 h6 v1 h-6 v-1 z M5 10 h4 v1 h-4 v-1 z M6 11 h3 v1 h-3 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M5 14 h1 v1 h-1 v-1 z" fill="#eab308"/>
-          <path d="M8 2 h3 v1 h-3 v-1 z M7 3 h3 v1 h-3 v-1 z M6 5 h2 v2 h-2 v-2 z M4 8 h2 v1 h-2 v-1 z M6 10 h1 v2 h-1 v-2 z" fill="#fef08a"/>
-          <rect x="9" y="2" width="1" height="1" fill="#ffffff"/>
-          <path d="M11 3 h1 v1 h-1 v-1 z M9 6 h1 v1 h-1 v-1 z M8 9 h1 v1 h-1 v-1 z M7 11 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z" fill="#ca8a04"/>
+          <path
+            d="M8 1 h4 v1 h-4 v-1 z M7 2 h1 v1 h-1 v-1 z M12 2 h1 v2 h-1 v-2 z M6 3 h1 v2 h-1 v-2 z M5 5 h1 v2 h-1 v-2 z M10 4 h2 v1 h-2 v-1 z M9 5 h2 v1 h-2 v-1 z M8 6 h2 v1 h-2 v-1 z M4 7 h5 v1 h-5 v-1 z M11 7 h1 v1 h-1 v-1 z M3 8 h2 v1 h-2 v-1 z M10 8 h2 v1 h-2 v-1 z M2 9 h2 v1 h-2 v-1 z M9 9 h2 v1 h-2 v-1 z M8 10 h2 v1 h-2 v-1 z M7 11 h2 v1 h-2 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M6 14 h1 v1 h-1 v-1 z M5 15 h1 v1 h-1 v-1 z"
+            fill="#1f1300" />
+          <path
+            d="M8 2 h4 v2 h-4 v-2 z M6 5 h4 v2 h-4 v-2 z M4 8 h6 v1 h-6 v-1 z M3 9 h6 v1 h-6 v-1 z M5 10 h4 v1 h-4 v-1 z M6 11 h3 v1 h-3 v-1 z M6 12 h2 v1 h-2 v-1 z M5 13 h2 v1 h-2 v-1 z M5 14 h1 v1 h-1 v-1 z"
+            fill="#eab308" />
+          <path
+            d="M8 2 h3 v1 h-3 v-1 z M7 3 h3 v1 h-3 v-1 z M6 5 h2 v2 h-2 v-2 z M4 8 h2 v1 h-2 v-1 z M6 10 h1 v2 h-1 v-2 z"
+            fill="#fef08a" />
+          <rect x="9" y="2" width="1" height="1" fill="#ffffff" />
+          <path
+            d="M11 3 h1 v1 h-1 v-1 z M9 6 h1 v1 h-1 v-1 z M8 9 h1 v1 h-1 v-1 z M7 11 h1 v1 h-1 v-1 z M6 13 h1 v1 h-1 v-1 z"
+            fill="#ca8a04" />
         </svg>
       </div>
       <div class="b-track"><i></i><span>100</span></div>
@@ -69,10 +94,12 @@
     <div class="b o2" title="Kyslík (Dech)" hidden>
       <div class="b-ico">
         <svg class="bar-ico" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
-          <path d="M5 2 h6 v1 h-6 v-1 z M3 3 h2 v1 h-2 v-1 z M11 3 h2 v1 h-2 v-1 z M2 5 h1 v6 h-1 v-6 z M13 5 h1 v6 h-1 v-6 z M3 12 h2 v1 h-2 v-1 z M11 12 h2 v1 h-2 v-1 z M5 13 h6 v1 h-6 v-1 z" fill="#041a29"/>
-          <path d="M5 3 h6 v1 h-6 v-1 z M3 4 h10 v8 h-10 v-8 z M5 12 h6 v1 h-6 v-1 z" fill="#0284c7"/>
-          <path d="M5 4 h3 v2 h-3 v-2 z M4 5 h1 v2 h-1 v-2 z" fill="#ffffff"/>
-          <rect x="10" y="10" width="1" height="1" fill="#7dd3fc"/>
+          <path
+            d="M5 2 h6 v1 h-6 v-1 z M3 3 h2 v1 h-2 v-1 z M11 3 h2 v1 h-2 v-1 z M2 5 h1 v6 h-1 v-6 z M13 5 h1 v6 h-1 v-6 z M3 12 h2 v1 h-2 v-1 z M11 12 h2 v1 h-2 v-1 z M5 13 h6 v1 h-6 v-1 z"
+            fill="#041a29" />
+          <path d="M5 3 h6 v1 h-6 v-1 z M3 4 h10 v8 h-10 v-8 z M5 12 h6 v1 h-6 v-1 z" fill="#0284c7" />
+          <path d="M5 4 h3 v2 h-3 v-2 z M4 5 h1 v2 h-1 v-2 z" fill="#ffffff" />
+          <rect x="10" y="10" width="1" height="1" fill="#7dd3fc" />
         </svg>
       </div>
       <div class="b-track"><i></i><span>100</span></div>
@@ -81,13 +108,31 @@
   <div id="hb"></div>
   <div id="toast"></div>
 
+  <!-- On-Screen RPG Discovery Banner (F5) -->
+  <div id="discoveryBanner" class="discovery-banner">
+    <div class="db-flair">✦ ✧ ✦</div>
+    <div class="db-subtitle">NOVÁ LOKACE OBJEVENA</div>
+    <div class="db-title" id="dbTitle">Prastará svatyně</div>
+    <div class="db-xp" id="dbXp">+50 XP za průzkum</div>
+  </div>
+
+  <!-- On-Screen RPG Level-Up Banner (F8) -->
+  <div id="levelUpBanner" class="discovery-banner" style="border-color:rgba(245,158,11,0.75);box-shadow:0 16px 48px rgba(0,0,0,0.85), 0 0 32px rgba(245,158,11,0.35);">
+    <div class="db-flair" style="color:#fbbf24;">★ 🌟 ★</div>
+    <div class="db-subtitle" style="color:#fde68a;">POSTUP NA NOVOU ÚROVEŇ</div>
+    <div class="db-title" id="lubTitle" style="color:#fbbf24;">ÚROVEŇ 2 DOSAŽENA!</div>
+    <div class="db-xp" id="lubStats" style="color:#34d399;">+10 Max HP · +5 Výdrž · +2 Útok</div>
+  </div>
+
+
   <!-- Herní Chat a Příkazová Konzole [Klávesa T nebo /] -->
   <div id="chatBox" class="chat-container">
     <div id="chatMessages" class="chat-messages"></div>
     <div id="chatAutocomplete" class="chat-autocomplete" hidden></div>
     <div id="chatInputRow" class="chat-input-row" hidden>
       <span class="chat-prefix">❯</span>
-      <input id="chatInput" type="text" maxlength="250" placeholder="Napiš zprávu nebo /příkaz (/help pro nápovědu)..." autocomplete="off" spellcheck="false">
+      <input id="chatInput" type="text" maxlength="250" placeholder="Napiš zprávu nebo /příkaz (/help pro nápovědu)..."
+        autocomplete="off" spellcheck="false">
       <button id="chatSendBtn" title="Odeslat zprávu (Enter)">↵</button>
     </div>
   </div>
@@ -189,7 +234,8 @@
                 <div class="inv-char-preview-box">
                   <canvas id="invCharPreviewCanvas" width="200" height="230"></canvas>
                   <div class="preview-footer-bar">
-                    <button id="invResetCamBtn" class="preview-mini-btn" title="Obnovit čelní pohled">🔄 Pohled zepředu</button>
+                    <button id="invResetCamBtn" class="preview-mini-btn" title="Obnovit čelní pohled">🔄 Pohled
+                      zepředu</button>
                     <span id="invCharNickBadge" class="char-nick-chip">Postava</span>
                   </div>
                 </div>
@@ -220,21 +266,15 @@
                 </div>
               </div>
 
-              <!-- Ruce & Prsteny: pravá ruka, prsten na pravé ruce, prsten na levé ruce, levá ruka -->
+              <!-- Ruce & Prsteny: levá ruka, prsten na levé ruce, prsten na pravé ruce, pravá ruka -->
               <div class="inv-hands-rings-strip">
-                <div class="gear-slot hand-slot" data-slot="hand_r" title="Pravá ruka">
+                <div class="gear-slot hand-slot" data-slot="hand_l" title="Levá ruka">
                   <span class="slot-placeholder">✋</span>
                   <div class="slot-hand-info">
-                    <span class="slot-name-tag">Pravá ruka</span>
-                    <span id="handRRoleBadge" class="role-pill dom">Dominantní</span>
+                    <span class="slot-name-tag">Levá ruka</span>
+                    <span id="handLRoleBadge" class="role-pill">Vedlejší</span>
                   </div>
-                  <div class="slot-fill" id="slot_hand_r"></div>
-                </div>
-
-                <div class="gear-slot ring-slot" data-slot="ring_r" title="Prsten na pravé ruce">
-                  <span class="slot-placeholder">💍</span>
-                  <span class="slot-name-tag">Prsten (P)</span>
-                  <div class="slot-fill" id="slot_ring_r"></div>
+                  <div class="slot-fill" id="slot_hand_l"></div>
                 </div>
 
                 <div class="gear-slot ring-slot" data-slot="ring_l" title="Prsten na levé ruce">
@@ -243,13 +283,19 @@
                   <div class="slot-fill" id="slot_ring_l"></div>
                 </div>
 
-                <div class="gear-slot hand-slot" data-slot="hand_l" title="Levá ruka">
+                <div class="gear-slot ring-slot" data-slot="ring_r" title="Prsten na pravé ruce">
+                  <span class="slot-placeholder">💍</span>
+                  <span class="slot-name-tag">Prsten (P)</span>
+                  <div class="slot-fill" id="slot_ring_r"></div>
+                </div>
+
+                <div class="gear-slot hand-slot" data-slot="hand_r" title="Pravá ruka">
                   <span class="slot-placeholder">✋</span>
                   <div class="slot-hand-info">
-                    <span class="slot-name-tag">Levá ruka</span>
-                    <span id="handLRoleBadge" class="role-pill">Vedlejší</span>
+                    <span class="slot-name-tag">Pravá ruka</span>
+                    <span id="handRRoleBadge" class="role-pill dom">Dominantní</span>
                   </div>
-                  <div class="slot-fill" id="slot_hand_l"></div>
+                  <div class="slot-fill" id="slot_hand_r"></div>
                 </div>
               </div>
 
@@ -262,7 +308,8 @@
                   <div class="bonus-badge"><span class="bb-ico">❤️</span> Bonus HP: <b id="statSumHp">+0</b></div>
                   <div class="bonus-badge"><span class="bb-ico">🏃</span> Rychlost: <b id="statSumSpeed">+0%</b></div>
                   <div class="bonus-badge"><span class="bb-ico">💥</span> Kritický: <b id="statSumCrit">5%</b></div>
-                  <div class="bonus-badge"><span class="bb-ico">🛡️</span> Vykrytí štítem: <b id="statSumBlock">0%</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">🛡️</span> Vykrytí štítem: <b id="statSumBlock">0%</b>
+                  </div>
                 </div>
               </div>
             </div>
@@ -294,16 +341,20 @@
       <div class="esc-title">PAUZA</div>
       <div class="esc-btns">
         <button id="escResume" class="esc-btn primary">▶ Pokračovat</button>
-        <button id="escOpenP2P" class="esc-btn" style="background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.35));border-color:rgba(52,211,153,0.5);color:#34d399;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 12px;">
+        <button id="escOpenP2P" class="esc-btn"
+          style="background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.35));border-color:rgba(52,211,153,0.5);color:#34d399;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 12px;">
           <span>🌐 Otevřít pro přátele (P2P)</span>
-          <span id="escP2PCodeBadge" style="font-size:12px;color:#6ee7b7;font-family:monospace;letter-spacing:1px;font-weight:800;">Kód: VOX-????</span>
+          <span id="escP2PCodeBadge"
+            style="font-size:12px;color:#6ee7b7;font-family:monospace;letter-spacing:1px;font-weight:800;">Kód:
+            VOX-????</span>
         </button>
         <button id="escCharEdit" class="esc-btn">👤 Upravit postavu</button>
         <button id="escInv" class="esc-btn">🎒 Inventář</button>
         <button id="escSettings" class="esc-btn">⚙️ Nastavení</button>
         <button id="escControls" class="esc-btn">🎮 Ovládání hry</button>
         <button id="escRespawn" class="esc-btn subtle">🔄 Obnovit pozici</button>
-        <button id="escMainMenu" class="esc-btn subtle" onclick="window.location.href = getRootUrl();">🏠 Hlavní menu</button>
+        <button id="escMainMenu" class="esc-btn subtle" onclick="window.location.href = getRootUrl();">🏠 Hlavní
+          menu</button>
       </div>
       <div class="esc-hint">Stiskni [ESC] pro návrat do hry</div>
     </div>
@@ -311,67 +362,113 @@
 
   <!-- Modal: Ovládání hry v herním menu -->
   <div id="modalInGameControls" class="overlay" hidden style="z-index:99999999;">
-    <div class="panel" style="max-width:540px;width:min(540px, 94vw);padding:24px 28px;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.8);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
-        <span style="font-family:'Pixelify Sans',sans-serif;font-size:22px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:8px;">🎮 Ovládání hry</span>
-        <button id="closeInGameControls" class="close-btn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;width:32px;height:32px;">✕</button>
+    <div class="panel"
+      style="max-width:540px;width:min(540px, 94vw);padding:24px 28px;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      <div
+        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
+        <span
+          style="font-family:'Pixelify Sans',sans-serif;font-size:22px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:8px;">🎮
+          Ovládání hry</span>
+        <button id="closeInGameControls" class="close-btn"
+          style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;width:32px;height:32px;">✕</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;max-height:60vh;overflow-y:auto;padding-right:4px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Pohyb postavy</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">W A S D</strong>
+      <div
+        style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Pohyb postavy</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">W
+            A S D</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Sprint / Běh</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Shift</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Sprint / Běh</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Shift</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kotrmelec (Roll)</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">2× Shift</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Kotrmelec (Roll)</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">2×
+            Shift</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Skok / Plavání</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Mezerník</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Skok / Plavání</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Mezerník</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kamera & Pohled</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Myš</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Kamera & Pohled</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Myš</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Zoom kamery</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Kolečko</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Zoom kamery</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Kolečko</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Útok zbraní / pěstmi</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Levé myšítko</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Útok zbraní / pěstmi</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Levé
+            myšítko</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Zničení / Blok</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Pravé myšítko</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Krytí štítem / Lektvar</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Pravé
+            myšítko</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Inventář</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">I</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Inventář</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">I</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">3D Minimapa</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">M</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">3D Minimapa</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">M</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kolo gest (Emotes)</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">V</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Kolo gest (Emotes)</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">V</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Chat & Příkazy</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">T nebo /</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Chat & Příkazy</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">T
+            nebo /</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Rychlá lišta (Hotbar)</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">1 – 9</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Rychlá lišta (Hotbar)</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">1
+            – 9</strong>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Menu & Pauza</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">ESC</strong>
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="color:#cbd5e1;">Menu & Pauza</span><strong
+            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">ESC</strong>
         </div>
       </div>
       <div style="margin-top:16px;text-align:center;">
-        <button onclick="$('modalInGameControls').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary" style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
+        <button onclick="$('modalInGameControls').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary"
+          style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
       </div>
     </div>
   </div>
 
   <!-- Modal: Nastavení ve hře -->
   <div id="modalInGameSettings" class="overlay" hidden style="z-index:99999999;">
-    <div class="panel" style="max-width:480px;width:min(480px, 94vw);padding:24px 28px;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.8);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
-        <span style="font-family:'Pixelify Sans',sans-serif;font-size:22px;font-weight:700;color:#10b981;display:flex;align-items:center;gap:8px;">⚙️ Nastavení hry</span>
-        <button id="closeInGameSettings" class="close-btn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;width:32px;height:32px;">✕</button>
+    <div class="panel"
+      style="max-width:480px;width:min(480px, 94vw);padding:24px 28px;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      <div
+        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
+        <span
+          style="font-family:'Pixelify Sans',sans-serif;font-size:22px;font-weight:700;color:#10b981;display:flex;align-items:center;gap:8px;">⚙️
+          Nastavení hry</span>
+        <button id="closeInGameSettings" class="close-btn"
+          style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;width:32px;height:32px;">✕</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:16px;font-size:13.5px;">
         <div>
@@ -379,7 +476,8 @@
             <span>Dohled terénu (Render Distance)</span>
             <strong id="settingRdVal" style="color:#34d399;">8 chunků</strong>
           </div>
-          <input id="settingRdSlider" type="range" min="3" max="14" step="1" value="8" style="width:100%;accent-color:#10b981;cursor:pointer;">
+          <input id="settingRdSlider" type="range" min="3" max="14" step="1" value="8"
+            style="width:100%;accent-color:#10b981;cursor:pointer;">
         </div>
 
         <div>
@@ -387,13 +485,16 @@
             <span>Zorné pole (FOV)</span>
             <strong id="settingFovVal" style="color:#38bdf8;">70°</strong>
           </div>
-          <input id="settingFovSlider" type="range" min="50" max="100" step="1" value="70" style="width:100%;accent-color:#38bdf8;cursor:pointer;">
+          <input id="settingFovSlider" type="range" min="50" max="100" step="1" value="70"
+            style="width:100%;accent-color:#38bdf8;cursor:pointer;">
         </div>
 
         <div>
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#cbd5e1;">
             <span>Zvukové efekty</span>
-            <button id="settingSoundToggle" style="padding:4px 12px;border-radius:6px;background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#34d399;font-weight:700;cursor:pointer;">🔊 Zapnuto</button>
+            <button id="settingSoundToggle"
+              style="padding:4px 12px;border-radius:6px;background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#34d399;font-weight:700;cursor:pointer;">🔊
+              Zapnuto</button>
           </div>
         </div>
 
@@ -403,81 +504,107 @@
             <strong id="settingHandVal" style="color:#f59e0b;">Pravá ruka</strong>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button id="settingHandRight" class="esc-btn setting-hand-btn active" style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🖐️ Pravá ruka</button>
-            <button id="settingHandLeft" class="esc-btn setting-hand-btn" style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🤚 Levá ruka</button>
+            <button id="settingHandLeft" class="esc-btn setting-hand-btn"
+              style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🤚
+              Levá ruka</button>
+            <button id="settingHandRight" class="esc-btn setting-hand-btn active"
+              style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🖐️
+              Pravá ruka</button>
           </div>
         </div>
       </div>
       <div style="margin-top:20px;text-align:center;">
-        <button onclick="$('modalInGameSettings').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary" style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
+        <button onclick="$('modalInGameSettings').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary"
+          style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
       </div>
     </div>
   </div>
 
-  <!-- P2P Lan / Přátelé Modal -->
+  <!-- P2P Lan / Družina Modal -->
   <div id="p2pModal" class="overlay" hidden>
-    <div class="panel p2p-panel" style="width:min(520px, 94vw);max-height:88vh;overflow-y:auto;background:#131c2b;border:2px solid #23344d;border-radius:16px;padding:22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.8);display:flex;flex-direction:column;gap:14px;color:#f8fafc;">
-      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
-        <span style="font-weight:800;font-size:18px;color:#34d399;display:flex;align-items:center;gap:8px;">🌐 Hraní s přáteli (P2P)</span>
-        <button id="p2pClose" class="close-btn" style="background:transparent;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
+    <div class="panel p2p-panel"
+      style="width:min(540px, 94vw);max-height:88vh;overflow-y:auto;background:#131c2b;border:2px solid #23344d;border-radius:16px;padding:22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.8);display:flex;flex-direction:column;gap:14px;color:#f8fafc;">
+      <div
+        style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
+        <span style="font-weight:800;font-size:18px;color:#34d399;display:flex;align-items:center;gap:8px;">🌐 Družina a P2P Svět</span>
+        <button id="p2pClose" class="close-btn"
+          style="background:transparent;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
       </div>
-      
+
       <div style="font-size:13.5px;color:#94a3b8;line-height:1.5;">
-        Tvůj svět je otevřen pro přátele. Pošli kamarádovi tento kód, aby se k tobě mohl připojit:
+        Tvůj svět je otevřen pro přátele. Pošli kamarádovi tento kód, aby se k tvé družině mohl připojit:
       </div>
 
-      <div style="background:rgba(2,6,23,0.7);border:1px dashed rgba(52,211,153,0.5);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:14px;">
-        <span id="p2pRoomCodeDisplay" style="font-family:'Pixelify Sans',monospace;font-size:32px;font-weight:700;letter-spacing:3px;color:#34d399;">VOX-????</span>
-        <button id="p2pCopyCodeBtn" title="Zkopírovat kód do schránky" style="padding:7px 14px;border-radius:8px;background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:#6ee7b7;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;">📋 Kopírovat</button>
+      <div
+        style="background:rgba(2,6,23,0.7);border:1px dashed rgba(52,211,153,0.5);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:14px;">
+        <span id="p2pRoomCodeDisplay"
+          style="font-family:'Pixelify Sans',monospace;font-size:32px;font-weight:700;letter-spacing:3px;color:#34d399;">VOX-????</span>
+        <button id="p2pCopyCodeBtn" title="Zkopírovat kód do schránky"
+          style="padding:7px 14px;border-radius:8px;background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:#6ee7b7;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;">📋
+          Kopírovat</button>
       </div>
 
-      <!-- Seznam hráčů ve světě a správa oprávnění příkazů -->
-      <div style="background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;text-align:left;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <span style="font-size:13px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.5px;">👥 Hráči ve světě & správa příkazů</span>
+      <!-- Seznam členů družiny ve světě -->
+      <div
+        style="background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;text-align:left;">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <span style="font-size:13px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.5px;">👥
+            Členové družiny & správa světa</span>
           <span id="p2pPlayersCount" style="color:#38bdf8;font-weight:700;font-size:12.5px;">1 / 4 hráčů</span>
         </div>
-        <div id="p2pPlayersList" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;padding-right:2px;">
-          <!-- Dynamicky generováno JS: Hostitel + Hosté -->
+        <div id="p2pPlayersList"
+          style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;padding-right:2px;">
+          <!-- Dynamicky generováno JS: Hostitel + Členové družiny -->
         </div>
       </div>
 
       <div style="font-size:12px;color:#64748b;text-align:left;line-height:1.4;">
-        ℹ️ <strong>Správa práv:</strong> Hostitel má příkazy v základu povolené. Připojení hosté mají příkazy ve výchozím stavu zakázané a hostitel jim je může výše kdykoliv povolit nebo zakázat.
+        ℹ️ <strong>Družina (Cube World RPG):</strong> Zde vidíš úroveň, životy a vzdálenost členů družiny, můžeš se k nim jedním klikem teleportovat a spravovat přístup.
       </div>
     </div>
   </div>
 
   <!-- Žádost o připojení hráče (Floating Approval Popup) -->
-  <div id="p2pRequestPopup" style="display:none;position:fixed;top:32px;left:50%;transform:translateX(-50%);z-index:99999999;background:rgba(15,23,42,0.97);border:2px solid #10b981;border-radius:20px;padding:22px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(16,185,129,0.45);backdrop-filter:blur(18px);width:min(440px, 94vw);color:#fff;font-family:'Outfit',sans-serif;pointer-events:auto;text-align:center;">
-    <div style="font-weight:800;font-size:16px;color:#34d399;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+  <div id="p2pRequestPopup"
+    style="display:none;position:fixed;top:32px;left:50%;transform:translateX(-50%);z-index:99999999;background:rgba(15,23,42,0.97);border:2px solid #10b981;border-radius:20px;padding:22px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 40px rgba(16,185,129,0.45);backdrop-filter:blur(18px);width:min(440px, 94vw);color:#fff;font-family:'Outfit',sans-serif;pointer-events:auto;text-align:center;">
+    <div
+      style="font-weight:800;font-size:16px;color:#34d399;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
       <span style="font-size:20px;">🔔</span> Žádost o připojení do světa
     </div>
     <div id="p2pRequestText" style="font-size:14px;color:#e2e8f0;margin-bottom:16px;line-height:1.5;">
       Hráč se chce připojit do tvého světa.
     </div>
     <div style="display:flex;gap:10px;">
-      <button id="p2pAcceptBtn" style="flex:1;padding:10px 16px;border-radius:12px;background:#10b981;color:#042318;font-weight:800;font-size:14px;border:none;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(16,185,129,0.4);transition:all 0.2s;">✔ Povolit (Y)</button>
-      <button id="p2pRejectBtn" style="flex:1;padding:10px 16px;border-radius:12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;transition:all 0.2s;">✕ Odmítnout (N)</button>
+      <button id="p2pAcceptBtn"
+        style="flex:1;padding:10px 16px;border-radius:12px;background:#10b981;color:#042318;font-weight:800;font-size:14px;border:none;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(16,185,129,0.4);transition:all 0.2s;">✔
+        Povolit (Y)</button>
+      <button id="p2pRejectBtn"
+        style="flex:1;padding:10px 16px;border-radius:12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#fca5a5;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;transition:all 0.2s;">✕
+        Odmítnout (N)</button>
     </div>
   </div>
 
   <!-- P2P Čekání na schválení hostitelem -->
-  <div id="p2pWaitingModal" class="overlay" hidden style="z-index:9999999;background:rgba(2,6,23,0.92);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;">
-    <div class="panel" style="max-width:440px;text-align:center;padding:36px 28px;border:2px solid #38bdf8;box-shadow:0 0 40px rgba(56,189,248,0.3);border-radius:18px;">
+  <div id="p2pWaitingModal" class="overlay" hidden
+    style="z-index:9999999;background:rgba(2,6,23,0.92);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;">
+    <div class="panel"
+      style="max-width:440px;text-align:center;padding:36px 28px;border:2px solid #38bdf8;box-shadow:0 0 40px rgba(56,189,248,0.3);border-radius:18px;">
       <div style="font-size:48px;margin-bottom:14px;animation:spin 3s linear infinite;">⏳</div>
       <h2 style="color:#38bdf8;font-size:22px;margin:0 0 10px 0;font-weight:800;">Čekám na schválení hostitelem…</h2>
       <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:24px;">
         Žádost o připojení do světa byla odeslána. Jakmile hostitel tvůj vstup schválí, svět se automaticky načte.
       </p>
-      <button onclick="window.location.replace('../index.html')" style="padding:10px 24px;border-radius:10px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;color:#fca5a5;font-weight:700;font-family:inherit;cursor:pointer;transition:0.2s;">
+      <button onclick="window.location.replace('../index.html')"
+        style="padding:10px 24px;border-radius:10px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;color:#fca5a5;font-weight:700;font-family:inherit;cursor:pointer;transition:0.2s;">
         ✕ Zrušit a vrátit se do menu
       </button>
     </div>
   </div>
 
   <!-- Autosave Indikátor (Ukládání postupu každých 5 sekund) -->
-  <div id="autoSaveIndicator" style="display:none;position:fixed;bottom:16px;right:16px;z-index:99;background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.4);border-radius:20px;padding:5px 14px;font-size:12.5px;color:#38bdf8;font-family:'Outfit',sans-serif;pointer-events:none;transition:opacity 0.6s ease;backdrop-filter:blur(8px);font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+  <div id="autoSaveIndicator"
+    style="display:none;position:fixed;bottom:16px;right:16px;z-index:99;background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.4);border-radius:20px;padding:5px 14px;font-size:12.5px;color:#38bdf8;font-family:'Outfit',sans-serif;pointer-events:none;transition:opacity 0.6s ease;backdrop-filter:blur(8px);font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.6);">
     <span>💾 Postup uložen</span>
   </div>
 
@@ -562,7 +689,8 @@
         <span>3D MAPA SVĚTA (CELÁ OBRAZOVKA)</span>
       </div>
       <div class="minimap-actions">
-        <button id="mmCloseBtn" title="Zavřít mapu (M / ESC)" style="padding:5px 14px;font-weight:700;display:flex;align-items:center;gap:6px;">✕ Zavřít [M]</button>
+        <button id="mmCloseBtn" title="Zavřít mapu (M / ESC)"
+          style="padding:5px 14px;font-weight:700;display:flex;align-items:center;gap:6px;">✕ Zavřít [M]</button>
       </div>
     </div>
     <div class="minimap-viewport">
@@ -583,7 +711,8 @@
         <button id="mmZoomIn" title="Přiblížit">+</button>
         <button id="mmZoomOut" title="Oddálit">−</button>
       </div>
-      <div class="mm-hint">Táhni myší pro rotaci · Pravé tlačítko / Shift pro posun · Kolečko myši pro zoom · [M] nebo [ESC] pro zavření</div>
+      <div class="mm-hint">Táhni myší pro rotaci · Pravé tlačítko / Shift pro posun · Kolečko myši pro zoom · [M] nebo
+        [ESC] pro zavření</div>
     </div>
   </div>
 
@@ -639,7 +768,7 @@
   </div>
   <script>
     // Okamžitá kontrola P2P klienta ještě před spuštěním generování světa
-    (function() {
+    (function () {
       try {
         var act = JSON.parse(localStorage.getItem('voxel_active_game') || '{}');
         var urlParams = new URLSearchParams(window.location.search);
@@ -664,32 +793,33 @@
             `;
           }
         }
-      } catch(e) {}
+      } catch (e) { }
     })();
   </script>
 
   <!-- Knihovny a Moduly -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="../js/storage.js?v=5"></script>
-  <script src="../js/config.js?v=4"></script>
-  <script src="../js/textures.js?v=3"></script>
-  <script src="../js/world.js?v=3"></script>
-  <script src="../js/voxelBuilder.js?v=3"></script>
-  <script src="../js/items.js?v=7"></script>
-  <script src="../js/character.js?v=8"></script>
-  <script src="../js/inventory.js?v=9"></script>
-  <script src="../js/customizer.js?v=5"></script>
-  <script src="../js/audio.js?v=5"></script>
-  <script src="../js/player.js?v=7"></script>
-  <script src="../js/minimap.js?v=4"></script>
-  <script src="../js/emotes.js?v=6"></script>
-  <script src="../js/cursor.js?v=3"></script>
-  <script src="../js/chat.js?v=4"></script>
+  <script src="../js/storage.js?v=20"></script>
+  <script src="../js/config.js?v=20"></script>
+  <script src="../js/textures.js?v=20"></script>
+  <script src="../js/world.js?v=20"></script>
+  <script src="../js/voxelBuilder.js?v=20"></script>
+  <script src="../js/items.js?v=20"></script>
+  <script src="../js/character.js?v=20"></script>
+  <script src="../js/entities.js?v=20"></script>
+  <script src="../js/inventory.js?v=20"></script>
+  <script src="../js/customizer.js?v=20"></script>
+  <script src="../js/audio.js?v=20"></script>
+  <script src="../js/player.js?v=20"></script>
+  <script src="../js/minimap.js?v=20"></script>
+  <script src="../js/emotes.js?v=20"></script>
+  <script src="../js/cursor.js?v=20"></script>
+  <script src="../js/chat.js?v=20"></script>
   <!-- PeerJS pro Peer-to-Peer (WebRTC) multiplayer s lokální zálohou -->
   <script src="../js/peerjs.min.js"></script>
   <script>if (typeof Peer === 'undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\\/script>');</script>
-  <script src="../js/network.js?v=13"></script>
-  <script src="../js/game.js?v=10"></script>
+  <script src="../js/network.js?v=20"></script>
+  <script src="../js/game.js?v=20"></script>
 </body>
 
 </html>

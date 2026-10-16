@@ -545,6 +545,222 @@ function updateMinimap(dt, now) {
     expEl.textContent = `🗺️ Objeveno: ${exploredChunks.size} oblastí`;
   }
 
+  // 3D POI Značky na dioramatu (F5)
+  updateMinimapMarkers(now);
+
   updateMinimapCam();
   mmRenderer.render(mmScene, mmCam);
 }
+
+// ============================================================================
+// 3D Minimap Markers & Discovery System (Milestone 2 - F5)
+// ============================================================================
+let mmPoiGroup = null;
+const mmPoiMarkersMap = new Map();
+
+function createPoiMarkerMesh(poi) {
+  if (typeof THREE === 'undefined') return null;
+  const group = new THREE.Group();
+  group.userData = { id: poi.id, type: poi.type };
+
+  const normType = String(poi.type || '').toLowerCase();
+
+  if (normType === 'shrine') {
+    // Vznášející se azurový oktaedr s rotujícím prstencem
+    const geo = new THREE.OctahedronGeometry(0.85, 0);
+    const mat = (typeof THREE.MeshStandardMaterial !== 'undefined')
+      ? new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, roughness: 0.2, metalness: 0.8, flatShading: true })
+      : new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const core = new THREE.Mesh(geo, mat);
+    group.add(core);
+
+    const ringGeo = new THREE.TorusGeometry(1.25, 0.1, 4, 12);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.name = 'ring';
+    group.add(ring);
+  } else if (normType === 'ruins') {
+    // Kamenná klenba s prastarou runou
+    const mat = (typeof THREE.MeshLambertMaterial !== 'undefined')
+      ? new THREE.MeshLambertMaterial({ color: 0x94a3b8 })
+      : new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), mat); p1.position.set(-0.6, 0.7, 0); group.add(p1);
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), mat); p2.position.set(0.6, 0.7, 0); group.add(p2);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.35, 0.5), mat); top.position.set(0, 1.5, 0); group.add(top);
+
+    const rune = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0x60a5fa }));
+    rune.position.set(0, 0.7, 0);
+    rune.name = 'rune';
+    group.add(rune);
+  } else if (normType === 'camp') {
+    // Táborový oheň s plamenem a uhlíky
+    const flameGeo = new THREE.ConeGeometry(0.7, 1.4, 4);
+    flameGeo.rotateY(Math.PI / 4);
+    const flameMat = (typeof THREE.MeshStandardMaterial !== 'undefined')
+      ? new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, flatShading: true })
+      : new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.y = 0.7;
+    flame.name = 'flame';
+    group.add(flame);
+
+    const emberMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 4) * Math.PI * 2;
+      const emb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), emberMat);
+      emb.position.set(Math.cos(ang) * 0.7, 0.12, Math.sin(ang) * 0.7);
+      group.add(emb);
+    }
+  } else if (normType === 'chest') {
+    // Zlatá pokladnice se zámkem
+    const chestMat = (typeof THREE.MeshStandardMaterial !== 'undefined')
+      ? new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xb45309, roughness: 0.3, metalness: 0.6, flatShading: true })
+      : new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.7), chestMat);
+    body.position.y = 0.3;
+    group.add(body);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.25, 0.74), chestMat);
+    lid.position.y = 0.7;
+    group.add(lid);
+    const latch = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.2, 0.1), new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
+    latch.position.set(0, 0.52, 0.38);
+    group.add(latch);
+  } else {
+    // Strážní věž / Maják
+    const towerMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
+      ? new THREE.MeshLambertMaterial({ color: 0x64748b })
+      : new THREE.MeshBasicMaterial({ color: 0x64748b });
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.55, 1.8, 4), towerMat);
+    tower.position.y = 0.9;
+    group.add(tower);
+    const beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    beacon.position.y = 2.0;
+    beacon.name = 'beacon';
+    group.add(beacon);
+  }
+
+  return group;
+}
+
+function updateMinimapMarkers(now) {
+  if (!mmScene) return;
+  if (!mmPoiGroup) {
+    mmPoiGroup = new THREE.Group();
+    mmScene.add(mmPoiGroup);
+  }
+
+  const centerBX = Math.floor(P.x / S) + mmPanX;
+  const centerBZ = Math.floor(P.z / S) + mmPanZ;
+  const centerH = height(centerBX, centerBZ);
+  const miniScale = 0.42;
+  const miniScaleH = 0.15;
+
+  if (window.POIManager) {
+    const list = window.POIManager.pois || [];
+    for (const poi of list) {
+      if (!window.POIManager.isDiscovered(poi.id)) {
+        const existing = mmPoiMarkersMap.get(poi.id);
+        if (existing) existing.visible = false;
+        continue;
+      }
+
+      let mesh = mmPoiMarkersMap.get(poi.id);
+      if (!mesh) {
+        mesh = createPoiMarkerMesh(poi);
+        if (mesh) {
+          mmPoiMarkersMap.set(poi.id, mesh);
+          mmPoiGroup.add(mesh);
+        }
+      }
+
+      if (!mesh) continue;
+      mesh.visible = true;
+
+      const poiBX = (typeof poi.x === 'number') ? poi.x : (poi.bx || 0);
+      const poiBZ = (typeof poi.z === 'number') ? poi.z : (poi.bz || 0);
+      const poiBY = (typeof poi.y === 'number') ? poi.y : (poi.by || height(poiBX, poiBZ));
+
+      const relX = (poiBX - centerBX) * miniScale;
+      const relZ = (poiBZ - centerBZ) * miniScale;
+      const baseY = (poiBY - centerH) * miniScaleH + 1.25;
+
+      const normType = String(poi.type || '').toLowerCase();
+      if (normType === 'shrine') {
+        mesh.position.set(relX, baseY + Math.sin(now * 0.003) * 0.18, relZ);
+        mesh.rotation.y += 0.02;
+        const ring = mesh.getObjectByName('ring');
+        if (ring) { ring.rotation.x += 0.015; ring.rotation.y += 0.025; }
+      } else if (normType === 'camp') {
+        mesh.position.set(relX, baseY, relZ);
+        const flame = mesh.getObjectByName('flame');
+        if (flame) {
+          const s = 1.0 + 0.12 * Math.sin(now * 0.014);
+          flame.scale.set(s, s * 1.15, s);
+        }
+      } else if (normType === 'chest') {
+        mesh.position.set(relX, baseY + Math.sin(now * 0.004) * 0.12, relZ);
+        mesh.rotation.y = Math.sin(now * 0.002) * 0.25;
+      } else if (normType === 'landmark') {
+        mesh.position.set(relX, baseY, relZ);
+        mesh.rotation.y += 0.008;
+      } else {
+        mesh.position.set(relX, baseY, relZ);
+      }
+    }
+  }
+}
+
+// Projekce na 2D radar s oříznutím na hranu
+function projectToRadar(playerX, playerZ, targetX, targetZ, radarRadius = 60) {
+  const dx = targetX - playerX;
+  const dz = targetZ - playerZ;
+  const dist = Math.hypot(dx, dz);
+  const angle = Math.atan2(dz, dx);
+  const clampedDist = Math.min(dist, radarRadius);
+  return {
+    radarX: Math.cos(angle) * clampedDist,
+    radarY: Math.sin(angle) * clampedDist,
+    clamped: dist > radarRadius
+  };
+}
+
+// Kontrola odhalení chunku v mlze (Fog of War)
+function isChunkRevealed(cx, cz) {
+  return exploredChunks.has(`${cx},${cz}`);
+}
+
+// Zobrazení RPG banneru a toastu při objevení lokace
+function showDiscoveryToast(name, xpReward = 50) {
+  const message = `Objevena lokace: ${name}!`;
+  if (typeof toast === 'function') {
+    toast(`🗺️ ${message} (+${xpReward} XP)`);
+  }
+
+  if (typeof document !== 'undefined') {
+    const banner = document.getElementById('discoveryBanner');
+    if (banner) {
+      const titleEl = document.getElementById('dbTitle');
+      const xpEl = document.getElementById('dbXp');
+      if (titleEl) titleEl.textContent = name;
+      if (xpEl) xpEl.textContent = `+${xpReward} XP za objevení`;
+
+      banner.classList.remove('active');
+      void banner.offsetWidth; // Force CSS reflow
+      banner.classList.add('active');
+
+      if (window._discoveryBannerTimer) clearTimeout(window._discoveryBannerTimer);
+      window._discoveryBannerTimer = setTimeout(() => {
+        banner.classList.remove('active');
+      }, 4200);
+    }
+  }
+}
+
+// Export do globálního okna
+if (typeof window !== 'undefined') {
+  window.projectToRadar = projectToRadar;
+  window.isChunkRevealed = isChunkRevealed;
+  window.showDiscoveryToast = showDiscoveryToast;
+  window.updateMinimapMarkers = updateMinimapMarkers;
+}
+

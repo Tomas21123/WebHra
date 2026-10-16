@@ -85,13 +85,13 @@ function tryEnableFullscreen() {
       req.call(doc).then(() => {
         // Uzamčení klávesy ESC, aby prohlížeč nezmenšoval okno, ale předal ESC do hry
         if (navigator.keyboard && navigator.keyboard.lock) {
-          navigator.keyboard.lock(['Escape']).catch(() => {});
+          navigator.keyboard.lock(['Escape']).catch(() => { });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } else {
     if (navigator.keyboard && navigator.keyboard.lock) {
-      navigator.keyboard.lock(['Escape']).catch(() => {});
+      navigator.keyboard.lock(['Escape']).catch(() => { });
     }
   }
 }
@@ -99,7 +99,7 @@ function tryEnableFullscreen() {
 document.addEventListener('fullscreenchange', () => {
   if (document.fullscreenElement) {
     if (navigator.keyboard && navigator.keyboard.lock) {
-      navigator.keyboard.lock(['Escape']).catch(() => {});
+      navigator.keyboard.lock(['Escape']).catch(() => { });
     }
   }
 });
@@ -115,7 +115,7 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 });
-try { tryEnableFullscreen(); } catch (e) {}
+try { tryEnableFullscreen(); } catch (e) { }
 
 // Klávesové vstupy
 addEventListener('keydown', e => {
@@ -152,6 +152,16 @@ addEventListener('keydown', e => {
     if (e.code === 'Digit4' || e.code === 'Numpad4') { playEmote('sit'); e.preventDefault(); return; }
     if (e.code === 'Escape') { closeEmotes(); e.preventDefault(); return; }
   }
+  if (e.code === 'KeyE' && !escOpen && !charOpen && !invOpen) {
+    if (window.POIManager && typeof window.POIManager.interactClosest === 'function') {
+      const interacted = window.POIManager.interactClosest(P.x, P.y, P.z);
+      if (interacted) {
+        e.preventDefault();
+        return;
+      }
+    }
+  }
+
   if (e.code === 'KeyM') {
     const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
     if (typeof minimapOpen !== 'undefined' && minimapOpen) {
@@ -164,6 +174,7 @@ addEventListener('keydown', e => {
       return;
     }
   }
+
   if (e.code === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
@@ -173,7 +184,7 @@ addEventListener('keydown', e => {
       tryEnableFullscreen();
     }
     if (navigator.keyboard && navigator.keyboard.lock) {
-      navigator.keyboard.lock(['Escape']).catch(() => {});
+      navigator.keyboard.lock(['Escape']).catch(() => { });
     }
 
     if (typeof chatOpen !== 'undefined' && chatOpen) {
@@ -182,6 +193,12 @@ addEventListener('keydown', e => {
       closeEmotes();
     } else if (typeof minimapOpen !== 'undefined' && minimapOpen) {
       toggleMinimap(false);
+    } else if (document.getElementById('modalInGameSettings') && !document.getElementById('modalInGameSettings').hidden) {
+      document.getElementById('modalInGameSettings').hidden = true;
+      openEscMenu();
+    } else if (document.getElementById('modalInGameControls') && !document.getElementById('modalInGameControls').hidden) {
+      document.getElementById('modalInGameControls').hidden = true;
+      openEscMenu();
     } else if (document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden) {
       document.getElementById('p2pModal').hidden = true;
       openEscMenu();
@@ -230,7 +247,7 @@ const hasP2PUrl = !!urlParams.get('p2p');
 const activeGameInfo = (typeof GameStorage !== 'undefined') ? GameStorage.getActiveGame() : null;
 window.isP2PWaitingApproval = hasP2PUrl || !!(activeGameInfo && activeGameInfo.mode === 'p2p_client');
 
-window.approveP2PJoin = function(hostSeed, hostDeltas, players) {
+window.approveP2PJoin = function (hostSeed, hostDeltas, players) {
   window.isP2PWaitingApproval = false;
 
   // 1. Nastavit hostitelův seed světa
@@ -328,6 +345,14 @@ function loop(now) {
       if (load) {
         load.style.opacity = 0;
         setTimeout(() => load.remove(), 600);
+      }
+      // Ambientní divočina při startu hry
+      const em = (typeof window !== 'undefined' && window.EntityManager) || (typeof EntityManager !== 'undefined' ? EntityManager : null);
+      if (em && typeof em.spawnCreature === 'function' && em.creatures && em.creatures.length === 0) {
+        const s = (typeof S !== 'undefined') ? S : 0.5;
+        const spawnY = (typeof height === 'function') ? height(Math.floor((P.x + 12) / s), Math.floor((P.z + 12) / s)) * s : P.y;
+        em.spawnCreature('Wolf', P.x + 12, spawnY, P.z + 12, 1);
+        em.spawnCreature('Wolf', P.x - 14, spawnY, P.z + 10, 1);
       }
     }
     renderer.render(scene, cam);
@@ -447,7 +472,8 @@ function loop(now) {
   // Kamera
   const cp = Math.cos(pitch);
   const dir = [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
-  const hx = P.x, hy = (P.renderY ?? P.y) + 1.55, hz = P.z;
+  const targetHeadY = (P.isSwimming) ? 0.85 : 1.55;
+  const hx = P.x, hy = (P.renderY ?? P.y) + targetHeadY, hz = P.z;
   let dd = dist;
   for (let t = 0.3; t <= dist; t += 0.25) {
     if (solid(hx + dir[0] * t, hy + dir[1] * t, hz + dir[2] * t)) {
@@ -473,7 +499,18 @@ function loop(now) {
     window.networkManager.updateAllRemotePlayers(dt);
   }
 
+  // Aktualizace PvE entit & nestvůr (Milestone 2 - F6)
+  if (window.EntityManager && typeof window.EntityManager.update === 'function') {
+    window.EntityManager.update(dt);
+  }
+
+  // Aktualizace procedurálních POI struktur a interakcí (Milestone 2 - F4)
+  if (window.POIManager && typeof window.POIManager.update === 'function') {
+    window.POIManager.update(dt, now, P.x, P.y, P.z);
+  }
+
   renderer.render(scene, cam);
+
 
   // 3D Minimapa (Cube World Style)
   if (typeof updateMinimap === 'function') {

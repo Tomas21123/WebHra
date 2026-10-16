@@ -245,6 +245,137 @@ const GameStorage = {
       worldName: 'Můj První Svět',
       seed: 12345
     };
+  },
+
+  // ---------- UŽIVATEL (Auth / Guest Session) ----------
+  getUser() {
+    try {
+      const raw = localStorage.getItem('voxel_auth_user');
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && typeof u === 'object') return u;
+      }
+    } catch (e) {}
+    const fallbackUser = { id: 999, nickname: 'Hráč_Guest', email: 'guest@voxel.cz' };
+    try {
+      localStorage.setItem('voxel_auth_user', JSON.stringify(fallbackUser));
+    } catch (e) {}
+    return fallbackUser;
+  },
+
+  getUserId() {
+    const u = this.getUser();
+    return (u && (u.id !== undefined && u.id !== null)) ? String(u.id) : '999';
+  },
+
+  getRpgStorageKey() {
+    return `voxel_rpg_player_${this.getUserId()}`;
+  },
+
+  // ---------- RPG POSTUP & PERSISTENCE (F8) ----------
+  savePlayerRPGState(customState = null) {
+    try {
+      const key = this.getRpgStorageKey();
+      let stateToSave = customState;
+
+      if (!stateToSave && typeof window !== 'undefined' && window.P) {
+        const p = window.P;
+        stateToSave = {
+          userId: this.getUserId(),
+          level: p.level || 1,
+          xp: p.xp || 0,
+          xpNext: p.xpNext || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(p.level || 1) : 100),
+          skillPoints: p.skillPoints || 0,
+          baseStats: {
+            maxHp: (p.baseStats && p.baseStats.maxHp) || 100,
+            maxStamina: (p.baseStats && p.baseStats.maxStamina) || 100,
+            attackPower: (p.baseStats && p.baseStats.attackPower) || 10,
+            critChance: (p.baseStats && p.baseStats.critChance) || 0.05,
+            moveSpeed: (p.baseStats && p.baseStats.moveSpeed) || 6.0
+          },
+          hp: (typeof G !== 'undefined' ? G.hp : (p.hp || 100)),
+          stamina: (typeof G !== 'undefined' ? G.st : (p.stamina || 100)),
+          savedAt: Date.now()
+        };
+      }
+
+      if (stateToSave) {
+        const json = JSON.stringify(stateToSave);
+        localStorage.setItem(key, json);
+        localStorage.setItem('voxel_rpg_stats', json);
+        return true;
+      }
+    } catch (e) {
+      console.error('[Storage] Chyba při ukládání RPG stavu:', e);
+    }
+    return false;
+  },
+
+  savePlayerRPG(data) {
+    return this.savePlayerRPGState(data);
+  },
+
+  loadPlayerRPGState() {
+    try {
+      const key = this.getRpgStorageKey();
+      let raw = localStorage.getItem(key);
+      if (!raw) {
+        raw = localStorage.getItem('voxel_rpg_stats');
+      }
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && typeof data === 'object') {
+          return {
+            level: Math.max(1, Number(data.level) || 1),
+            xp: Math.max(0, Number(data.xp) || 0),
+            xpNext: Number(data.xpNext) || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(data.level || 1) : 100),
+            skillPoints: Math.max(0, Number(data.skillPoints) || 0),
+            baseStats: {
+              maxHp: Number(data.baseStats?.maxHp) || Number(data.maxHp) || 100,
+              maxStamina: Number(data.baseStats?.maxStamina) || Number(data.maxStamina) || 100,
+              attackPower: Number(data.baseStats?.attackPower) || 10,
+              critChance: Number(data.baseStats?.critChance) || 0.05,
+              moveSpeed: Number(data.baseStats?.moveSpeed) || 6.0
+            },
+            hp: Number(data.hp) || null,
+            stamina: Number(data.stamina) || null
+          };
+        }
+      }
+    } catch (e) {
+      console.error('[Storage] Chyba při načítání RPG stavu:', e);
+    }
+    return null;
+  },
+
+  loadPlayerRPG() {
+    return this.loadPlayerRPGState();
+  },
+
+  applyPlayerRPGState(targetP = (typeof P !== 'undefined' ? P : (typeof window !== 'undefined' ? window.P : null))) {
+    if (!targetP) return false;
+    const state = this.loadPlayerRPGState();
+    if (!state) return false;
+
+    targetP.level = state.level;
+    targetP.xp = state.xp;
+    targetP.xpNext = state.xpNext;
+    targetP.skillPoints = state.skillPoints;
+    targetP.baseStats = Object.assign({}, state.baseStats);
+
+    const bonusHp = (typeof window !== 'undefined' && typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
+    targetP.maxHp = targetP.baseStats.maxHp + bonusHp;
+    targetP.maxStamina = targetP.baseStats.maxStamina;
+
+    if (state.hp !== null && typeof G !== 'undefined') {
+      G.hp = Math.min(targetP.maxHp, state.hp);
+    }
+    if (state.stamina !== null && typeof G !== 'undefined') {
+      G.st = Math.min(targetP.maxStamina, state.stamina);
+    }
+
+    if (typeof ui === 'function') ui();
+    return true;
   }
 };
 

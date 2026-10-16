@@ -44,7 +44,7 @@ class NetworkManager {
     try {
       const saved = localStorage.getItem('voxel_char_custom');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     if (typeof DEFAULT_CUSTOM !== 'undefined') return DEFAULT_CUSTOM;
     return {
       skinColor: '#f5cfb3',
@@ -83,7 +83,7 @@ class NetworkManager {
           serverName: `P2P Svět (${fullCode})`
         };
       }
-    } catch(e) {}
+    } catch (e) { }
 
     if (this.activeGame.mode === 'multiplayer') {
       this.connectToServer(this.activeGame.serverAddress || 'localhost:3000');
@@ -210,7 +210,7 @@ class NetworkManager {
   // ===========================================================================
   // 2. PEER-TO-PEER (P2P LAN / Přátelé přes WebRTC)
   // ===========================================================================
-  
+
   // Hostitel: Otevření dialogu se stálým kódem světa
   openP2PHostDialog() {
     const modal = document.getElementById('p2pModal');
@@ -218,7 +218,7 @@ class NetworkManager {
 
     // Uvolnit myš pro možnost interakce s dialogem
     if (document.exitPointerLock) {
-      try { document.exitPointerLock(); } catch(e) {}
+      try { document.exitPointerLock(); } catch (e) { }
     }
 
     if (!this.isP2PHost || !this.peer || this.peer.destroyed) {
@@ -257,10 +257,10 @@ class NetworkManager {
   setupHostLocalChannel(cleanNum) {
     if (typeof BroadcastChannel === 'undefined') return;
     if (this.localChannel) {
-      try { this.localChannel.close(); } catch(e) {}
+      try { this.localChannel.close(); } catch (e) { }
     }
     if (this.localHubChannel) {
-      try { this.localHubChannel.close(); } catch(e) {}
+      try { this.localHubChannel.close(); } catch (e) { }
     }
 
     const onIncomingLocalMessage = (event, activeChannel) => {
@@ -284,7 +284,7 @@ class NetworkManager {
                 target: senderId,
                 data: data
               });
-            } catch(e) {
+            } catch (e) {
               console.warn('[P2P Local Send Error]', e);
             }
           },
@@ -295,7 +295,7 @@ class NetworkManager {
                 target: senderId,
                 data: { type: 'hostDisconnect', message: 'Hostitel se odpojil ze světa.' }
               });
-            } catch(e) {}
+            } catch (e) { }
             this.p2pClients.delete(senderId);
             this.removeRemotePlayer(senderId);
             this.updateP2PPlayerCount();
@@ -329,7 +329,7 @@ class NetworkManager {
       this.localHubChannel = new BroadcastChannel('vox_p2p_local_hub');
       this.localHubChannel.onmessage = (e) => onIncomingLocalMessage(e, this.localHubChannel);
       console.log(`[P2P Host] Záložní lokální hub aktivní: vox_p2p_local_hub`);
-    } catch(e) {
+    } catch (e) {
       console.warn('[P2P Host] Chyba inicializace lokálního kanálu:', e);
     }
   }
@@ -414,7 +414,7 @@ class NetworkManager {
         console.warn(`[P2P Host] ID ${peerId} je dočasně obsazeno (probíhá uvolnění socketu). Zkusím reconnect...`);
         setTimeout(() => {
           if (this.peer && !this.peer.destroyed) {
-            try { this.peer.reconnect(); } catch(e) {}
+            try { this.peer.reconnect(); } catch (e) { }
           }
         }, 2500);
       }
@@ -424,7 +424,7 @@ class NetworkManager {
       console.log('[P2P Host] Odpojeno od PeerJS brokera, obnovuji spojení na pozadí...');
       setTimeout(() => {
         if (this.peer && !this.peer.destroyed) {
-          try { this.peer.reconnect(); } catch(e) {}
+          try { this.peer.reconnect(); } catch (e) { }
         }
       }, 3000);
     });
@@ -442,7 +442,7 @@ class NetworkManager {
 
     // Uvolnit pointer lock kurzoru, aby hostitel mohl okamžitě kliknout myší
     if (document.exitPointerLock) {
-      try { document.exitPointerLock(); } catch(e) {}
+      try { document.exitPointerLock(); } catch (e) { }
     }
 
     const popup = document.getElementById('p2pRequestPopup');
@@ -561,6 +561,9 @@ class NetworkManager {
         id: 'host',
         nickname: hostNick,
         isOp: true,
+        level: (typeof P !== 'undefined' && P.level) ? P.level : 1,
+        hp: (typeof G !== 'undefined') ? Math.ceil(G.hp) : 100,
+        maxHp: (typeof P !== 'undefined' && P.maxHp) ? P.maxHp : 100,
         x: P.x, y: P.y, z: P.z,
         bodyYaw: (typeof model !== 'undefined') ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0),
         yaw: typeof yaw !== 'undefined' ? yaw : 0,
@@ -577,6 +580,9 @@ class NetworkManager {
           id: rId,
           nickname: rp.nickname || 'Hráč',
           isOp: !!rp.isOp,
+          level: rp.level || 1,
+          hp: rp.hp || 100,
+          maxHp: rp.maxHp || 100,
           x: rp.targetX, y: rp.targetY, z: rp.targetZ,
           bodyYaw: rp.targetYaw || 0,
           yaw: rp.targetYaw || 0,
@@ -610,7 +616,7 @@ class NetworkManager {
 
     conn.send({ type: 'rejected', message: 'Hostitel odmítl žádost o připojení.' });
     setTimeout(() => {
-      try { conn.close(); } catch(e) {}
+      try { conn.close(); } catch (e) { }
     }, 200);
   }
 
@@ -632,6 +638,11 @@ class NetworkManager {
         this.broadcastP2P(msg);
         this.spawnDamageIndicator(msg.targetId, msg.damage, msg.isCrit);
       }
+    } else if (msg.type === 'projectileSpawn') {
+      if (window.ProjectileManager && typeof window.ProjectileManager.spawn === 'function') {
+        window.ProjectileManager.spawn(Object.assign({}, msg, { owner: 'remotePlayer', ownerId: conn.peer }));
+      }
+      this.broadcastP2P(Object.assign({ type: 'projectileSpawn', ownerId: conn.peer }, msg), conn.peer);
     } else if (msg.type === 'blockChange') {
       this.onRemoteBlockChange(msg.x, msg.y, msg.z, msg.blockType);
       this.broadcastP2P(msg, conn.peer);
@@ -649,7 +660,7 @@ class NetworkManager {
       if (peerId !== excludePeer && conn.open) {
         try {
           conn.send(msg);
-        } catch(e) {
+        } catch (e) {
           console.warn(`[P2P Host] Chyba odeslání klientovi ${peerId}:`, e);
         }
       }
@@ -659,11 +670,51 @@ class NetworkManager {
   updateP2PPlayerCount() {
     const el = document.getElementById('p2pPlayersCount');
     if (el) {
-      el.textContent = `${this.p2pClients.size + 1} / 4 hráčů`;
+      const count = this.isP2PHost ? (this.p2pClients.size + 1) : (this.remotePlayers.size + 1);
+      el.textContent = `${count} / 4 hráčů`;
     }
   }
 
-  // Vykreslení seznamu hráčů a přepínačů oprávnění příkazů v P2P dialogu
+  teleportToPartyMember(peerId) {
+    const rp = this.remotePlayers.get(peerId);
+    if (!rp || typeof P === 'undefined') return false;
+    const tx = (typeof rp.targetX === 'number') ? rp.targetX : (rp.group ? rp.group.position.x : P.x);
+    const ty = (typeof rp.targetY === 'number') ? rp.targetY : (rp.group ? rp.group.position.y : P.y);
+    const tz = (typeof rp.targetZ === 'number') ? rp.targetZ : (rp.group ? rp.group.position.z : P.z);
+    P.x = tx + 1.2;
+    P.y = ty + 0.15;
+    P.z = tz + 1.2;
+    P.vx = 0; P.vy = 0; P.vz = 0;
+    if (typeof toast === 'function') {
+      toast(`📍 Teleportován k členovi družiny: ${rp.nickname || 'Hráč'}`);
+    }
+    const p2pModal = document.getElementById('p2pModal');
+    if (p2pModal) p2pModal.hidden = true;
+    return true;
+  }
+
+  kickP2PPlayer(peerId) {
+    if (!this.isP2PHost) return false;
+    const conn = this.p2pClients.get(peerId);
+    const rp = this.remotePlayers.get(peerId);
+    const nick = (rp && rp.nickname) || (conn && conn.nickname) || 'Hráč';
+    if (conn) {
+      try {
+        conn.send({ type: 'kicked', reason: 'Byl jsi vyhozen hostitelem družiny.' });
+      } catch (e) { }
+      setTimeout(() => {
+        try { conn.close(); } catch (e) { }
+      }, 120);
+      this.p2pClients.delete(peerId);
+    }
+    this.removeRemotePlayer(peerId);
+    this.broadcastP2P({ type: 'playerLeave', id: peerId });
+    if (typeof toast === 'function') toast(`🚪 Hráč ${nick} byl vyhozen z družiny.`);
+    this.renderP2PPlayersList();
+    return true;
+  }
+
+  // Vykreslení seznamu členů družiny v P2P / Party dialogu
   renderP2PPlayersList() {
     const listContainer = document.getElementById('p2pPlayersList');
     if (!listContainer) return;
@@ -672,8 +723,12 @@ class NetworkManager {
 
     const isHost = this.isP2PHost;
     const myNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hostitel';
+    const myLvl = (typeof P !== 'undefined' && P.level) ? P.level : 1;
+    const myHp = (typeof G !== 'undefined') ? Math.ceil(G.hp) : 100;
+    const myMaxHp = (typeof P !== 'undefined' && P.maxHp) ? P.maxHp : 100;
+    const myHpPct = Math.max(0, Math.min(100, Math.round((myHp / myMaxHp) * 100)));
 
-    // 1. Karta hostitele (já, pokud hostuji)
+    // 1. Karta lokálního hráče / hostitele
     const hostCard = document.createElement('div');
     hostCard.className = 'p2p-player-card is-self';
     const hostCmdAllowed = (this.hostCommandsAllowed !== false);
@@ -682,17 +737,23 @@ class NetworkManager {
       <div class="p2p-player-left">
         <div class="p2p-avatar host">👑</div>
         <div class="p2p-player-meta">
-          <div class="p2p-player-name">
+          <div class="p2p-player-name" style="display:flex;align-items:center;gap:6px;">
+            <span style="background:#f59e0b;color:#0f172a;font-size:10.5px;font-weight:800;padding:1px 5px;border-radius:4px;">Lv.${myLvl}</span>
             <span>${this.escape(myNick)}</span>
-            <span style="font-size:11px;color:#94a3b8;font-weight:normal;">${isHost ? '(Ty / Hostitel)' : '(Hostitel)'}</span>
+            <span style="font-size:11px;color:#94a3b8;font-weight:normal;">(Ty${isHost ? ' / Hostitel' : ''})</span>
           </div>
-          <span class="p2p-role-badge host">Hostitel světa</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <div style="width:90px;height:7px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);">
+              <div style="width:${myHpPct}%;height:100%;background:#10b981;"></div>
+            </div>
+            <span style="font-size:11px;color:#cbd5e1;">${myHp}/${myMaxHp} HP</span>
+          </div>
         </div>
       </div>
       <div class="p2p-player-controls">
         <div class="p2p-cmd-toggle-wrap" title="Povolit nebo zakázat používání herních příkazů (např. /tp, /time, /heal)">
           <span class="p2p-cmd-status-text ${hostCmdAllowed ? 'enabled' : 'disabled'}" id="p2pHostCmdStatus">
-            ${hostCmdAllowed ? 'Povoleno' : 'Vypnuto'}
+            ${hostCmdAllowed ? 'Příkazy' : 'Vypnuto'}
           </span>
           <label class="p2p-cmd-switch">
             <input type="checkbox" id="p2pToggleHostCmd" ${hostCmdAllowed ? 'checked' : ''} ${!isHost ? 'disabled' : ''}>
@@ -711,48 +772,74 @@ class NetworkManager {
       });
     }
 
-    // 2. Karty pro připojené hosty / přátele
+    // 2. Karty pro připojené členy družiny
     let guestCount = 0;
-    if (this.p2pClients && this.p2pClients.size > 0) {
-      for (const [peerId, conn] of this.p2pClients) {
-        guestCount++;
-        const rp = this.remotePlayers.get(peerId);
-        const guestNick = (rp && rp.nickname) || conn.nickname || `Host_${peerId.slice(-4)}`;
-        const cmdAllowed = !!conn.commandsAllowed;
+    const memberIds = new Set([
+      ...(this.p2pClients ? this.p2pClients.keys() : []),
+      ...(this.remotePlayers ? this.remotePlayers.keys() : [])
+    ]);
 
-        const guestCard = document.createElement('div');
-        guestCard.className = 'p2p-player-card';
-        guestCard.innerHTML = `
-          <div class="p2p-player-left">
-            <div class="p2p-avatar">👤</div>
-            <div class="p2p-player-meta">
-              <div class="p2p-player-name">
-                <span>${this.escape(guestNick)}</span>
+    for (const peerId of memberIds) {
+      guestCount++;
+      const conn = this.p2pClients ? this.p2pClients.get(peerId) : null;
+      const rp = this.remotePlayers.get(peerId);
+      const guestNick = (rp && rp.nickname) || (conn && conn.nickname) || `Hráč_${String(peerId).slice(-4)}`;
+      const guestLvl = (rp && rp.level) || 1;
+      const guestHp = (rp && typeof rp.hp === 'number') ? Math.ceil(rp.hp) : 100;
+      const guestMaxHp = (rp && rp.maxHp) ? rp.maxHp : 100;
+      const guestHpPct = Math.max(0, Math.min(100, Math.round((guestHp / guestMaxHp) * 100)));
+      const distM = (rp && typeof P !== 'undefined')
+        ? Math.round(Math.hypot((rp.targetX || 0) - P.x, (rp.targetZ || 0) - P.z))
+        : 0;
+      const cmdAllowed = conn ? !!conn.commandsAllowed : false;
+
+      const guestCard = document.createElement('div');
+      guestCard.className = 'p2p-player-card';
+      guestCard.innerHTML = `
+        <div class="p2p-player-left">
+          <div class="p2p-avatar">👤</div>
+          <div class="p2p-player-meta">
+            <div class="p2p-player-name" style="display:flex;align-items:center;gap:6px;">
+              <span style="background:#38bdf8;color:#0f172a;font-size:10.5px;font-weight:800;padding:1px 5px;border-radius:4px;">Lv.${guestLvl}</span>
+              <span>${this.escape(guestNick)}</span>
+              <span style="font-size:11px;color:#94a3b8;">(${distM} m)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+              <div style="width:84px;height:7px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);">
+                <div style="width:${guestHpPct}%;height:100%;background:#22c55e;"></div>
               </div>
-              <span class="p2p-role-badge guest">Host / Přítel</span>
+              <span style="font-size:11px;color:#cbd5e1;">${guestHp}/${guestMaxHp} HP</span>
             </div>
           </div>
-          <div class="p2p-player-controls">
-            <div class="p2p-cmd-toggle-wrap" title="Povolit nebo zakázat hráči používat herní příkazy (např. /tp, /time)">
-              <span class="p2p-cmd-status-text ${cmdAllowed ? 'enabled' : 'disabled'}" id="p2pStatus_${peerId}">
-                ${cmdAllowed ? 'Povoleno' : 'Zakázáno'}
-              </span>
-              <label class="p2p-cmd-switch">
-                <input type="checkbox" id="p2pToggle_${peerId}" ${cmdAllowed ? 'checked' : ''} ${!isHost ? 'disabled' : ''}>
-                <span class="p2p-cmd-slider"></span>
-              </label>
-            </div>
-          </div>
-        `;
+        </div>
+        <div class="p2p-player-controls" style="display:flex;align-items:center;gap:6px;">
+          <button class="party-tp-btn" data-peer="${peerId}" title="Teleportovat se k tomuto členovi družiny" style="padding:5px 9px;border-radius:7px;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.45);color:#7dd3fc;font-size:11.5px;font-weight:700;cursor:pointer;">📍 TP</button>
+          ${isHost ? `<button class="party-kick-btn" data-peer="${peerId}" title="Vyhodit hráče ze světa" style="padding:5px 9px;border-radius:7px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.45);color:#fca5a5;font-size:11.5px;font-weight:700;cursor:pointer;">🚪</button>` : ''}
+          ${isHost && conn ? `
+          <div class="p2p-cmd-toggle-wrap" title="Povolit nebo zakázat hráči používat herní příkazy">
+            <label class="p2p-cmd-switch">
+              <input type="checkbox" id="p2pToggle_${peerId}" ${cmdAllowed ? 'checked' : ''}>
+              <span class="p2p-cmd-slider"></span>
+            </label>
+          </div>` : ''}
+        </div>
+      `;
 
-        listContainer.appendChild(guestCard);
+      listContainer.appendChild(guestCard);
 
-        const guestSwitch = guestCard.querySelector(`#p2pToggle_${peerId}`);
-        if (guestSwitch && isHost) {
-          guestSwitch.addEventListener('change', (e) => {
-            this.setPlayerCommandPermission(peerId, e.target.checked);
-          });
-        }
+      const tpBtn = guestCard.querySelector('.party-tp-btn');
+      if (tpBtn) {
+        tpBtn.addEventListener('click', () => this.teleportToPartyMember(peerId));
+      }
+      const kickBtn = guestCard.querySelector('.party-kick-btn');
+      if (kickBtn && isHost) {
+        kickBtn.addEventListener('click', () => this.kickP2PPlayer(peerId));
+      }
+      const guestSwitch = guestCard.querySelector(`#p2pToggle_${peerId}`);
+      if (guestSwitch && isHost) {
+        guestSwitch.addEventListener('change', (e) => {
+          this.setPlayerCommandPermission(peerId, e.target.checked);
+        });
       }
     }
 
@@ -762,8 +849,8 @@ class NetworkManager {
       emptyDiv.className = 'p2p-empty-placeholder';
       emptyDiv.innerHTML = `
         <div style="font-size:20px;margin-bottom:2px;">🎮</div>
-        <div style="font-weight:600;color:#94a3b8;">Zatím se nepřipojil žádný přítel</div>
-        <div style="font-size:11.5px;color:#64748b;">Pošli kamarádovi kód zobrazený výše. Až se připojí, uvidíš ho zde a můžeš mu povolit příkazy.</div>
+        <div style="font-weight:600;color:#94a3b8;">Zatím se nepřipojil žádný člen družiny</div>
+        <div style="font-size:11.5px;color:#64748b;">Pošli kamarádovi kód zobrazený výše. Až se připojí, uvidíš zde jeho úroveň, životy a tlačítko pro okamžitý teleport.</div>
       `;
       listContainer.appendChild(emptyDiv);
     }
@@ -791,7 +878,7 @@ class NetworkManager {
         type: 'commandPermission',
         allowed: conn.commandsAllowed
       });
-    } catch(e) {
+    } catch (e) {
       console.warn('[P2P] Chyba při odesílání oprávnění klientovi:', e);
     }
 
@@ -844,10 +931,10 @@ class NetworkManager {
   setupClientLocalChannel(cleanNum) {
     if (typeof BroadcastChannel === 'undefined') return;
     if (this.localChannel) {
-      try { this.localChannel.close(); } catch(e) {}
+      try { this.localChannel.close(); } catch (e) { }
     }
     if (this.localHubChannel) {
-      try { this.localHubChannel.close(); } catch(e) {}
+      try { this.localHubChannel.close(); } catch (e) { }
     }
 
     this.localClientId = 'local_client_' + Math.random().toString(36).substring(2, 9);
@@ -881,7 +968,7 @@ class NetworkManager {
                 target: 'host',
                 data: data
               });
-            } catch(e) {
+            } catch (e) {
               console.warn('[P2P Client Local Send Error]', e);
             }
           },
@@ -892,7 +979,7 @@ class NetworkManager {
                 target: 'host',
                 data: { type: 'playerLeave', id: this.localClientId }
               });
-            } catch(e) {}
+            } catch (e) { }
           }
         };
 
@@ -940,10 +1027,10 @@ class NetworkManager {
         };
 
         if (this.localChannel) {
-          try { this.localChannel.postMessage(packet); } catch(e) {}
+          try { this.localChannel.postMessage(packet); } catch (e) { }
         }
         if (this.localHubChannel) {
-          try { this.localHubChannel.postMessage(packet); } catch(e) {}
+          try { this.localHubChannel.postMessage(packet); } catch (e) { }
         }
 
         const statusDetail = document.getElementById('p2pClientStatusDetail');
@@ -956,7 +1043,7 @@ class NetworkManager {
       if (this.localRetryTimer) clearInterval(this.localRetryTimer);
       this.localRetryTimer = setInterval(sendLocalJoin, 1000);
 
-    } catch(e) {
+    } catch (e) {
       console.warn('[P2P Client] Chyba inicializace lokálního kanálu:', e);
     }
   }
@@ -1068,7 +1155,7 @@ class NetworkManager {
         console.warn('[P2P Client] PeerJS broker rate limit / network hiccup. Pokračuji v hledání...');
         setTimeout(() => {
           if (this.peer && !this.peer.destroyed && !this.approved) {
-            try { this.peer.reconnect(); } catch(e) {}
+            try { this.peer.reconnect(); } catch (e) { }
           }
         }, 3000);
       }
@@ -1081,7 +1168,7 @@ class NetworkManager {
   connectToServer(address) {
     let raw = (address || '').trim();
     let cleanHost = raw.replace(/^(ws:\/\/|wss:\/\/|http:\/\/|https:\/\/)/i, '').replace(/\/+$/, '');
-    
+
     if (!cleanHost.includes(':')) {
       cleanHost += ':3000';
     }
@@ -1180,6 +1267,7 @@ class NetworkManager {
     const aDur = (typeof attackDuration !== 'undefined') ? attackDuration : 0.26;
     const aCombo = (typeof attackCombo !== 'undefined') ? attackCombo : 0;
     const hId = (typeof heldId !== 'undefined') ? heldId : null;
+    const isBlk = (typeof isPlayerBlocking === 'function') ? !!isPlayerBlocking() : false;
 
     const payload = {
       x: P.x,
@@ -1202,7 +1290,11 @@ class NetworkManager {
       attacking: isAtk,
       attackTime: aTime,
       attackDuration: aDur,
-      attackCombo: aCombo
+      attackCombo: aCombo,
+      isBlocking: isBlk,
+      level: (typeof P !== 'undefined' && P.level) ? P.level : 1,
+      hp: (typeof G !== 'undefined') ? Math.ceil(G.hp) : 100,
+      maxHp: (typeof P !== 'undefined' && P.maxHp) ? P.maxHp : 100
     };
 
     if (this.isP2PHost) {
@@ -1213,6 +1305,16 @@ class NetworkManager {
 
     // Klient posílá move na server nebo hostiteli
     this.send(Object.assign({ type: 'move' }, payload));
+  }
+
+  sendProjectileSpawn(projData) {
+    if (!this.connected || !projData) return;
+    const msg = Object.assign({ type: 'projectileSpawn', senderId: this.playerId || (this.isP2PHost ? 'host' : 'self') }, projData);
+    if (this.isP2PHost) {
+      this.broadcastP2P(msg);
+    } else {
+      this.send(msg);
+    }
   }
 
   // Společné zpracování zpráv (ze serveru i z P2P)
@@ -1315,6 +1417,22 @@ class NetworkManager {
         break;
       }
 
+      case 'projectileSpawn': {
+        const sid = msg.senderId || msg.id;
+        if (sid !== this.playerId && !(this.isP2PHost && sid === 'host')) {
+          if (typeof window.ProjectileManager !== 'undefined' && typeof window.ProjectileManager.spawn === 'function') {
+            window.ProjectileManager.spawn({
+              type: msg.projType || 'arrow',
+              x: msg.x, y: msg.y, z: msg.z,
+              dx: msg.dx, dy: msg.dy, dz: msg.dz,
+              damage: msg.damage || 15,
+              isRemote: true
+            });
+          }
+        }
+        break;
+      }
+
       case 'playerLeave':
         this.removeRemotePlayer(msg.id);
         break;
@@ -1333,13 +1451,23 @@ class NetworkManager {
         }
         break;
 
+      case 'kicked':
       case 'hostDisconnect':
         this.connected = false;
         if (this.joinRetryTimer) clearInterval(this.joinRetryTimer);
         if (this.syncTimer) clearInterval(this.syncTimer);
-        this.showNetStatus('Hostitel se odpojil ze světa.', 'error', true);
-        alert(msg.message || 'Hostitel se odpojil ze světa. Budeš přesměrován do hlavního menu.');
-        window.location.replace('../index.html?msg=host_disconnected');
+        this.showNetStatus(msg.reason || msg.message || 'Spojení со světem bylo ukončeno.', 'error', true);
+        if (typeof toast === 'function') toast(msg.reason || msg.message || 'Odpojeno ze světa.');
+        setTimeout(() => {
+          window.location.replace('../index.html?msg=host_disconnected');
+        }, 1200);
+        break;
+
+      case 'setTime':
+        if (typeof G !== 'undefined' && typeof msg.timeOfDay === 'number') {
+          G.timeOfDay = msg.timeOfDay;
+          if (typeof toast === 'function') toast('Čas světa byl synchronizován.');
+        }
         break;
 
       case 'blockChange':
@@ -1367,11 +1495,6 @@ class NetworkManager {
           P.vx = 0; P.vy = 0; P.vz = 0;
           if (typeof toast === 'function') toast('Byl jsi teleportován!');
         }
-        break;
-
-      case 'hostDisconnect':
-        alert(msg.message || 'Hostitel se odpojil ze světa.');
-        window.location.replace('../index.html?msg=host_disconnected');
         break;
     }
   }
@@ -1404,9 +1527,13 @@ class NetworkManager {
       updateCharacterRig(rig, custom, eqMap);
     }
 
-    // Jmenovka nad hlavou hráče
-    const nametag = this.createNametagSprite(playerData.nickname || 'Hráč', playerData.isOp);
-    nametag.position.set(0, 2.3, 0);
+    const initLevel = playerData.level || 1;
+    const initHp = typeof playerData.hp === 'number' ? playerData.hp : 100;
+    const initMaxHp = typeof playerData.maxHp === 'number' ? playerData.maxHp : 100;
+
+    // Jmenovka nad hlavou hráče s úrovní a HP barem
+    const nametag = this.createNametagSprite(playerData.nickname || 'Hráč', playerData.isOp, initLevel, initHp, initMaxHp);
+    nametag.position.set(0, 2.35, 0);
     group.add(nametag);
 
     // Vytvořit sadu zbraní pro ruku vzdáleného hráče
@@ -1430,6 +1557,10 @@ class NetworkManager {
     this.remotePlayers.set(playerData.id, {
       id: playerData.id,
       nickname: playerData.nickname || 'Hráč',
+      isOp: !!playerData.isOp,
+      level: initLevel,
+      hp: initHp,
+      maxHp: initMaxHp,
       group: group,
       rig: rig,
       skin: custom,
@@ -1456,6 +1587,7 @@ class NetworkManager {
       attackTime: playerData.attackTime || 0,
       attackDuration: playerData.attackDuration || 0.26,
       attackCombo: playerData.attackCombo || 0,
+      isBlocking: !!playerData.isBlocking,
       emote: playerData.emote || null,
       emoteTimer: 0,
       phase: 0,
@@ -1470,34 +1602,13 @@ class NetworkManager {
     });
   }
 
-  createNametagSprite(name, isOp = false) {
+  createNametagSprite(name, isOp = false, level = 1, hp = 100, maxHp = 100) {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
-    canvas.height = 64;
+    canvas.height = 76;
     const ctx = canvas.getContext('2d');
 
-    // Bezpečné vykreslení štítku
-    ctx.fillStyle = 'rgba(10, 15, 25, 0.78)';
-    if (typeof ctx.roundRect === 'function') {
-      ctx.beginPath();
-      ctx.roundRect(10, 12, 236, 40, 10);
-      ctx.fill();
-      ctx.strokeStyle = isOp ? 'rgba(251, 191, 36, 0.85)' : 'rgba(56, 189, 248, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    } else {
-      ctx.fillRect(10, 12, 236, 40);
-      ctx.strokeStyle = isOp ? '#fbbf24' : '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(10, 12, 236, 40);
-    }
-
-    ctx.font = 'bold 22px Outfit, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = isOp ? '#fbbf24' : '#ffffff';
-    const label = (isOp ? '👑 ' : '') + name;
-    ctx.fillText(label, 128, 32);
+    this.drawNametagCanvas(ctx, name, isOp, level, hp, maxHp);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -1509,8 +1620,44 @@ class NetworkManager {
       transparent: true
     });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(1.8, 0.45, 1);
+    sprite.scale.set(1.9, 0.56, 1);
+    sprite.userData = { canvas, ctx, texture };
     return sprite;
+  }
+
+  drawNametagCanvas(ctx, name, isOp = false, level = 1, hp = 100, maxHp = 100) {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, 256, 76);
+
+    // Štítek pozadí
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.82)';
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(8, 8, 240, 60, 10);
+      ctx.fill();
+      ctx.strokeStyle = isOp ? 'rgba(251, 191, 36, 0.85)' : 'rgba(56, 189, 248, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillRect(8, 8, 240, 60);
+      ctx.strokeStyle = isOp ? '#fbbf24' : '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(8, 8, 240, 60);
+    }
+
+    ctx.font = 'bold 19px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isOp ? '#fbbf24' : '#ffffff';
+    const label = `${isOp ? '👑 ' : ''}[Lv.${level || 1}] ${name}`;
+    ctx.fillText(label, 128, 28);
+
+    // HP Bar pod jménem
+    const pct = Math.max(0, Math.min(1, (hp || 0) / Math.max(1, maxHp || 100)));
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(24, 46, 208, 12);
+    ctx.fillStyle = pct > 0.5 ? '#22c55e' : (pct > 0.25 ? '#f59e0b' : '#ef4444');
+    ctx.fillRect(25, 47, Math.round(206 * pct), 10);
   }
 
   updateRemotePlayer(data) {
@@ -1549,6 +1696,25 @@ class NetworkManager {
     if (typeof data.attackTime === 'number') p.attackTime = data.attackTime;
     if (typeof data.attackDuration === 'number') p.attackDuration = data.attackDuration;
     if (typeof data.attackCombo === 'number') p.attackCombo = data.attackCombo;
+    if (typeof data.isBlocking !== 'undefined') p.isBlocking = !!data.isBlocking;
+
+    let redrawTag = false;
+    if (typeof data.level === 'number' && data.level !== p.level) {
+      p.level = data.level;
+      redrawTag = true;
+    }
+    if (typeof data.hp === 'number' && data.hp !== p.hp) {
+      p.hp = data.hp;
+      redrawTag = true;
+    }
+    if (typeof data.maxHp === 'number' && data.maxHp !== p.maxHp) {
+      p.maxHp = data.maxHp;
+      redrawTag = true;
+    }
+    if (redrawTag && p.nametag && p.nametag.userData && p.nametag.userData.ctx) {
+      this.drawNametagCanvas(p.nametag.userData.ctx, p.nickname, p.isOp, p.level, p.hp, p.maxHp);
+      if (p.nametag.userData.texture) p.nametag.userData.texture.needsUpdate = true;
+    }
 
     if (typeof data.emote !== 'undefined') {
       if (p.emote !== data.emote) {
@@ -1852,51 +2018,22 @@ class NetworkManager {
   }
 
   // ===========================================================================
-  // 6. Synchronizace Bloků a Chatu
+  // 6. Synchronizace Bloků a Chatu (Blokové stavění zakázáno pro Cube World RPG)
   // ===========================================================================
   modifyBlock(x, y, z, blockType) {
-    const key = `${x},${y},${z}`;
-    this.worldDeltas[key] = blockType;
-    this.applySingleBlock(x, y, z, blockType);
-
-    this.send({
-      type: 'blockChange',
-      x: x,
-      y: y,
-      z: z,
-      blockType: blockType
-    });
+    // Voxel building/destruction removed for Cube World Action-RPG gameplay.
   }
 
   onRemoteBlockChange(x, y, z, blockType) {
-    const key = `${x},${y},${z}`;
-    this.worldDeltas[key] = blockType;
-    this.applySingleBlock(x, y, z, blockType);
+    // Voxel building/destruction removed for Cube World Action-RPG gameplay.
   }
 
   applySingleBlock(x, y, z, blockType) {
-    if (typeof getChunk === 'undefined' || typeof CS === 'undefined') return;
-    const cx = x >> 4, cz = z >> 4;
-    const k = cx + ',' + cz;
-    if (typeof chunks !== 'undefined' && chunks.has(k)) {
-      const c = chunks.get(k);
-      const lx = x & 15, lz = z & 15;
-      if (y >= 0 && y < c.H) {
-        c.d[lx + lz * CS + y * 256] = blockType;
-        if (typeof dispose === 'function' && typeof buildMesh === 'function') {
-          dispose(c);
-          buildMesh(c);
-        }
-      }
-    }
+    // Voxel building/destruction removed for Cube World Action-RPG gameplay.
   }
 
   applyWorldDeltas() {
-    if (!this.worldDeltas) return;
-    for (const key of Object.keys(this.worldDeltas)) {
-      const [x, y, z] = key.split(',').map(Number);
-      this.applySingleBlock(x, y, z, this.worldDeltas[key]);
-    }
+    // Voxel building/destruction removed for Cube World Action-RPG gameplay.
   }
 
   sendChatMessage(text) {
@@ -1925,7 +2062,7 @@ class NetworkManager {
           if (escMenu) escMenu.hidden = true;
           if (typeof escOpen !== 'undefined') escOpen = false;
           if (document.exitPointerLock) {
-            try { document.exitPointerLock(); } catch(e) {}
+            try { document.exitPointerLock(); } catch (e) { }
           }
           this.openP2PHostDialog();
         };
@@ -1937,7 +2074,7 @@ class NetworkManager {
         p2pClose.onclick = () => {
           const m = document.getElementById('p2pModal');
           if (m) m.hidden = true;
-          try { (window.cv || (window.renderer && renderer.domElement))?.requestPointerLock(); } catch (e) {}
+          try { (window.cv || (window.renderer && renderer.domElement))?.requestPointerLock(); } catch (e) { }
         };
       }
 
@@ -1984,9 +2121,9 @@ class NetworkManager {
               message: 'Hostitel se odpojil ze světa.'
             });
             for (const [, conn] of this.p2pClients) {
-              try { conn.close(); } catch(err) {}
+              try { conn.close(); } catch (err) { }
             }
-          } catch(e) {}
+          } catch (e) { }
         } else if (this.localChannel && this.localClientId) {
           try {
             this.localChannel.postMessage({
@@ -1994,7 +2131,7 @@ class NetworkManager {
               target: 'host',
               data: { type: 'playerLeave', id: this.localClientId }
             });
-          } catch(e) {}
+          } catch (e) { }
         }
       });
     };

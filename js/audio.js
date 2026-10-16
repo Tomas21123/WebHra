@@ -142,3 +142,50 @@ function playRollSound() {
     }, 180);
   } catch (e) {}
 }
+
+function playDiscoveryChime() {
+  if (typeof window !== 'undefined' && window.soundMuted) return;
+  try {
+    if (typeof window === 'undefined') return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    const notes = [
+      { freq: 523.25, time: 0.00, dur: 0.35, vol: 0.16 }, // C5
+      { freq: 659.25, time: 0.09, dur: 0.38, vol: 0.18 }, // E5
+      { freq: 783.99, time: 0.18, dur: 0.45, vol: 0.20 }, // G5
+      { freq: 1046.50, time: 0.28, dur: 0.75, vol: 0.24 } // C6
+    ];
+
+    notes.forEach(n => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      osc.type = 'sine';
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2800, t + n.time);
+
+      osc.frequency.setValueAtTime(n.freq, t + n.time);
+      osc.frequency.exponentialRampToValueAtTime(n.freq * 1.008, t + n.time + n.dur);
+
+      gain.gain.setValueAtTime(0.0001, t + n.time);
+      gain.gain.linearRampToValueAtTime(n.vol, t + n.time + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + n.time + n.dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(t + n.time);
+      osc.stop(t + n.time + n.dur);
+    });
+  } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+  window.playDiscoveryChime = playDiscoveryChime;
+}
+

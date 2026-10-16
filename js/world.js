@@ -800,3 +800,542 @@ function pump(budget) {
     if (!c.meshed) buildMesh(c);
   }
 }
+
+// ============================================================================
+// Procedural POIs & 3D Voxel Structures (Milestone 2 - F4)
+// ============================================================================
+(function () {
+  'use strict';
+
+  const MACRO_L = 160;
+  const POI_MARGIN = 24;
+  const POI_TYPES = ['Shrine', 'Ruins', 'Camp', 'Landmark', 'Chest'];
+  const DISPLAY_NAMES = {
+    Shrine: 'Prastará svatyně',
+    Ruins: 'Tajemné zříceniny',
+    Camp: 'Tábor nestvůr',
+    Chest: 'Tajemná pokladnice',
+    Landmark: 'Strážní maják'
+  };
+
+  const POIManager = {
+    macroCellSize: MACRO_L,
+    pois: [],
+    instances: new Map(),
+    discoveredPOIs: new Set(),
+    openedChests: new Set(),
+    activeShrines: new Map(),
+
+    init: function () {
+      try {
+        const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
+        if (typeof localStorage !== 'undefined') {
+          const disc = localStorage.getItem(`voxel_poi_discovered_${sKey}`) || localStorage.getItem(`voxel_discovered_pois_${sKey}`);
+          if (disc) {
+            const arr = JSON.parse(disc);
+            if (Array.isArray(arr)) arr.forEach(id => this.discoveredPOIs.add(id));
+          }
+          const opn = localStorage.getItem(`voxel_opened_chests_${sKey}`);
+          if (opn) {
+            const arr = JSON.parse(opn);
+            if (Array.isArray(arr)) arr.forEach(id => this.openedChests.add(id));
+          }
+        }
+      } catch (e) {}
+    },
+
+    save: function () {
+      try {
+        const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
+        if (typeof localStorage !== 'undefined') {
+          const discList = Array.from(this.discoveredPOIs);
+          localStorage.setItem(`voxel_poi_discovered_${sKey}`, JSON.stringify(discList));
+          localStorage.setItem(`voxel_discovered_pois_${sKey}`, JSON.stringify(discList));
+          localStorage.setItem(`voxel_opened_chests_${sKey}`, JSON.stringify(Array.from(this.openedChests)));
+        }
+      } catch (e) {}
+    },
+
+    getPoiForCell: function (cellX, cellZ) {
+      const key = `${cellX},${cellZ}`;
+      if (this.instances.has(key)) return this.instances.get(key);
+
+      const sea = (typeof SEA !== 'undefined') ? SEA : 44;
+      const s = (typeof S !== 'undefined') ? S : 0.5;
+
+      // Deterministický výběr typu POI
+      const typeHash = Math.abs(Math.sin(cellX * 12.9898 + cellZ * 78.233) * 43758.5453) % 1;
+      const typeIndex = Math.floor(typeHash * POI_TYPES.length);
+      const type = POI_TYPES[typeIndex];
+      const displayName = DISPLAY_NAMES[type] || type;
+
+      // Deterministické prohledávání suché země (y >= SEA + 3)
+      const offsets = [
+        [0, 0], [24, 0], [-24, 0], [0, 24], [0, -24], [36, 36], [-36, -36]
+      ];
+
+      let bestBX = cellX * MACRO_L + 80;
+      let bestBZ = cellZ * MACRO_L + 80;
+      let bestBY = Math.max(sea + 3, 47);
+      let foundDry = false;
+
+      // Hledání vhodného místa v buňce
+      for (const [ox, oz] of offsets) {
+        const hashRelX = Math.abs(Math.sin(cellX * 37.11 + cellZ * 19.33 + ox * 0.1) * 23421.1) % 1;
+        const hashRelZ = Math.abs(Math.sin(cellX * 17.55 + cellZ * 43.77 + oz * 0.1) * 87654.3) % 1;
+        const relX = Math.floor(POI_MARGIN + hashRelX * (MACRO_L - 2 * POI_MARGIN));
+        const relZ = Math.floor(POI_MARGIN + hashRelZ * (MACRO_L - 2 * POI_MARGIN));
+        const candBX = cellX * MACRO_L + Math.min(MACRO_L - 16, Math.max(16, relX + ox));
+        const candBZ = cellZ * MACRO_L + Math.min(MACRO_L - 16, Math.max(16, relZ + oz));
+
+        let candBY = Math.max(sea + 3, 47);
+        if (typeof height === 'function') {
+          candBY = height(candBX, candBZ);
+        }
+
+        if (candBY >= sea + 3) {
+          bestBX = candBX;
+          bestBZ = candBZ;
+          bestBY = candBY;
+          foundDry = true;
+          break;
+        }
+      }
+
+      // Bezpečnostní garance suché země (y >= SEA + 3 = 47)
+      if (bestBY < sea + 3) {
+        bestBY = sea + 3;
+      }
+
+      const id = `poi_${cellX}_${cellZ}`;
+      const isOpened = this.openedChests.has(id);
+
+      const poi = {
+        id,
+        cellX,
+        cellZ,
+        x: bestBX,
+        y: bestBY,
+        z: bestBZ,
+        bx: bestBX,
+        by: bestBY,
+        bz: bestBZ,
+        wx: bestBX * s,
+        wy: bestBY * s,
+        wz: bestBZ * s,
+        type,
+        displayName,
+        xpReward: 50,
+        xp: 50,
+        group: null,
+        attached: false,
+        guardiansSpawned: false,
+        opened: isOpened,
+        openAngle: isOpened ? 1.3 : 0,
+        targetAngle: isOpened ? 1.3 : 0
+      };
+
+      this.instances.set(key, poi);
+      if (!this.pois.some(p => p.id === id)) {
+        this.pois.push(poi);
+      }
+
+      return poi;
+    },
+
+    getPoisInChunk: function (cx, cz) {
+      const cellX = Math.floor((cx * 16) / MACRO_L);
+      const cellZ = Math.floor((cz * 16) / MACRO_L);
+      return [this.getPoiForCell(cellX, cellZ)];
+    },
+
+    isDiscovered: function (poiId) {
+      return this.discoveredPOIs.has(poiId);
+    },
+
+    discoverPOI: function (poiId) {
+      if (this.isDiscovered(poiId)) {
+        return false;
+      }
+
+      this.discoveredPOIs.add(poiId);
+
+      // Vyhledání instance POI
+      let poi = null;
+      for (const p of this.instances.values()) {
+        if (p.id === poiId) { poi = p; break; }
+      }
+      if (!poi) {
+        poi = this.pois.find(p => p.id === poiId);
+      }
+
+      const xp = (poi && (poi.xpReward || poi.xp)) || 50;
+      const name = (poi && poi.displayName) || 'Neznámé místo';
+
+      // 1. Udělení zkušeností
+      if (typeof window !== 'undefined') {
+        if (typeof window.addPlayerXP === 'function') {
+          window.addPlayerXP(xp, 'discovery');
+        } else if (typeof P !== 'undefined' && P) {
+          P.xp = (P.xp || 0) + xp;
+          if (typeof window.checkPlayerLevelUp === 'function') {
+            window.checkPlayerLevelUp();
+          }
+        }
+      }
+
+      // 2. Web Audio fanfára
+      if (typeof window !== 'undefined' && typeof window.playDiscoveryChime === 'function') {
+        window.playDiscoveryChime();
+      }
+
+      // 3. On-screen toast a RPG banner
+      if (typeof window !== 'undefined' && typeof window.showDiscoveryToast === 'function') {
+        window.showDiscoveryToast(name, xp);
+      } else if (typeof toast === 'function') {
+        toast(`🗺️ Objeveno: ${name} (+${xp} XP)`);
+      }
+
+      // 4. Landmark speciální odhalení mlhy (Fog of War 12 chunků)
+      if (poi && poi.type === 'Landmark') {
+        if (typeof exploredChunks !== 'undefined') {
+          const s = (typeof S !== 'undefined') ? S : 0.5;
+          const cs = (typeof CS !== 'undefined') ? CS : 16;
+          const pcx = Math.floor(poi.wx / (cs * s));
+          const pcz = Math.floor(poi.wz / (cs * s));
+          let hasNew = false;
+          for (let lx = -12; lx <= 12; lx++) {
+            for (let lz = -12; lz <= 12; lz++) {
+              if (lx * lx + lz * lz <= 144) {
+                const k = `${pcx + lx},${pcz + lz}`;
+                if (!exploredChunks.has(k)) {
+                  exploredChunks.add(k);
+                  hasNew = true;
+                }
+              }
+            }
+          }
+          if (hasNew && typeof saveExploredHistory === 'function') {
+            saveExploredHistory();
+          }
+        }
+      }
+
+      // 5. Aktualizace minimapy
+      if (typeof mmNeedsRebuild !== 'undefined') {
+        mmNeedsRebuild = true;
+      }
+
+      this.save();
+      return true;
+    },
+
+    buildPOIMesh: function (poi) {
+      if (poi.group) return poi.group;
+      if (typeof THREE === 'undefined') return null;
+
+      const grp = new THREE.Group();
+      grp.position.set(poi.wx, poi.wy, poi.wz);
+
+      if (poi.type === 'Shrine') {
+        // Prastará svatyně
+        const daisMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+        const dais = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.4, 5.2), daisMat);
+        dais.position.y = 0.2;
+        grp.add(dais);
+        const daisUpper = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.3, 4.2), new THREE.MeshLambertMaterial({ color: 0x64748b }));
+        daisUpper.position.y = 0.55;
+        grp.add(daisUpper);
+
+        // 4 kamenné sloupy
+        const colMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
+        const colOffsets = [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]];
+        colOffsets.forEach(([cx, cz]) => {
+          const col = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 0.5), colMat);
+          col.position.set(cx, 2.15, cz);
+          grp.add(col);
+        });
+
+        // Oltář uprostřed
+        const altar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.2), new THREE.MeshLambertMaterial({ color: 0x334155 }));
+        altar.position.set(0, 0.95, 0);
+        grp.add(altar);
+
+        // Vznášející se runový krystal
+        const crystalGroup = new THREE.Group();
+        crystalGroup.position.set(0, 2.3, 0);
+        const crystalGeo = new THREE.OctahedronGeometry(0.55, 0);
+        const crystalMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0284c7 });
+        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+        crystalGroup.add(crystal);
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.06, 6, 16), new THREE.MeshBasicMaterial({ color: 0x7dd3fc }));
+        crystalGroup.add(ring);
+
+        const light = new THREE.PointLight(0x38bdf8, 1.4, 14);
+        crystalGroup.add(light);
+
+        grp.add(crystalGroup);
+        poi.crystalGroup = crystalGroup;
+        poi.crystalLight = light;
+        poi.crystalBaseY = 2.3;
+
+      } else if (poi.type === 'Ruins') {
+        // Tajemné zříceniny
+        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 3.8, 0.7), stoneMat);
+        p1.position.set(-1.8, 1.9, 0);
+        const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 3.8, 0.7), stoneMat);
+        p2.position.set(1.8, 1.9, 0);
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.6, 0.8), stoneMat);
+        grp.add(p1);
+        grp.add(p2);
+        grp.add(arch);
+
+        // Zřícený povalený sloup
+        const fallen = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.8, 6), stoneMat);
+        fallen.rotation.z = Math.PI / 2.3;
+        fallen.position.set(0.6, 0.3, 1.5);
+        grp.add(fallen);
+
+        // Truhla uprostřed ruin
+        this._buildChestGroup(grp, poi);
+
+      } else if (poi.type === 'Camp') {
+        // Tábor nestvůr s ohništěm a stany
+        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const rock = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.35), stoneMat);
+          rock.position.set(Math.cos(ang) * 0.8, 0.12, Math.sin(ang) * 0.8);
+          grp.add(rock);
+        }
+
+        const ember = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.8, 5), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
+        ember.position.y = 0.4;
+        grp.add(ember);
+
+        const fireLight = new THREE.PointLight(0xf97316, 1.5, 16);
+        fireLight.position.y = 0.6;
+        grp.add(fireLight);
+        poi.fireLight = fireLight;
+        poi.baseLightIntensity = 1.5;
+
+        // Stan
+        const tentMat = new THREE.MeshLambertMaterial({ color: 0xb45309 });
+        const tent = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.2, 4), tentMat);
+        tent.position.set(-2.8, 1.1, -1.8);
+        tent.rotation.y = Math.PI / 4;
+        grp.add(tent);
+
+        // Truhla se zásobami
+        this._buildChestGroup(grp, poi);
+
+      } else if (poi.type === 'Chest') {
+        // Samostatná pokladnice
+        this._buildChestGroup(grp, poi);
+
+      } else if (poi.type === 'Landmark') {
+        // Strážní maják / vyhlídková věž
+        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 6.0, 6), stoneMat);
+        tower.position.y = 3.0;
+        grp.add(tower);
+
+        const platform = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.0, 0.7, 6), stoneMat);
+        platform.position.y = 6.35;
+        grp.add(platform);
+
+        const brazier = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 0.6, 6), new THREE.MeshLambertMaterial({ color: 0x1e293b }));
+        brazier.position.y = 7.0;
+        grp.add(brazier);
+
+        const fire = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+        fire.position.y = 7.6;
+        grp.add(fire);
+
+        const beaconLight = new THREE.PointLight(0xfbbf24, 2.2, 35);
+        beaconLight.position.y = 7.8;
+        grp.add(beaconLight);
+        poi.fireLight = beaconLight;
+        poi.baseLightIntensity = 2.2;
+      }
+
+      poi.group = grp;
+      return grp;
+    },
+
+    _buildChestGroup: function (parentGroup, poi) {
+      if (typeof THREE === 'undefined') return;
+
+      const chestGroup = new THREE.Group();
+      chestGroup.position.set(0, 0, 0);
+
+      const woodMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), woodMat);
+      base.position.y = 0.25;
+      chestGroup.add(base);
+
+      // Kloubové víko truhly
+      const lidGroup = new THREE.Group();
+      lidGroup.position.set(0, 0.5, -0.3); // Osa otáčení v zadním rohu
+
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.2, 0.62), woodMat);
+      lid.position.set(0, 0.1, 0.31);
+      lidGroup.add(lid);
+
+      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.08), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+      latch.position.set(0, 0.0, 0.63);
+      lidGroup.add(latch);
+
+      if (poi.opened) {
+        lidGroup.rotation.x = -1.30;
+      }
+
+      chestGroup.add(lidGroup);
+      parentGroup.add(chestGroup);
+      poi.lidGroup = lidGroup;
+    },
+
+    update: function (dt, now, px, py, pz) {
+      const s = (typeof S !== 'undefined') ? S : 0.5;
+      const cs = (typeof CS !== 'undefined') ? CS : 16;
+      const rd = (typeof RD !== 'undefined') ? RD : 8;
+
+      const curCellX = Math.floor(px / (MACRO_L * s));
+      const curCellZ = Math.floor(pz / (MACRO_L * s));
+      const maxAttachDist = (rd + 1) * cs * s;
+      const cullDist = (rd + 2) * cs * s;
+
+      // Zkoumání 3x3 okolních macro-cells
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const poi = this.getPoiForCell(curCellX + dx, curCellZ + dz);
+          if (!poi) continue;
+
+          const d = Math.hypot(px - poi.wx, pz - poi.wz);
+
+          // 1. Automatické odhalení při přiblížení na 36 metrů
+          if (d <= 36.0 && !this.isDiscovered(poi.id)) {
+            this.discoverPOI(poi.id);
+          }
+
+          // 2. Připojení / Odpojení 3D modelu
+          if (d <= maxAttachDist) {
+            if (!poi.group) this.buildPOIMesh(poi);
+            if (poi.group && !poi.attached && typeof scene !== 'undefined' && scene) {
+              scene.add(poi.group);
+              poi.attached = true;
+
+              // Automatický spawn strážců POI (Goblins v táborech, Kostlivci v ruinách, Vlci u památek)
+              const em = (typeof window !== 'undefined' && window.EntityManager) || (typeof EntityManager !== 'undefined' ? EntityManager : null);
+              if (!poi.guardiansSpawned && em && typeof em.spawnCreature === 'function') {
+                poi.guardiansSpawned = true;
+                if (poi.type === 'Camp') {
+                  em.spawnCreature('Goblin', poi.wx + 2.5, poi.wy, poi.wz + 1.5, 1);
+                  em.spawnCreature('Goblin', poi.wx - 2.0, poi.wy, poi.wz - 2.0, 1);
+                } else if (poi.type === 'Ruins') {
+                  em.spawnCreature('Skeleton', poi.wx + 1.8, poi.wy, poi.wz + 2.0, 1);
+                  em.spawnCreature('Skeleton', poi.wx - 1.5, poi.wy, poi.wz - 1.8, 2);
+                } else if (poi.type === 'Landmark') {
+                  em.spawnCreature('Wolf', poi.wx + 3.0, poi.wy, poi.wz + 3.0, 1);
+                }
+              }
+            }
+          } else if (d > cullDist && poi.attached && poi.group && typeof scene !== 'undefined' && scene) {
+            scene.remove(poi.group);
+            poi.attached = false;
+          }
+
+          // 3. Per-frame animace připojených POI
+          if (poi.attached) {
+            if (poi.crystalGroup) {
+              poi.crystalGroup.rotation.y += dt * 1.5;
+              poi.crystalGroup.position.y = poi.crystalBaseY + Math.sin(now * 0.003) * 0.12;
+            }
+            if (poi.fireLight) {
+              poi.fireLight.intensity = poi.baseLightIntensity + Math.sin(now * 0.015) * 0.18 + (Math.random() - 0.5) * 0.05;
+            }
+            if (poi.lidGroup && Math.abs(poi.openAngle - poi.targetAngle) > 0.01) {
+              if (typeof THREE !== 'undefined' && THREE.MathUtils) {
+                poi.openAngle = THREE.MathUtils.lerp(poi.openAngle, poi.targetAngle, Math.min(1, dt * 8));
+              } else {
+                poi.openAngle = poi.targetAngle;
+              }
+              poi.lidGroup.rotation.x = -poi.openAngle;
+            }
+          }
+        }
+      }
+    },
+
+    interactClosest: function (px, py, pz) {
+      const s = (typeof S !== 'undefined') ? S : 0.5;
+      const curCellX = Math.floor(px / (MACRO_L * s));
+      const curCellZ = Math.floor(pz / (MACRO_L * s));
+
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const poi = this.getPoiForCell(curCellX + dx, curCellZ + dz);
+          if (!poi || !poi.attached) continue;
+
+          const d = Math.hypot(px - poi.wx, pz - poi.wz);
+          if (d <= 3.8) {
+            if ((poi.type === 'Chest' || poi.type === 'Ruins' || poi.type === 'Camp') && !poi.opened) {
+              poi.opened = true;
+              poi.targetAngle = 1.30;
+              this.openedChests.add(poi.id);
+              this.save();
+
+              if (typeof toast === 'function') {
+                toast(`🎁 Otevřena ${poi.displayName}! (+80 XP, Zlato & Předměty)`);
+              }
+              if (typeof window !== 'undefined' && typeof window.addPlayerXP === 'function') {
+                window.addPlayerXP(80, poi.displayName);
+              } else if (typeof P !== 'undefined') {
+                P.xp = (P.xp || 0) + 80;
+                if (typeof window.checkPlayerLevelUp === 'function') window.checkPlayerLevelUp();
+              }
+
+              // Odměny do inventáře
+              if (typeof INV !== 'undefined' && Array.isArray(INV)) {
+                const potion = INV.find(it => it.id === 'potion_hp');
+                if (potion) potion.count = (potion.count || 0) + 2;
+                const iron = INV.find(it => it.id === 'ore_iron');
+                if (iron) iron.count = (iron.count || 0) + 3;
+                const gold = INV.find(it => it.id === 'coin_gold' || it.id === 'gold');
+                if (gold) gold.count = (gold.count || 0) + 40;
+              }
+              return true;
+            } else if (poi.type === 'Shrine') {
+              if (typeof P !== 'undefined' && typeof P.maxHp === 'number') {
+                P.hp = P.maxHp;
+                P.stamina = P.maxStamina || 100;
+              }
+              if (typeof G !== 'undefined') {
+                G.hp = (typeof P !== 'undefined' ? P.maxHp : 100);
+                G.st = 100;
+              }
+              if (poi.crystalLight) {
+                poi.crystalLight.intensity = 3.5;
+                setTimeout(() => { if (poi.crystalLight) poi.crystalLight.intensity = 1.4; }, 1200);
+              }
+              if (typeof toast === 'function') {
+                toast(`✨ Prastará svatyně: Plné zdraví a stamina obnovena!`);
+              }
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+  };
+
+  POIManager.init();
+
+  if (typeof window !== 'undefined') {
+    window.POIManager = POIManager;
+  }
+})();
+

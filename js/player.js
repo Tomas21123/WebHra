@@ -42,12 +42,244 @@ const safeSpawn = findSafeSpawnCoords();
 let SPX = safeSpawn.x;
 let SPY = safeSpawn.y;
 let SPZ = safeSpawn.z;
-const P = { x: SPX, y: SPY, z: SPZ, vx: 0, vy: 0, vz: 0, ground: false, moveX: 0, moveZ: 0 };
+const P = {
+  x: SPX, y: SPY, z: SPZ,
+  vx: 0, vy: 0, vz: 0,
+  ground: false, moveX: 0, moveZ: 0,
+  inWater: false, isSwimming: false, isRolling: false,
+  level: 1,
+  xp: 0,
+  xpNext: 100,
+  skillPoints: 0,
+  hp: 100,
+  maxHp: 100,
+  stamina: 100,
+  maxStamina: 100,
+  baseStats: {
+    maxHp: 100,
+    maxStamina: 100,
+    attackPower: 10,
+    critChance: 0.05,
+    moveSpeed: 6.0
+  }
+};
+if (typeof window !== 'undefined') {
+  window.P = P;
+}
+
+function calculateXpNext(level) {
+  const l = Math.max(1, Math.floor(level || 1));
+  return Math.floor(100 * Math.pow(l, 1.5));
+}
+if (typeof window !== 'undefined') {
+  window.calculateXpNext = calculateXpNext;
+  window.getPlayerLevel = () => P.level || 1;
+}
+
+function showLevelUpBanner(newLevel, levelsGained = 1) {
+  const banner = document.getElementById('levelUpBanner');
+  const titleEl = document.getElementById('lubTitle');
+  const statsEl = document.getElementById('lubStats');
+  if (banner) {
+    if (titleEl) titleEl.textContent = `ÚROVEŇ ${newLevel} DOSAŽENA!`;
+    if (statsEl) {
+      statsEl.textContent = `+${10 * levelsGained} Max HP · +${5 * levelsGained} Výdrž · +${2 * levelsGained} Útok`;
+    }
+    banner.classList.add('active');
+    clearTimeout(banner._hideTimer);
+    banner._hideTimer = setTimeout(() => {
+      banner.classList.remove('active');
+    }, 3600);
+  } else if (typeof toast === 'function') {
+    toast(`🌟 Úroveň zvýšena na Lv. ${newLevel}! (+${10 * levelsGained} HP, +${2 * levelsGained} Útok)`);
+  }
+}
+if (typeof window !== 'undefined') {
+  window.showLevelUpBanner = showLevelUpBanner;
+}
+
+function spawnLevelUpParticles(x, y, z) {
+  if (typeof scene === 'undefined' || typeof THREE === 'undefined') return;
+  const group = new THREE.Group();
+  group.position.set(x, y + 0.8, z);
+  const colors = [0xfbbf24, 0x34d399, 0x38bdf8, 0xfef08a];
+  const particles = [];
+  for (let i = 0; i < 18; i++) {
+    const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0.95 });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), mat);
+    const angle = (i / 18) * Math.PI * 2;
+    const speed = 1.6 + Math.random() * 1.4;
+    particles.push({
+      mesh,
+      vx: Math.cos(angle) * speed,
+      vy: 2.2 + Math.random() * 2.0,
+      vz: Math.sin(angle) * speed
+    });
+    group.add(mesh);
+  }
+  scene.add(group);
+  let elapsed = 0;
+  const iv = setInterval(() => {
+    elapsed += 0.03;
+    for (const pt of particles) {
+      pt.mesh.position.x += pt.vx * 0.03;
+      pt.mesh.position.y += pt.vy * 0.03;
+      pt.mesh.position.z += pt.vz * 0.03;
+      pt.vy -= 4.5 * 0.03;
+      pt.mesh.material.opacity = Math.max(0, 1 - elapsed / 1.1);
+    }
+    if (elapsed >= 1.1) {
+      clearInterval(iv);
+      scene.remove(group);
+    }
+  }, 30);
+}
+if (typeof window !== 'undefined') {
+  window.spawnLevelUpParticles = spawnLevelUpParticles;
+}
+
+function checkPlayerLevelUp() {
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : P;
+  if (!pObj) return false;
+  if (typeof pObj.level !== 'number' || pObj.level < 1) pObj.level = 1;
+  if (typeof pObj.xp !== 'number' || pObj.xp < 0) pObj.xp = 0;
+  if (typeof pObj.xpNext !== 'number' || pObj.xpNext <= 0) {
+    pObj.xpNext = calculateXpNext(pObj.level);
+  }
+  if (!pObj.baseStats) {
+    pObj.baseStats = { maxHp: 100, maxStamina: 100, attackPower: 10, critChance: 0.05, moveSpeed: 6.0 };
+  }
+
+  const growth = Object.assign({
+    maxHp: 10,
+    maxStamina: 5,
+    attackPower: 2,
+    critChance: 0.005,
+    moveSpeed: 0.05
+  }, (typeof window !== 'undefined' && window.RPG_STAT_GROWTH) ? window.RPG_STAT_GROWTH : {});
+
+  let leveledUp = false;
+  const startLevel = pObj.level;
+
+  while (pObj.xp >= pObj.xpNext) {
+    pObj.xp -= pObj.xpNext;
+    pObj.level += 1;
+    pObj.xpNext = calculateXpNext(pObj.level);
+
+    pObj.baseStats.maxHp += growth.maxHp;
+    pObj.baseStats.maxStamina += growth.maxStamina;
+    pObj.baseStats.attackPower += growth.attackPower;
+    pObj.baseStats.critChance = parseFloat((pObj.baseStats.critChance + growth.critChance).toFixed(4));
+    pObj.baseStats.moveSpeed = parseFloat((pObj.baseStats.moveSpeed + growth.moveSpeed).toFixed(3));
+    pObj.skillPoints = (pObj.skillPoints || 0) + 1;
+
+    const bonusHp = (typeof window !== 'undefined' && typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
+    pObj.maxHp = pObj.baseStats.maxHp + bonusHp;
+    pObj.maxStamina = pObj.baseStats.maxStamina;
+    pObj.hp = pObj.maxHp;
+    pObj.stamina = pObj.maxStamina;
+
+    if (typeof G !== 'undefined') {
+      G.hp = pObj.maxHp;
+      G.st = pObj.maxStamina;
+      G.tired = 0;
+      G.o2 = 100;
+    }
+    leveledUp = true;
+  }
+
+  if (leveledUp) {
+    const gained = pObj.level - startLevel;
+    if (typeof window !== 'undefined' && typeof window.playLevelUpSound === 'function') {
+      window.playLevelUpSound();
+    } else if (typeof window !== 'undefined' && typeof window.playDiscoverySound === 'function') {
+      window.playDiscoverySound();
+    }
+    spawnLevelUpParticles(pObj.x, pObj.y, pObj.z);
+    showLevelUpBanner(pObj.level, gained);
+    if (typeof window !== 'undefined' && window.GameStorage && typeof window.GameStorage.savePlayerRPGState === 'function') {
+      window.GameStorage.savePlayerRPGState();
+    }
+    if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.sendPlayerTransform === 'function') {
+      window.networkManager.sendPlayerTransform();
+    }
+  }
+  if (typeof ui === 'function') ui();
+  return leveledUp;
+}
+
+function addPlayerXP(amount, source = 'combat') {
+  const num = Number(amount);
+  if (!num || isNaN(num) || num <= 0) return false;
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : P;
+  if (!pObj) return false;
+  pObj.xp = (pObj.xp || 0) + Math.round(num);
+  const leveled = checkPlayerLevelUp();
+  if (!leveled && typeof window !== 'undefined' && window.GameStorage && typeof window.GameStorage.savePlayerRPGState === 'function') {
+    window.GameStorage.savePlayerRPGState();
+  }
+  if (typeof ui === 'function') ui();
+  return leveled;
+}
+
+if (typeof window !== 'undefined') {
+  window.checkPlayerLevelUp = checkPlayerLevelUp;
+  window.addPlayerXP = addPlayerXP;
+}
+
+// Rozšíření HUD ui() o Level Badge, XP Bar a škálované životy/staminu
+const _origUi = (typeof ui === 'function') ? ui : null;
+ui = function () {
+  const bonusHp = (typeof window !== 'undefined' && typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
+  const baseMaxHp = (P.baseStats && P.baseStats.maxHp) ? P.baseStats.maxHp : 100;
+  const baseMaxSt = (P.baseStats && P.baseStats.maxStamina) ? P.baseStats.maxStamina : 100;
+  P.maxHp = baseMaxHp + bonusHp;
+  P.maxStamina = baseMaxSt;
+
+  if (typeof G !== 'undefined') {
+    if (G.hp > P.maxHp) G.hp = P.maxHp;
+    if (G.st > P.maxStamina) G.st = P.maxStamina;
+    P.hp = G.hp;
+    P.stamina = G.st;
+  }
+
+  const hpPct = Math.max(0, Math.min(100, (G.hp / (P.maxHp || 100)) * 100));
+  const stPct = Math.max(0, Math.min(100, (G.st / (P.maxStamina || 100)) * 100));
+  if (typeof bH !== 'undefined' && bH) bH.style.width = hpPct + '%';
+  if (typeof bS !== 'undefined' && bS) bS.style.width = stPct + '%';
+  if (typeof bHt !== 'undefined' && bHt) bHt.textContent = `${Math.ceil(G.hp)} / ${P.maxHp}`;
+  if (typeof bSt !== 'undefined' && bSt) bSt.textContent = `${Math.ceil(G.st)} / ${P.maxStamina}`;
+
+  if (typeof bOBox !== 'undefined' && bOBox) {
+    if (G.o2 < 99.5) {
+      bOBox.hidden = false;
+      if (typeof bO !== 'undefined' && bO) bO.style.width = Math.max(0, G.o2) + '%';
+      if (typeof bOt !== 'undefined' && bOt) bOt.textContent = Math.max(0, Math.ceil(G.o2));
+    } else {
+      bOBox.hidden = true;
+    }
+  }
+
+  const lvlBadge = document.getElementById('hudLevelBadge');
+  if (lvlBadge) lvlBadge.textContent = `Lv. ${P.level || 1}`;
+  const xpFill = document.getElementById('xpBarFill');
+  const xpText = document.getElementById('xpBarText');
+  const xpNext = P.xpNext || calculateXpNext(P.level || 1);
+  const xpPct = Math.max(0, Math.min(100, ((P.xp || 0) / xpNext) * 100));
+  if (xpFill) xpFill.style.width = xpPct + '%';
+  if (xpText) xpText.textContent = `${P.xp || 0} / ${xpNext} XP`;
+};
+if (typeof window !== 'undefined') {
+  window.ui = ui;
+  if (window.GameStorage && typeof window.GameStorage.applyPlayerRPGState === 'function') {
+    window.GameStorage.applyPlayerRPGState(P);
+  }
+}
 
 let yaw = 0, pitch = 0.45, dist = 6, face = 0, phase = 0;
 let isSprinting = false, airBlend = 0, landingSquash = 0, wasGround = true;
 let attacking = false, attackTime = 0, attackDuration = 0.26, attackCombo = 0;
-let autoJumpTimer = 0, waterExitTimer = 0;
+let autoJumpTimer = 0, waterExitTimer = 0, waterJumpTimer = 0;
 
 // Elden Ring / Souls-like Dodge Roll (Kotrmelec)
 let isRolling = false;
@@ -90,12 +322,14 @@ function triggerRoll() {
 }
 
 function checkPvPHit(whichHand = 'dominant') {
-  if (!window.networkManager || !window.networkManager.remotePlayers || window.networkManager.remotePlayers.size === 0) {
-    return;
-  }
-
   const reach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach(whichHand) : 2.4;
   const atkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage(whichHand) : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
+
+  const weaponId = (whichHand === 'secondary')
+    ? (typeof getEquippedOffHandId === 'function' ? getEquippedOffHandId() : null)
+    : ((typeof getEquippedMainHandId === 'function' ? getEquippedMainHandId() : null) || (typeof heldId !== 'undefined' ? heldId : null));
+  const isCleave = (weaponId === 'greatsword' || weaponId === 'battleaxe');
+  const maxTargets = isCleave ? 3 : 1;
 
   // Směr pohledu hráče
   const cp = Math.cos(pitch);
@@ -107,48 +341,89 @@ function checkPvPHit(whichHand = 'dominant') {
   const eyeY = (P.renderY ?? P.y) + 1.45;
   const eyeZ = P.z;
 
-  let bestTarget = null;
-  let bestScore = -Infinity;
+  const candidateTargets = [];
 
-  for (const [id, p] of window.networkManager.remotePlayers) {
-    if (!p.group) continue;
-    const targetX = p.group.position.x;
-    const targetY = p.group.position.y + 0.9; // střed těla cíle
-    const targetZ = p.group.position.z;
+  // 1. Kontrola PvE nestvůr (Cube World PvE systém)
+  if (window.EntityManager && Array.isArray(window.EntityManager.creatures)) {
+    for (const creature of window.EntityManager.creatures) {
+      if (!creature || creature.state === 'Dead' || creature.hp <= 0) continue;
+      const targetX = creature.x;
+      const targetY = creature.y + (creature.height || 1.0) * 0.5;
+      const targetZ = creature.z;
 
-    const dx = targetX - eyeX;
-    const dy = targetY - eyeY;
-    const dz = targetZ - eyeZ;
-    const dist = Math.hypot(dx, dy, dz);
+      const dx = targetX - eyeX;
+      const dy = targetY - eyeY;
+      const dz = targetZ - eyeZ;
+      const dist = Math.hypot(dx, dy, dz);
+      const hitboxR = creature.hitboxRadius || 0.75;
 
-    // Hitbox postavy: poloměr 0.75m, dosah zbraně
-    if (dist <= reach + 0.75) {
-      const dot = (dx * fwdX + dy * fwdY + dz * fwdZ) / (dist || 1);
-      const minDot = dist < 1.2 ? 0.15 : 0.38;
-      if (dot > minDot) {
-        const score = dot * 10 - dist;
-        if (score > bestScore) {
-          bestScore = score;
-          bestTarget = { id, p, dist, dx, dy, dz };
+      if (dist <= reach + hitboxR) {
+        const dot = (dx * fwdX + dy * fwdY + dz * fwdZ) / (dist || 1);
+        const minDot = dist < 1.2 ? 0.15 : (isCleave ? 0.25 : 0.38);
+        if (dot > minDot) {
+          const score = dot * 10 - dist;
+          candidateTargets.push({ type: 'creature', target: creature, dist, score, dx, dy, dz });
         }
       }
     }
   }
 
-  if (bestTarget) {
-    const kLen = Math.hypot(bestTarget.dx, bestTarget.dz) || 1;
+  // 2. Kontrola ostatních hráčů (Multiplayer PvP)
+  if (window.networkManager && window.networkManager.remotePlayers && window.networkManager.remotePlayers.size > 0) {
+    for (const [id, p] of window.networkManager.remotePlayers) {
+      if (!p.group) continue;
+      const targetX = p.group.position.x;
+      const targetY = p.group.position.y + 0.9; // střed těla cíle
+      const targetZ = p.group.position.z;
+
+      const dx = targetX - eyeX;
+      const dy = targetY - eyeY;
+      const dz = targetZ - eyeZ;
+      const dist = Math.hypot(dx, dy, dz);
+
+      if (dist <= reach + 0.75) {
+        const dot = (dx * fwdX + dy * fwdY + dz * fwdZ) / (dist || 1);
+        const minDot = dist < 1.2 ? 0.15 : (isCleave ? 0.25 : 0.38);
+        if (dot > minDot) {
+          const score = dot * 10 - dist;
+          candidateTargets.push({ type: 'player', id, p, dist, score, dx, dy, dz });
+        }
+      }
+    }
+  }
+
+  if (candidateTargets.length === 0) return;
+
+  // Seřazení cílů podle zacílení
+  candidateTargets.sort((a, b) => b.score - a.score);
+  const targetsToHit = candidateTargets.slice(0, maxTargets);
+
+  for (const cand of targetsToHit) {
+    const kLen = Math.hypot(cand.dx, cand.dz) || 1;
+    const kbMult = (atkInfo.isCrit ? 1.5 : 1.0) * (weaponId === 'mace' || weaponId === 'hammer' ? 1.35 : 1.0);
     const knockback = {
-      x: (bestTarget.dx / kLen) * (atkInfo.isCrit ? 1.5 : 1.0),
-      z: (bestTarget.dz / kLen) * (atkInfo.isCrit ? 1.5 : 1.0)
+      x: (cand.dx / kLen) * kbMult,
+      z: (cand.dz / kLen) * kbMult
     };
 
-    window.networkManager.sendPlayerHit(bestTarget.id, atkInfo.damage, knockback, atkInfo.isCrit, atkInfo.weaponName);
-    if (typeof toast === 'function') {
-      const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
-      toast(`Zásah do hráče ${bestTarget.p.nickname || 'Přítel'}: -${atkInfo.damage} HP${critText}`);
+    if (cand.type === 'creature') {
+      cand.target.takeDamage(atkInfo.damage, knockback, atkInfo.isCrit, 'player');
+      if (typeof toast === 'function') {
+        const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
+        toast(`Zásah do ${cand.target.name || 'nestvůry'}: -${atkInfo.damage} HP${critText}`);
+      }
+    } else if (cand.type === 'player') {
+      if (window.networkManager && typeof window.networkManager.sendPlayerHit === 'function') {
+        window.networkManager.sendPlayerHit(cand.id, atkInfo.damage, knockback, atkInfo.isCrit, atkInfo.weaponName);
+      }
+      if (typeof toast === 'function') {
+        const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
+        toast(`Zásah do hráče ${cand.p.nickname || 'Přítel'}: -${atkInfo.damage} HP${critText}`);
+      }
     }
   }
 }
+
 
 let activeAttackHand = 'dominant'; // 'dominant' nebo 'secondary'
 window.activeAttackHand = activeAttackHand;
@@ -171,16 +446,19 @@ function handleHandAction(whichHand) {
   if (item && item.subcat === 'shield') {
     isPlayerBlocking = true;
     blockingHand = whichHand;
+    P.isBlocking = true;
     return;
   }
 
-  // 2. Pokud je v této ruce spotřební lektvar
-  if (item && item.id === 'potion_hp') {
-    if (G.hp < 100) {
-      G.hp = Math.min(100, G.hp + 40);
+  // 2. Pokud je v této ruce spotřební lektvar nebo jídlo
+  if (item && (item.subcat === 'consumable' || item.healHp || item.restoreStamina || item.buffStrength || item.buffSpeed || item.id === 'potion_hp' || item.id === 'apple' || (item.id && item.id.startsWith('potion_')))) {
+    if (typeof window !== 'undefined' && typeof window.useConsumableItem === 'function') {
+      window.useConsumableItem(item);
+    } else if (G.hp < (P.maxHp || 100)) {
+      G.hp = Math.min(P.maxHp || 100, G.hp + (item.healHp || 40));
       if (typeof ui === 'function') ui();
       if (typeof playAttackSound === 'function') playAttackSound('punch');
-      if (typeof toast === 'function') toast('🧪 Vypit léčivý lektvar (+40 HP)');
+      if (typeof toast === 'function') toast(`🧪 Vypit ${item.name || 'léčivý lektvar'} (+${item.healHp || 40} HP)`);
     }
     return;
   }
@@ -193,7 +471,251 @@ function handleHandRelease(whichHand) {
   if (blockingHand === whichHand) {
     isPlayerBlocking = false;
     blockingHand = null;
+    P.isBlocking = false;
   }
+}
+
+// ---------- Správce 3D Projektilů (Luky, Ohnivé a Ledové Hole - F7) ----------
+const ProjectileManager = {
+  projectiles: [],
+  nextId: 1,
+
+  createMesh(type) {
+    if (typeof THREE === 'undefined') return null;
+    const grp = new THREE.Group();
+    if (type === 'arrow') {
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.72, 6),
+        new THREE.MeshLambertMaterial({ color: 0x8a5a30 })
+      );
+      shaft.rotation.x = Math.PI / 2;
+      grp.add(shaft);
+      const tip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.045, 0.14, 4),
+        new THREE.MeshLambertMaterial({ color: 0xd5dbe6 })
+      );
+      tip.rotation.x = Math.PI / 2;
+      tip.position.z = 0.4;
+      grp.add(tip);
+    } else if (type === 'fireball') {
+      const core = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.22, 1),
+        new THREE.MeshBasicMaterial({ color: 0xff4500 })
+      );
+      const aura = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.32, 1),
+        new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.55 })
+      );
+      grp.add(core);
+      grp.add(aura);
+    } else if (type === 'frost') {
+      const shard = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.24, 0),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      shard.scale.set(0.7, 0.7, 1.6);
+      grp.add(shard);
+    }
+    return grp;
+  },
+
+  spawn(cfg) {
+    const type = cfg.type || 'arrow';
+    const mesh = this.createMesh(type);
+    if (mesh && typeof scene !== 'undefined') {
+      mesh.position.set(cfg.x, cfg.y, cfg.z);
+      scene.add(mesh);
+    }
+    const proj = {
+      id: cfg.id || (this.nextId++),
+      type,
+      owner: cfg.owner || 'player',
+      ownerId: cfg.ownerId || null,
+      x: cfg.x,
+      y: cfg.y,
+      z: cfg.z,
+      vx: cfg.vx,
+      vy: cfg.vy,
+      vz: cfg.vz,
+      gravity: cfg.gravity !== undefined ? cfg.gravity : (type === 'arrow' ? -9.81 : 0),
+      damage: cfg.damage || 28,
+      isCrit: !!cfg.isCrit,
+      weaponName: cfg.weaponName || 'Projektil',
+      splashRadius: cfg.splashRadius || (type === 'fireball' ? 3.2 : 0),
+      age: 0,
+      maxAge: cfg.maxAge || 3.2,
+      stuck: false,
+      mesh
+    };
+    this.projectiles.push(proj);
+    if (typeof window !== 'undefined' && window.EntityManager && Array.isArray(window.EntityManager.projectiles)) {
+      window.EntityManager.projectiles = this.projectiles;
+    }
+    return proj;
+  },
+
+  spawnFromPlayer(weaponId, whichHand = 'dominant') {
+    const atkInfo = (typeof getPlayerAttackDamage === 'function')
+      ? getPlayerAttackDamage(whichHand)
+      : { damage: 30, isCrit: false, weaponName: 'Projektil' };
+
+    const cp = Math.cos(pitch);
+    const dirX = -Math.sin(yaw) * cp;
+    const dirY = -Math.sin(pitch);
+    const dirZ = -Math.cos(yaw) * cp;
+
+    const type = weaponId === 'staff_fire' ? 'fireball' : (weaponId === 'staff_frost' ? 'frost' : 'arrow');
+    const speed = type === 'arrow' ? 42.0 : (type === 'frost' ? 36.0 : 32.0);
+    const startX = P.x + dirX * 0.65;
+    const startY = (P.renderY ?? P.y) + 1.42 + dirY * 0.45;
+    const startZ = P.z + dirZ * 0.65;
+
+    const proj = this.spawn({
+      type,
+      owner: 'player',
+      x: startX,
+      y: startY,
+      z: startZ,
+      vx: dirX * speed,
+      vy: dirY * speed + (type === 'arrow' ? 1.6 : 0),
+      vz: dirZ * speed,
+      damage: atkInfo.damage,
+      isCrit: atkInfo.isCrit,
+      weaponName: atkInfo.weaponName
+    });
+
+    if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.sendProjectileSpawn === 'function') {
+      window.networkManager.sendProjectileSpawn(proj);
+    }
+    return proj;
+  },
+
+  detonateEffect(x, y, z, type) {
+    if (typeof scene === 'undefined' || typeof THREE === 'undefined') return;
+    const col = type === 'fireball' ? 0xff5500 : (type === 'frost' ? 0x38bdf8 : 0xe2e8f0);
+    const radius = type === 'fireball' ? 1.8 : 0.7;
+    const sphere = new THREE.Mesh(
+      new THREE.OctahedronGeometry(radius, 1),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 })
+    );
+    sphere.position.set(x, y, z);
+    scene.add(sphere);
+    let t = 0;
+    const iv = setInterval(() => {
+      t += 0.03;
+      sphere.scale.setScalar(1 + t * 4.5);
+      sphere.material.opacity = Math.max(0, 0.75 - t * 3.2);
+      if (t >= 0.24) {
+        clearInterval(iv);
+        scene.remove(sphere);
+      }
+    }, 25);
+  },
+
+  applyImpact(proj, hitX, hitY, hitZ, directCreature = null, directPlayer = null) {
+    this.detonateEffect(hitX, hitY, hitZ, proj.type);
+    const kLen = Math.hypot(proj.vx, proj.vz) || 1;
+    const kb = { x: (proj.vx / kLen) * 1.4, z: (proj.vz / kLen) * 1.4 };
+
+    if (proj.type === 'fireball' && proj.splashRadius > 0 && window.EntityManager && Array.isArray(window.EntityManager.creatures)) {
+      for (const c of window.EntityManager.creatures) {
+        if (!c || c.state === 'Dead' || c.hp <= 0) continue;
+        const d = Math.hypot(c.x - hitX, (c.y + 0.8) - hitY, c.z - hitZ);
+        if (d <= proj.splashRadius) {
+          const mult = Math.max(0.5, 1 - (d / proj.splashRadius) * 0.5);
+          const splashDmg = Math.max(1, Math.round(proj.damage * mult));
+          c.takeDamage(splashDmg, kb, proj.isCrit, 'player');
+          if (typeof toast === 'function' && c === directCreature) {
+            toast(`🔥 Ohnivá exploze zasáhla ${c.name}: -${splashDmg} HP!`);
+          }
+        }
+      }
+    } else if (directCreature) {
+      directCreature.takeDamage(proj.damage, kb, proj.isCrit, 'player');
+      if (proj.type === 'frost') {
+        directCreature._frostSlowUntil = Date.now() + 4000;
+        if (typeof toast === 'function') {
+          toast(`❄️ Mrazivý zásah do ${directCreature.name}: -${proj.damage} HP (Zpomalení -40%)`);
+        }
+      } else if (typeof toast === 'function') {
+        toast(`🏹 Zásah z dálky do ${directCreature.name}: -${proj.damage} HP${proj.isCrit ? ' 💥 KRIT!' : ''}`);
+      }
+    }
+
+    if (directPlayer && proj.owner === 'player') {
+      if (window.networkManager && typeof window.networkManager.sendPlayerHit === 'function') {
+        window.networkManager.sendPlayerHit(directPlayer.id, proj.damage, kb, proj.isCrit, proj.weaponName);
+      }
+      if (typeof toast === 'function') {
+        toast(`🏹 Zásah do hráče ${directPlayer.p.nickname || 'Přítel'}: -${proj.damage} HP`);
+      }
+    }
+  },
+
+  update(dt) {
+    if (!this.projectiles.length) return;
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      p.age += dt;
+      if (p.age >= p.maxAge) {
+        if (p.mesh && typeof scene !== 'undefined') scene.remove(p.mesh);
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+      if (p.stuck) continue;
+
+      p.vy += p.gravity * dt;
+      const nx = p.x + p.vx * dt;
+      const ny = p.y + p.vy * dt;
+      const nz = p.z + p.vz * dt;
+
+      // Kontrola zásahu PvE bytostí
+      let hitCreature = null;
+      if (p.owner === 'player' && window.EntityManager && Array.isArray(window.EntityManager.creatures)) {
+        for (const c of window.EntityManager.creatures) {
+          if (!c || c.state === 'Dead' || c.hp <= 0) continue;
+          const cy = c.y + (c.height || 1.0) * 0.5;
+          const d = Math.hypot(c.x - nx, cy - ny, c.z - nz);
+          if (d <= (c.hitboxRadius || 0.85) + 0.35) {
+            hitCreature = c;
+            break;
+          }
+        }
+      }
+
+      // Kontrola zásahu vzdálených hráčů
+      let hitRemote = null;
+      if (!hitCreature && p.owner === 'player' && window.networkManager && window.networkManager.remotePlayers) {
+        for (const [id, rp] of window.networkManager.remotePlayers) {
+          if (!rp.group) continue;
+          const d = Math.hypot(rp.group.position.x - nx, (rp.group.position.y + 0.9) - ny, rp.group.position.z - nz);
+          if (d <= 0.95) {
+            hitRemote = { id, p: rp };
+            break;
+          }
+        }
+      }
+
+      // Kontrola kolize s pevným terénem
+      const hitSolid = (typeof solid === 'function') ? solid(nx, ny, nz) : false;
+
+      if (hitCreature || hitRemote || hitSolid) {
+        this.applyImpact(p, nx, ny, nz, hitCreature, hitRemote);
+        if (p.mesh && typeof scene !== 'undefined') scene.remove(p.mesh);
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
+      p.x = nx; p.y = ny; p.z = nz;
+      if (p.mesh) {
+        p.mesh.position.set(p.x, p.y, p.z);
+        p.mesh.rotation.y = Math.atan2(p.vx, p.vz);
+      }
+    }
+  }
+};
+if (typeof window !== 'undefined') {
+  window.ProjectileManager = ProjectileManager;
 }
 
 function triggerHandAttack(whichHand) {
@@ -223,6 +745,11 @@ function triggerHandAttack(whichHand) {
     attackDuration = 0.26; playAttackSound('slash');
   }
 
+  // Střelné a magické zbraně vystřelují 3D projektil
+  if (itId === 'bow' || itId === 'staff_fire' || itId === 'staff_frost') {
+    ProjectileManager.spawnFromPlayer(itId, whichHand);
+  }
+
   setTimeout(() => {
     checkPvPHit(whichHand);
   }, Math.min(110, Math.round(attackDuration * 320)));
@@ -250,7 +777,7 @@ function initPlayerControls(cv) {
       handleHandAction('dominant');
       if (!document.pointerLockElement) {
         drag = true;
-        try { cv.requestPointerLock(); } catch (err) {}
+        try { cv.requestPointerLock(); } catch (err) { }
       }
     } else if (e.button === 2) {
       // PRAVÉ TLAČÍTKO MYŠI (RMB) = SEKUNDÁRNÍ RUKA
@@ -279,11 +806,21 @@ function initPlayerControls(cv) {
 }
 
 // Kolize a fyzikální simulace
-const HW = 0.3, HT = 1.8;
+const HW = 0.3;
+const STANDING_HT = 1.8;
+const SWIMMING_HT = 0.7;
+const ROLLING_HT = 0.85;
 
-function hits(x, y, z) {
+function getPlayerHitboxHeight() {
+  if (P.isSwimming) return SWIMMING_HT;
+  if (isRolling) return ROLLING_HT;
+  return STANDING_HT;
+}
+
+function hits(x, y, z, customH) {
+  const ht = (customH !== undefined) ? customH : getPlayerHitboxHeight();
   for (let i = Math.floor((x - HW) / S); i <= Math.floor((x + HW) / S); i++) {
-    for (let j = Math.floor(y / S); j <= Math.floor((y + HT - 0.01) / S); j++) {
+    for (let j = Math.floor(y / S); j <= Math.floor((y + ht - 0.01) / S); j++) {
       for (let k = Math.floor((z - HW) / S); k <= Math.floor((z + HW) / S); k++) {
         if (vs(i, j, k)) return true;
       }
@@ -293,6 +830,9 @@ function hits(x, y, z) {
 }
 
 function physics(dt) {
+  if (autoJumpTimer > 0) autoJumpTimer -= dt;
+  if (waterJumpTimer > 0) waterJumpTimer -= dt;
+
   const wb = y => block(Math.floor(P.x / S), Math.floor(y / S), Math.floor(P.z / S));
   const lq = b => b === 5 || b === 11;
   const inW = lq(wb(P.y + 0.3)) || lq(wb(P.y + 0.9));
@@ -343,6 +883,13 @@ function physics(dt) {
   P.moveX = fx;
   P.moveZ = fz;
 
+  const isMovingInput = (fx !== 0 || fz !== 0);
+  const isMovingFast = Math.hypot(P.vx, P.vz) > 0.12;
+
+  // Hráč plave (vodorovná plavecká animace i nízký hitbox 0.7m), pokud je ve vodě, pohybuje se a nestojí nohama pevně na dně
+  const isSwimming = inW && (!P.ground || (waterTopY > -900 && P.y > waterTopY - 0.75)) && (isMovingInput || isMovingFast);
+  P.isSwimming = isSwimming;
+
   // Kotrmelec (Elden Ring Dodge Roll) - priorita pohybu
   if (isRolling) {
     rollTimer += dt;
@@ -369,28 +916,34 @@ function physics(dt) {
       face = Math.atan2(rollDirX, rollDirZ);
     }
   } else {
-    const sprint = (keys.ShiftLeft || keys.ShiftRight) && (fx || fz) && G.st > 0 && !G.tired;
+    const sprint = (keys.ShiftLeft || keys.ShiftRight) && (fx || fz) && G.st > 0 && !G.tired && !isPlayerBlocking;
     isSprinting = sprint;
 
+    const maxSt = P.maxStamina || 100;
     if (sprint) {
       G.st = Math.max(0, G.st - 12 * dt);
       G.sd = 0;
       if (G.st <= 0) G.tired = 1;
     } else {
       G.sd += dt;
-      if (G.sd > 0.7) G.st = Math.min(100, G.st + 20 * dt);
+      if (G.sd > 0.7) G.st = Math.min(maxSt, G.st + 20 * dt);
       if (G.tired && G.st > 25) G.tired = 0;
     }
 
-    // Rychlost: ve vodě (ani při skákání po hladině) nelze běhat rychlostí 9 m/s!
+    // Rychlost: ve vodě plavecká rychlost + bonusy z výbavy, lektvaru hbitosti a úrovně
     const bonusSpd = (typeof getPlayerBonusSpeed === 'function') ? getPlayerBonusSpeed() : 0;
+    const buffSpd = (typeof getActiveBuffMultiplier === 'function') ? getActiveBuffMultiplier('speed') : 0;
+    const lvlSpdBonus = (P.baseStats && P.baseStats.moveSpeed) ? Math.max(0, (P.baseStats.moveSpeed - 6.0) * 0.05) : 0;
+    const blockMult = isPlayerBlocking ? 0.70 : 1.0;
+    const totalMult = (1 + bonusSpd + buffSpd + lvlSpdBonus) * blockMult;
+
     let sp;
     if (inW) {
-      sp = (sprint ? 4.2 : 3.0) * (1 + bonusSpd); // Plavecká rychlost
+      sp = (sprint ? 4.5 : 3.2) * totalMult; // Plavecká rychlost
     } else if (waterExitTimer > 0) {
-      sp = 4.0 * (1 + bonusSpd); // Přechodová rychlost po opuštění vody zabraňující bunny-hopu po vodě
+      sp = 4.2 * totalMult; // Přechodová rychlost po opuštění vody
     } else {
-      sp = (sprint ? 9 : 5.5) * (1 + bonusSpd); // Běžná pozemní rychlost
+      sp = (sprint ? 9 : 5.5) * totalMult; // Běžná pozemní rychlost
     }
 
     const wx = (-Math.sin(yaw)) * fz + Math.cos(yaw) * fx;
@@ -403,71 +956,93 @@ function physics(dt) {
   }
 
   if (inW) {
-    P.vy *= 1 - 3 * dt;
+    if (waterJumpTimer > 0) {
+      // Během výskoku z vody na břeh zachovat plný vertikální impuls bez vodního brzdění
+      P.vy -= 22 * dt;
+    } else {
+      P.vy *= 1 - 3 * dt;
 
-    if (waterTopY > -900) {
-      // Výška těla je HT = 1.8. Cíl je mít nad hladinou polovinu těla (od pasu nahoru):
-      // Nohy (P.y) tedy mají být ve výšce waterTopY - 0.9.
-      const targetSurfaceY = waterTopY - 0.9;
+      if (waterTopY > -900) {
+        // Výška hladiny je waterTopY. Cíl pro plavání u hladiny:
+        const targetSurfaceY = waterTopY - 0.9;
 
-      if (keys.Space) {
-        // Hráč drží mezerník ve vodě
-        if (P.y < targetSurfaceY - 0.1) {
-          // Pod hladinou: plave vzhůru k hladině
-          P.vy += 8.0 * dt;
-          if (P.vy > 2.8) P.vy = 2.8;
+        if (keys.Space) {
+          if (P.y < targetSurfaceY - 0.25) {
+            // Pod hladinou: plave vzhůru k hladině
+            P.vy += 10.0 * dt;
+            if (P.vy > 3.2) P.vy = 3.2;
+          } else {
+            // U hladiny a stisknut mezerník: VÝSKOK Z VODY NA BŘEH!
+            P.vy = 7.8;
+            waterJumpTimer = 0.4;
+            autoJumpTimer = 0.35;
+            if (typeof playJumpSound === 'function') playJumpSound();
+
+            // Dopředný impuls směrem na břeh, pokud se hráč hýbe
+            if (fx || fz) {
+              const spd = Math.hypot(P.vx, P.vz) || 1;
+              P.vx += (P.vx / spd) * 2.2;
+              P.vz += (P.vz / spd) * 2.2;
+            }
+          }
         } else {
-          // U hladiny: aktivně se drží na hladině (do poloviny těla nad hladinou)
-          // Žádné vystřelení nad hladinu ani stání na vodě!
-          const diff = targetSurfaceY - P.y;
-          P.vy += diff * 12.0 * dt;
-          if (P.vy > 0.4) P.vy = 0.4;
-          if (P.vy < -0.4) P.vy = -0.4;
+          // Nedrží mezerník: přirozený vztlak / držení se u hladiny
+          const restingY = targetSurfaceY - 0.15;
+          const diff = restingY - P.y;
+          P.vy += diff * 4.5 * dt - 4.0 * dt;
         }
       } else {
-        // Nedrží mezerník: přirozený vztlak / pomalé klesání k hrudníku
-        const restingY = targetSurfaceY - 0.35;
-        const diff = restingY - P.y;
-        P.vy += diff * 4.0 * dt - 4.5 * dt;
+        P.vy -= 12 * dt;
+        if (keys.Space) {
+          P.vy = 7.5;
+          waterJumpTimer = 0.38;
+        }
       }
-    } else {
-      P.vy -= 9 * dt;
-      if (keys.Space) P.vy = 3.0;
-    }
 
-    // Výstup z vody na břeh při pohybu do břehu (auto-step na břeh)
-    if (fx || fz) {
-      const spd = Math.hypot(P.vx, P.vz);
-      if (spd > 0.18) {
-        const dirX = P.vx / spd, dirZ = P.vz / spd;
-        const testX = P.x + dirX * 0.36, testZ = P.z + dirZ * 0.36;
-        if (hits(testX, P.y + 0.4, testZ) && !hits(testX, P.y + 1.1, testZ) && !hits(P.x, P.y + 1.2, P.z)) {
-          if (keys.Space || autoJumpTimer <= 0) {
-            P.vy = 5.6; // Vystoupení na břeh
-            autoJumpTimer = 0.35;
+      // Automatické vystoupení / vyhoupnutí z vody na břeh při plavání směrem do břehu
+      if (fx || fz) {
+        const spd = Math.hypot(P.vx, P.vz);
+        if (spd > 0.12 && autoJumpTimer <= 0) {
+          const dirX = P.vx / spd, dirZ = P.vz / spd;
+          const testX = P.x + dirX * 0.42, testZ = P.z + dirZ * 0.42;
+
+          // Je před námi pevný blok břehu?
+          const hitsBank = hits(testX, P.y + 0.25, testZ, 0.5) || (waterTopY > -900 && hits(testX, waterTopY - 0.2, testZ, 0.5));
+          // A je nad břehem volno k vystoupení?
+          const clearAbove = (waterTopY > -900)
+            ? (!hits(testX, waterTopY + 0.05, testZ, STANDING_HT) && !hits(P.x, waterTopY + 0.15, P.z, 0.7))
+            : (!hits(testX, P.y + 0.8, testZ, STANDING_HT));
+
+          if (hitsBank && clearAbove) {
+            P.vy = 7.0; // Plynulé vyhoupnutí na břeh
+            waterJumpTimer = 0.38;
+            autoJumpTimer = 0.45;
+            P.vx += dirX * 1.8;
+            P.vz += dirZ * 1.8;
           }
         }
       }
     }
   } else {
     P.vy -= 26 * dt;
-    if (keys.Space && P.ground && !isRolling) P.vy = 9.2; // Normální výskok (o 1 blok méně než dříve)
+    if (keys.Space && P.ground && !isRolling) P.vy = 9.2; // Normální výskok na souši
     if (P.vy < -30) P.vy = -30;
   }
 
   const wasG = P.ground;
   P.ground = false;
 
-  // Plynulé vyběhnutí kopce (Step-assist do výšky 1 bloku):
-  // Namísto cloumavého vyskakování postava plynule vyběhne schody/kopec o 1 blok výš bez přerušení běhu.
-  const stepLimit = 0.52;
+  // Plynulé vyběhnutí schodů/břehu (Step-assist):
+  // Funguje na souši i při výstupu z vody na břeh
+  const stepLimit = 0.55;
+  const canStep = (wasG || (inW && (waterTopY > -900 ? P.y >= waterTopY - 1.25 : true))) && (fx || fz);
 
   // Pohyb po ose X
   const dx = P.vx * dt;
   if (dx !== 0) {
     if (!hits(P.x + dx, P.y, P.z)) {
       P.x += dx;
-    } else if (wasG && !inW && (fx || fz)) {
+    } else if (canStep) {
       const stepY = (Math.floor(P.y / S) + 1) * S;
       if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x + dx, stepY, P.z)) {
         P.x += dx;
@@ -486,7 +1061,7 @@ function physics(dt) {
   if (dz !== 0) {
     if (!hits(P.x, P.y, P.z + dz)) {
       P.z += dz;
-    } else if (wasG && !inW && (fx || fz)) {
+    } else if (canStep) {
       const stepY = (Math.floor(P.y / S) + 1) * S;
       if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x, stepY, P.z + dz)) {
         P.z += dz;
@@ -512,5 +1087,9 @@ function physics(dt) {
 
   if (P.y < -20) {
     P.x = SPX; P.z = SPZ; P.y = SPY; P.vy = 0;
+  }
+
+  if (typeof ProjectileManager !== 'undefined' && typeof ProjectileManager.update === 'function') {
+    ProjectileManager.update(dt);
   }
 }

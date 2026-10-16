@@ -1,0 +1,22 @@
+{
+  "name": "voxelovy-svet",
+  "version": "1.0.0",
+  "description": "Cube World-style 3D Voxel Action-RPG & Exploration Game",
+  "main": "test_e2e_runner.js",
+  "scripts": {
+    "test": "node test_e2e_runner.js",
+    "test:tier1": "node test_e2e_runner.js --tier 1",
+    "test:tier2": "node test_e2e_runner.js --tier 2",
+    "test:tier3": "node test_e2e_runner.js --tier 3",
+    "test:tier4": "node test_e2e_runner.js --tier 4"
+  },
+  "keywords": [
+    "voxel",
+    "rpg",
+    "action-rpg",
+    "threejs",
+    "cube-world"
+  ],
+  "author": "Tomas",
+  "license": "MIT"
+}
