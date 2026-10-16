@@ -114,22 +114,22 @@ function applyEmoteAnimation(rig, emoteId, et, now) {
     torso.rotation.set(0, 0, 0);
     head.rotation.set(-0.08 + Math.sin(t * 5) * 0.05, 0, -0.12);
 
-    arms[1].rotation.x = -2.25;
-    arms[1].rotation.z = 0.55 + Math.sin(t * 10) * 0.35;
-    arms[1].rotation.y = 0.18;
-    arms[0].rotation.set(0, 0, -0.12);
+    arms[0].rotation.x = -2.25;
+    arms[0].rotation.z = -0.55 - Math.sin(t * 10) * 0.35;
+    arms[0].rotation.y = -0.18;
+    arms[1].rotation.set(0, 0, 0.12);
 
     legs[0].rotation.set(0, 0, -0.04);
     legs[1].rotation.set(0, 0, 0.04);
     return true;
   } else if (emoteId === 'point') {
-    // Ukázání rukou dopředu
+    // Ukázání pravou rukou dopředu
     body.position.y = 0;
-    torso.rotation.set(0.04, 0.08, 0);
+    torso.rotation.set(0.04, -0.08, 0);
     head.rotation.set(0, 0, 0);
 
-    arms[1].rotation.set(-1.57, 0.04, 0.08);
-    arms[0].rotation.set(-0.3, 0.2, -0.3);
+    arms[0].rotation.set(-1.57, -0.04, -0.08);
+    arms[1].rotation.set(-0.3, -0.2, 0.3);
 
     legs[0].rotation.set(0, 0, -0.04);
     legs[1].rotation.set(0, 0, 0.04);

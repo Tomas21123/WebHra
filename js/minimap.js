@@ -74,6 +74,14 @@ function markExploredAroundPlayer() {
   }
 }
 
+function getMinimapViewportDimensions() {
+  const box = $('minimapBox');
+  const viewport = box ? box.querySelector('.minimap-viewport') : null;
+  const w = (viewport && viewport.clientWidth > 0) ? viewport.clientWidth : Math.max(320, window.innerWidth - 32);
+  const h = (viewport && viewport.clientHeight > 0) ? viewport.clientHeight : Math.max(240, window.innerHeight - 120);
+  return { w, h };
+}
+
 function toggleMinimap(force) {
   minimapOpen = (force !== undefined) ? force : !minimapOpen;
   const box = $('minimapBox');
@@ -81,13 +89,20 @@ function toggleMinimap(force) {
   box.hidden = !minimapOpen;
 
   if (minimapOpen) {
+    if (document.exitPointerLock) {
+      try { document.exitPointerLock(); } catch(e) {}
+    }
     if (!mmRenderer) initMinimap();
     markExploredAroundPlayer();
     mmNeedsRebuild = true;
-    updateMinimapSize();
-    toast('3D Mapa světa: Zapnuto [M]');
+    requestAnimationFrame(() => {
+      updateMinimapSize();
+      updateMinimapCam();
+    });
+    toast('3D Mapa světa: Otevřena na celou obrazovku [M]');
   } else {
-    toast('3D Mapa: Skryto [M]');
+    try { (window.cv || (window.renderer && renderer.domElement))?.requestPointerLock(); } catch (e) {}
+    toast('3D Mapa: Zavřeno [M]');
   }
 }
 
@@ -98,8 +113,7 @@ function initMinimap() {
   loadExploredHistory();
   markExploredAroundPlayer();
 
-  const w = minimapExpanded ? 640 : 310;
-  const h = minimapExpanded ? 500 : 270;
+  const { w, h } = getMinimapViewportDimensions();
 
   mmRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   mmRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -276,15 +290,20 @@ function fitAllExploredTerrain() {
 function updateMinimapSize() {
   const box = $('minimapBox');
   if (!box || !mmRenderer) return;
-  box.classList.toggle('expanded', minimapExpanded);
-  $('mmExpandBtn').textContent = minimapExpanded ? '⤡' : '⤢';
 
-  const w = minimapExpanded ? 640 : 310;
-  const h = minimapExpanded ? 500 : 270;
+  const { w, h } = getMinimapViewportDimensions();
   mmRenderer.setSize(w, h);
-  mmCam.aspect = w / h;
-  mmCam.updateProjectionMatrix();
+  if (mmCam) {
+    mmCam.aspect = w / h;
+    mmCam.updateProjectionMatrix();
+  }
 }
+
+window.addEventListener('resize', () => {
+  if (minimapOpen) {
+    updateMinimapSize();
+  }
+});
 
 function updateMinimapCam() {
   if (!mmCam) return;

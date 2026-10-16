@@ -72,6 +72,31 @@ function playAttackSound(type) {
   } catch (e) {}
 }
 
+function playBlockSound() {
+  if (window.soundMuted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'triangle';
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(800, t);
+    osc.frequency.setValueAtTime(420, t);
+    osc.frequency.exponentialRampToValueAtTime(120, t + 0.2);
+    gain.gain.setValueAtTime(0.32, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.start(t);
+    osc.stop(t + 0.2);
+  } catch (e) {}
+}
+window.playBlockSound = playBlockSound;
+
 function playRollSound() {
   if (window.soundMuted) return;
   try {

@@ -252,7 +252,11 @@ $('escResume').onclick = closeEscMenu;
 const escOpenP2PBtn = $('escOpenP2P');
 if (escOpenP2PBtn) {
   escOpenP2PBtn.onclick = () => {
-    closeEscMenu();
+    escOpen = false;
+    $('escMenu').hidden = true;
+    if (document.exitPointerLock) {
+      try { document.exitPointerLock(); } catch(e) {}
+    }
     if (window.networkManager) {
       window.networkManager.openP2PHostDialog();
     }
@@ -315,9 +319,46 @@ function updateInGameSettingsUI() {
     soundBtn.style.borderColor = isMuted ? '#ef4444' : '#10b981';
     soundBtn.style.color = isMuted ? '#fca5a5' : '#34d399';
   }
+  const handVal = $('settingHandVal');
+  const handRBtn = $('settingHandRight');
+  const handLBtn = $('settingHandLeft');
+  const curHand = (typeof dominantHand !== 'undefined') ? dominantHand : 'right';
+  if (handVal) handVal.textContent = curHand === 'left' ? 'Levá ruka' : 'Pravá ruka';
+  if (handRBtn) handRBtn.classList.toggle('active', curHand === 'right');
+  if (handLBtn) handLBtn.classList.toggle('active', curHand === 'left');
 }
 
-// Slidery v Nastavení
+// Slidery a Tlačítka v Nastavení
+const settingHandRight = $('settingHandRight');
+if (settingHandRight) {
+  settingHandRight.onclick = () => {
+    dominantHand = 'right';
+    window.dominantHand = 'right';
+    try { localStorage.setItem('voxel_dominant_hand', 'right'); } catch(e) {}
+    if (typeof updateRigDominantHand === 'function' && typeof playerRig !== 'undefined') {
+      updateRigDominantHand(playerRig, 'right');
+    }
+    if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+    if (typeof updateInventoryPreview === 'function') updateInventoryPreview();
+    updateInGameSettingsUI();
+    if (typeof toast === 'function') toast('Dominantní ruka: Pravá');
+  };
+}
+const settingHandLeft = $('settingHandLeft');
+if (settingHandLeft) {
+  settingHandLeft.onclick = () => {
+    dominantHand = 'left';
+    window.dominantHand = 'left';
+    try { localStorage.setItem('voxel_dominant_hand', 'left'); } catch(e) {}
+    if (typeof updateRigDominantHand === 'function' && typeof playerRig !== 'undefined') {
+      updateRigDominantHand(playerRig, 'left');
+    }
+    if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+    if (typeof updateInventoryPreview === 'function') updateInventoryPreview();
+    updateInGameSettingsUI();
+    if (typeof toast === 'function') toast('Dominantní ruka: Levá');
+  };
+}
 const settingRdSlider = $('settingRdSlider');
 if (settingRdSlider) {
   settingRdSlider.oninput = (e) => {

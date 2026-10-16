@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Pixelify+Sans:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/style.css?v=8">
 </head>
 
 <body>
@@ -95,30 +95,196 @@
   <!-- Efekt zásahu / poškození -->
   <div id="damageFlash"></div>
 
-  <!-- Inventář Modal -->
+  <!-- Inventář Modal (Nový 5-sekční RPG Layout) -->
   <div id="inv" hidden>
-    <div class="panel">
-      <div class="head">
-        <span>Inventář</span>
-        <button id="invx">✕</button>
+    <div class="panel inv-panel-v2">
+      <div class="inv-header-bar">
+        <div class="inv-header-left">
+          <span class="inv-header-icon">🎒</span>
+          <span class="inv-header-title">INVENTÁŘ & VYBAVENÍ</span>
+          <span id="invCapacityBadge" class="inv-capacity-pill">Předměty</span>
+        </div>
+        <button id="invx" class="inv-close-btn" title="Zavřít [ESC / I]">✕</button>
       </div>
-      <div class="tabs">
-        <button data-c="all" class="on">Vše</button>
-        <button data-c="weapon">Zbraně</button>
-        <button data-c="armor">Oblečení</button>
-        <button data-c="loot">Loot</button>
+
+      <div class="inv-body-layout">
+        <!-- 1) LEVÝ SLOUPEC: Seznam hlavních kategorií -->
+        <div class="inv-sec-1">
+          <div class="sec-label">KATEGORIE</div>
+          <div class="inv-cat-nav">
+            <button class="inv-cat-btn active" data-c="all">
+              <span class="cat-ico">🌐</span>
+              <span class="cat-txt">Vše</span>
+            </button>
+            <button class="inv-cat-btn" data-c="weapon">
+              <span class="cat-ico">⚔️</span>
+              <span class="cat-txt">Zbraně</span>
+            </button>
+            <button class="inv-cat-btn" data-c="armor">
+              <span class="cat-ico">🛡️</span>
+              <span class="cat-txt">Oblečení</span>
+            </button>
+            <button class="inv-cat-btn" data-c="other">
+              <span class="cat-ico">💎</span>
+              <span class="cat-txt">Ostatní</span>
+            </button>
+          </div>
+          <div class="inv-search-box">
+            <input type="text" id="invSearchInput" placeholder="🔍 Hledat...">
+          </div>
+        </div>
+
+        <!-- STŘEDNÍ ČÁST: 2) Podkategorie nahoře + 3) Filtrované itemy dole -->
+        <div class="inv-middle-col">
+          <!-- 2) Podkategorie -->
+          <div class="inv-sec-2" id="invSubcatBar">
+            <!-- Dynamicky generováno v JS -->
+          </div>
+          <!-- 3) Mřížka filtrovaných itemů -->
+          <div class="inv-sec-3">
+            <div id="grid" class="inv-grid-container"></div>
+          </div>
+        </div>
+
+        <!-- PRAVÁ ČÁST: 4) Volba (Vybavení / Crafting) + 5) Vybavení nebo Crafting -->
+        <div class="inv-right-col">
+          <!-- 4) Přepínač Vybavení / Crafting -->
+          <div class="inv-sec-4">
+            <button id="tabEquipBtn" class="inv-mode-tab active" data-mode="equip">🛡️ Vybavení</button>
+            <button id="tabCraftBtn" class="inv-mode-tab" data-mode="craft">⚒️ Crafting</button>
+          </div>
+
+          <!-- 5) Obsah sekce 5 -->
+          <div class="inv-sec-5" id="invSection5">
+            <!-- REŽIM A: VYBAVENÍ -->
+            <div id="invEquipContainer" class="inv-equip-container">
+              <!-- Horní část: Oblečení (vlevo 4) | Postava čelní náhled (uprostřed) | Brnění (vpravo 4) -->
+              <div class="inv-equip-upper-row">
+                <!-- Vlevo: 4 políčka Oblečení -->
+                <div class="inv-gear-col">
+                  <div class="gear-col-title">Oblečení</div>
+                  <div class="gear-slot" data-slot="cloth_head" title="Čepice / Kápě">
+                    <span class="slot-placeholder">🧢</span>
+                    <span class="slot-name-tag">Čepice</span>
+                    <div class="slot-fill" id="slot_cloth_head"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="cloth_chest" title="Tryko / Tunika">
+                    <span class="slot-placeholder">👕</span>
+                    <span class="slot-name-tag">Tryko</span>
+                    <div class="slot-fill" id="slot_cloth_chest"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="cloth_legs" title="Gatě / Kalhoty">
+                    <span class="slot-placeholder">👖</span>
+                    <span class="slot-name-tag">Gatě</span>
+                    <div class="slot-fill" id="slot_cloth_legs"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="cloth_feet" title="Boty">
+                    <span class="slot-placeholder">👢</span>
+                    <span class="slot-name-tag">Boty</span>
+                    <div class="slot-fill" id="slot_cloth_feet"></div>
+                  </div>
+                </div>
+
+                <!-- Uprostřed: Čelní 3D náhled postavy -->
+                <div class="inv-char-preview-box">
+                  <canvas id="invCharPreviewCanvas" width="200" height="230"></canvas>
+                  <div class="preview-footer-bar">
+                    <button id="invResetCamBtn" class="preview-mini-btn" title="Obnovit čelní pohled">🔄 Pohled zepředu</button>
+                    <span id="invCharNickBadge" class="char-nick-chip">Postava</span>
+                  </div>
+                </div>
+
+                <!-- Vpravo: 4 políčka Brnění -->
+                <div class="inv-gear-col">
+                  <div class="gear-col-title">Brnění</div>
+                  <div class="gear-slot" data-slot="armor_head" title="Přilba">
+                    <span class="slot-placeholder">🪖</span>
+                    <span class="slot-name-tag">Přilba</span>
+                    <div class="slot-fill" id="slot_armor_head"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="armor_chest" title="Kyrys / Zbroj">
+                    <span class="slot-placeholder">🛡️</span>
+                    <span class="slot-name-tag">Brnění</span>
+                    <div class="slot-fill" id="slot_armor_chest"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="armor_legs" title="Plátové gatě">
+                    <span class="slot-placeholder">🛡️</span>
+                    <span class="slot-name-tag">Pláty</span>
+                    <div class="slot-fill" id="slot_armor_legs"></div>
+                  </div>
+                  <div class="gear-slot" data-slot="armor_feet" title="Plátové boty">
+                    <span class="slot-placeholder">🛡️</span>
+                    <span class="slot-name-tag">Okovy</span>
+                    <div class="slot-fill" id="slot_armor_feet"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ruce & Prsteny: pravá ruka, prsten na pravé ruce, prsten na levé ruce, levá ruka -->
+              <div class="inv-hands-rings-strip">
+                <div class="gear-slot hand-slot" data-slot="hand_r" title="Pravá ruka">
+                  <span class="slot-placeholder">✋</span>
+                  <div class="slot-hand-info">
+                    <span class="slot-name-tag">Pravá ruka</span>
+                    <span id="handRRoleBadge" class="role-pill dom">Dominantní</span>
+                  </div>
+                  <div class="slot-fill" id="slot_hand_r"></div>
+                </div>
+
+                <div class="gear-slot ring-slot" data-slot="ring_r" title="Prsten na pravé ruce">
+                  <span class="slot-placeholder">💍</span>
+                  <span class="slot-name-tag">Prsten (P)</span>
+                  <div class="slot-fill" id="slot_ring_r"></div>
+                </div>
+
+                <div class="gear-slot ring-slot" data-slot="ring_l" title="Prsten na levé ruce">
+                  <span class="slot-placeholder">💍</span>
+                  <span class="slot-name-tag">Prsten (L)</span>
+                  <div class="slot-fill" id="slot_ring_l"></div>
+                </div>
+
+                <div class="gear-slot hand-slot" data-slot="hand_l" title="Levá ruka">
+                  <span class="slot-placeholder">✋</span>
+                  <div class="slot-hand-info">
+                    <span class="slot-name-tag">Levá ruka</span>
+                    <span id="handLRoleBadge" class="role-pill">Vedlejší</span>
+                  </div>
+                  <div class="slot-fill" id="slot_hand_l"></div>
+                </div>
+              </div>
+
+              <!-- Souhrn aktuálních bonusů -->
+              <div class="inv-bonus-summary">
+                <div class="bonus-header">⚡ SOUHRN BONUSŮ POSTAVY</div>
+                <div class="bonus-grid">
+                  <div class="bonus-badge"><span class="bb-ico">🛡️</span> Obrana: <b id="statSumArmor">+0%</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">⚔️</span> Útok: <b id="statSumDamage">10 HP</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">❤️</span> Bonus HP: <b id="statSumHp">+0</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">🏃</span> Rychlost: <b id="statSumSpeed">+0%</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">💥</span> Kritický: <b id="statSumCrit">5%</b></div>
+                  <div class="bonus-badge"><span class="bb-ico">🛡️</span> Vykrytí štítem: <b id="statSumBlock">0%</b></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- REŽIM B: CRAFTING -->
+            <div id="invCraftContainer" class="inv-craft-container" hidden>
+              <div class="craft-cat-tabs" id="craftCatTabs">
+                <button class="craft-tab-btn active" data-ccat="all">Vše</button>
+                <button class="craft-tab-btn" data-ccat="weapons">⚔️ Zbraně</button>
+                <button class="craft-tab-btn" data-ccat="shields">🛡️ Štíty</button>
+                <button class="craft-tab-btn" data-ccat="armor">🪖 Zbroj</button>
+                <button class="craft-tab-btn" data-ccat="rings">💍 Prsteny</button>
+                <button class="craft-tab-btn" data-ccat="alchemy">🧪 Alchymie</button>
+              </div>
+              <div class="craft-workbench-body">
+                <div class="craft-recipes-pane" id="craftRecipesList"></div>
+                <div class="craft-info-pane" id="craftDetailPanel"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="grid"></div>
-    </div>
-    <div id="pop" hidden>
-      <div class="pop-header">
-        <span id="popRarity" class="pop-rarity-pill">Běžné</span>
-        <div id="pn" class="pop-title"></div>
-        <div id="popType" class="pop-type"></div>
-      </div>
-      <div id="popStats" class="pop-stats-list"></div>
-      <div id="popDesc" class="pop-desc"></div>
-      <button id="eqb" class="pop-action-btn"></button>
     </div>
   </div>
 
@@ -230,6 +396,17 @@
             <button id="settingSoundToggle" style="padding:4px 12px;border-radius:6px;background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#34d399;font-weight:700;cursor:pointer;">🔊 Zapnuto</button>
           </div>
         </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#cbd5e1;">
+            <span>Dominantní ruka</span>
+            <strong id="settingHandVal" style="color:#f59e0b;">Pravá ruka</strong>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button id="settingHandRight" class="esc-btn setting-hand-btn active" style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🖐️ Pravá ruka</button>
+            <button id="settingHandLeft" class="esc-btn setting-hand-btn" style="padding:8px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">🤚 Levá ruka</button>
+          </div>
+        </div>
       </div>
       <div style="margin-top:20px;text-align:center;">
         <button onclick="$('modalInGameSettings').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary" style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
@@ -239,28 +416,34 @@
 
   <!-- P2P Lan / Přátelé Modal -->
   <div id="p2pModal" class="overlay" hidden>
-    <div class="panel p2p-panel" style="width:min(420px, 92vw);background:#131c2b;border:2px solid #23344d;border-radius:14px;padding:22px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,0.7);display:flex;flex-direction:column;gap:14px;color:#f8fafc;">
+    <div class="panel p2p-panel" style="width:min(520px, 94vw);max-height:88vh;overflow-y:auto;background:#131c2b;border:2px solid #23344d;border-radius:16px;padding:22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.8);display:flex;flex-direction:column;gap:14px;color:#f8fafc;">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
         <span style="font-weight:800;font-size:18px;color:#34d399;display:flex;align-items:center;gap:8px;">🌐 Hraní s přáteli (P2P)</span>
         <button id="p2pClose" class="close-btn" style="background:transparent;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
       </div>
       
       <div style="font-size:13.5px;color:#94a3b8;line-height:1.5;">
-        Tvůj svět je otevřen pro hráče na stejné síti. Pošli kamarádovi tento kód, aby se k tobě mohl připojit:
+        Tvůj svět je otevřen pro přátele. Pošli kamarádovi tento kód, aby se k tobě mohl připojit:
       </div>
 
-      <div style="background:rgba(2,6,23,0.7);border:1px dashed rgba(52,211,153,0.5);border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:center;gap:12px;">
+      <div style="background:rgba(2,6,23,0.7);border:1px dashed rgba(52,211,153,0.5);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:14px;">
         <span id="p2pRoomCodeDisplay" style="font-family:'Pixelify Sans',monospace;font-size:32px;font-weight:700;letter-spacing:3px;color:#34d399;">VOX-????</span>
-        <button id="p2pCopyCodeBtn" title="Zkopírovat kód do schránky" style="padding:6px 12px;border-radius:8px;background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:#6ee7b7;font-weight:700;font-size:13px;cursor:pointer;">📋 Kopírovat</button>
+        <button id="p2pCopyCodeBtn" title="Zkopírovat kód do schránky" style="padding:7px 14px;border-radius:8px;background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:#6ee7b7;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;">📋 Kopírovat</button>
       </div>
 
-      <div style="background:rgba(15,23,42,0.6);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;">
-        <span style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></span> Stav: Čekám na hráče</span>
-        <span id="p2pPlayersCount" style="color:#38bdf8;font-weight:700;">1 / 4 hráčů</span>
+      <!-- Seznam hráčů ve světě a správa oprávnění příkazů -->
+      <div style="background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;text-align:left;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <span style="font-size:13px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.5px;">👥 Hráči ve světě & správa příkazů</span>
+          <span id="p2pPlayersCount" style="color:#38bdf8;font-weight:700;font-size:12.5px;">1 / 4 hráčů</span>
+        </div>
+        <div id="p2pPlayersList" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;padding-right:2px;">
+          <!-- Dynamicky generováno JS: Hostitel + Hosté -->
+        </div>
       </div>
 
       <div style="font-size:12px;color:#64748b;text-align:left;line-height:1.4;">
-        ℹ️ <strong>Jak se kamarád připojí:</strong> V hlavním menu v záložce <em>Multiplayer</em> zadá tento kód do pole <em>„Připojit se kódem k příteli“</em>. Tobě ve hře vyskočí žádost o schválení.
+        ℹ️ <strong>Správa práv:</strong> Hostitel má příkazy v základu povolené. Připojení hosté mají příkazy ve výchozím stavu zakázané a hostitel jim je může výše kdykoliv povolit nebo zakázat.
       </div>
     </div>
   </div>
@@ -371,16 +554,15 @@
     </div>
   </div>
 
-  <!-- 3D Minimapa (Cube World Style) -->
+  <!-- 3D Celoobrazovková Mapa Světa (Cube World Style) -->
   <div id="minimapBox" hidden>
     <div class="minimap-header">
       <div class="minimap-title">
         <span class="mm-icon">🧭</span>
-        <span>3D MAPA SVĚTA</span>
+        <span>3D MAPA SVĚTA (CELÁ OBRAZOVKA)</span>
       </div>
       <div class="minimap-actions">
-        <button id="mmExpandBtn" title="Zvětšit / Zmenšit (Tab)">⤢</button>
-        <button id="mmCloseBtn" title="Zavřít (M)">✕</button>
+        <button id="mmCloseBtn" title="Zavřít mapu (M / ESC)" style="padding:5px 14px;font-weight:700;display:flex;align-items:center;gap:6px;">✕ Zavřít [M]</button>
       </div>
     </div>
     <div class="minimap-viewport">
@@ -394,14 +576,14 @@
     </div>
     <div class="minimap-footer">
       <div class="mm-controls">
-        <button id="mmRotL" title="Otočit vlevo">⟲</button>
-        <button id="mmCenter" title="Vycentrovat pohled na hráče">Hráč</button>
-        <button id="mmRotR" title="Otočit vpravo">⟳</button>
-        <button id="mmFitAll" title="Zobrazit celé objevené území">🗺️ Vše</button>
+        <button id="mmRotL" title="Otočit vlevo">⟲ Otočit</button>
+        <button id="mmCenter" title="Vycentrovat pohled na hráče">📍 Hráč</button>
+        <button id="mmRotR" title="Otočit vpravo">⟳ Otočit</button>
+        <button id="mmFitAll" title="Zobrazit celé objevené území">🗺️ Objevené území</button>
         <button id="mmZoomIn" title="Přiblížit">+</button>
         <button id="mmZoomOut" title="Oddálit">−</button>
       </div>
-      <div class="mm-hint">Táhni myší · Pravé tl./Shift = posun · Kolečko = zoom · [M]</div>
+      <div class="mm-hint">Táhni myší pro rotaci · Pravé tlačítko / Shift pro posun · Kolečko myši pro zoom · [M] nebo [ESC] pro zavření</div>
     </div>
   </div>
 
@@ -493,21 +675,21 @@
   <script src="../js/textures.js?v=3"></script>
   <script src="../js/world.js?v=3"></script>
   <script src="../js/voxelBuilder.js?v=3"></script>
-  <script src="../js/items.js?v=4"></script>
-  <script src="../js/character.js?v=4"></script>
-  <script src="../js/inventory.js?v=3"></script>
-  <script src="../js/customizer.js?v=4"></script>
-  <script src="../js/audio.js?v=4"></script>
-  <script src="../js/player.js?v=4"></script>
-  <script src="../js/minimap.js?v=3"></script>
-  <script src="../js/emotes.js?v=5"></script>
+  <script src="../js/items.js?v=7"></script>
+  <script src="../js/character.js?v=8"></script>
+  <script src="../js/inventory.js?v=9"></script>
+  <script src="../js/customizer.js?v=5"></script>
+  <script src="../js/audio.js?v=5"></script>
+  <script src="../js/player.js?v=7"></script>
+  <script src="../js/minimap.js?v=4"></script>
+  <script src="../js/emotes.js?v=6"></script>
   <script src="../js/cursor.js?v=3"></script>
-  <script src="../js/chat.js?v=3"></script>
+  <script src="../js/chat.js?v=4"></script>
   <!-- PeerJS pro Peer-to-Peer (WebRTC) multiplayer s lokální zálohou -->
   <script src="../js/peerjs.min.js"></script>
   <script>if (typeof Peer === 'undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\\/script>');</script>
-  <script src="../js/network.js?v=11"></script>
-  <script src="../js/game.js?v=8"></script>
+  <script src="../js/network.js?v=13"></script>
+  <script src="../js/game.js?v=10"></script>
 </body>
 
 </html>

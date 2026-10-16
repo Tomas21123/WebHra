@@ -1,4 +1,33 @@
 // ---------- Model a Rig Postavy ----------
+let dominantHand = 'right';
+try {
+  const savedHand = localStorage.getItem('voxel_dominant_hand');
+  if (savedHand === 'left' || savedHand === 'right') {
+    dominantHand = savedHand;
+  } else {
+    dominantHand = 'right';
+    localStorage.setItem('voxel_dominant_hand', 'right');
+  }
+} catch (e) {
+  dominantHand = 'right';
+}
+window.dominantHand = dominantHand;
+
+function updateRigDominantHand(rig, dHand) {
+  if (!rig || !rig.arms || !rig.hand || !rig.offhand) return;
+  const isLeft = (dHand === 'left');
+  if (rig.hand.parent) rig.hand.parent.remove(rig.hand);
+  if (rig.offhand.parent) rig.offhand.parent.remove(rig.offhand);
+  if (isLeft) {
+    rig.arms[1].add(rig.hand);
+    rig.arms[0].add(rig.offhand);
+  } else {
+    rig.arms[0].add(rig.hand);
+    rig.arms[1].add(rig.offhand);
+  }
+}
+window.updateRigDominantHand = updateRigDominantHand;
+
 function createCharacterRig() {
   const root = new THREE.Group();
   const body = new THREE.Group();
@@ -8,7 +37,17 @@ function createCharacterRig() {
   const arms = [new THREE.Group(), new THREE.Group()];
   const hand = new THREE.Group();
   hand.position.set(0, -8 * VX, 0);
-  arms[1].add(hand);
+  const offhand = new THREE.Group();
+  offhand.position.set(0, -8 * VX, 0);
+
+  const isLeft = (typeof dominantHand !== 'undefined' && dominantHand === 'left');
+  if (isLeft) {
+    arms[1].add(hand);
+    arms[0].add(offhand);
+  } else {
+    arms[0].add(hand);
+    arms[1].add(offhand);
+  }
 
   // Plášť (Cape) - 4 kloubové segmenty pro simulaci vlající látky
   // Clasp na ramenou: y = 17 v absolutních voxelech -> v trupu (pivot v pase y = 8) je to 17 - 8 = 9 voxelů
@@ -26,19 +65,15 @@ function createCharacterRig() {
   }
 
   // HIERARCHIE KOSTRY:
-  // root -> body (celé tělo: umožňuje naklápění do horizontály při plavání a snížení celého těla při sedu)
   root.add(body);
-  // body -> nohy (kyčelní klouby)
   body.add(legs[0]);
   body.add(legs[1]);
-  // body -> trup (kloub v pase)
   body.add(torso);
-  // trup -> hlava (krk) & paže (ramena) - díky tomu hlava a paže NIKDY neodpadnou od těla při běhu, sprintu ani plavání!
   torso.add(head);
   torso.add(arms[0]);
   torso.add(arms[1]);
 
-  return { root, body, torso, head, legs, arms, hand, capeRoot, capeSegs };
+  return { root, body, torso, head, legs, arms, hand, offhand, capeRoot, capeSegs };
 }
 
 function generateCharacterVoxels(custom, eqMap) {
@@ -190,15 +225,19 @@ function generateCharacterVoxels(custom, eqMap) {
     bx(head, -4, 21, -4, 4, 26, -3, shade(headCol, -0.15));
     bx(head, -4, 23, -3, -3, 26, 3, headCol);
     bx(head, 3, 23, -3, 4, 26, 3, headCol);
+    if (eqMap.head && eqMap.head.id === 'helmet_iron') {
+      bx(head, -3, 22, 3, 3, 24, 4, 0x111827); // průzor přilby
+      bx(head, -1, 28, -2, 1, 30, 2, 0xe8c34a); // zlatý chochol
+    }
   }
 
   return {
     torso,
     head,
-    leftLeg: makeLeg(-4, -1),
-    rightLeg: makeLeg(1, 4),
-    leftArm: makeArm(-7, -4),
-    rightArm: makeArm(4, 7)
+    rightLeg: makeLeg(-4, -1),
+    leftLeg: makeLeg(1, 4),
+    rightArm: makeArm(-7, -4),
+    leftArm: makeArm(4, 7)
   };
 }
 
@@ -210,12 +249,13 @@ function updateCharacterRig(rig, custom, eqMap) {
   setVoxGroupMesh(rig.head, vox.head, 0, 19, 0, true);
   rig.head.position.set(0, 11 * VX, 0);
   // Nohy mají pivot v kyčlích: oy = 8. V těle jsou na pozici (±2.5 * VX, 8 * VX, 0)
-  setVoxGroupMesh(rig.legs[0], vox.leftLeg, -2.5, 8, 0);
-  setVoxGroupMesh(rig.legs[1], vox.rightLeg, 2.5, 8, 0);
+  setVoxGroupMesh(rig.legs[0], vox.rightLeg, -2.5, 8, 0);
+  setVoxGroupMesh(rig.legs[1], vox.leftLeg, 2.5, 8, 0);
   // Paže mají pivot v ramenou: oy = 16. V trupu jsou na pozici (±5.5 * VX, 8 * VX, 0.5 * VX)
-  setVoxGroupMesh(rig.arms[0], vox.leftArm, -5.5, 16, 0.5, true);
+  // arms[0] = pravá paže postavy (-5.5 * VX), arms[1] = levá paže postavy (+5.5 * VX)
+  setVoxGroupMesh(rig.arms[0], vox.rightArm, -5.5, 16, 0.5, true);
   rig.arms[0].position.set(-5.5 * VX, 8 * VX, 0.5 * VX);
-  setVoxGroupMesh(rig.arms[1], vox.rightArm, 5.5, 16, 0.5, true);
+  setVoxGroupMesh(rig.arms[1], vox.leftArm, 5.5, 16, 0.5, true);
   rig.arms[1].position.set(5.5 * VX, 8 * VX, 0.5 * VX);
 
   const hasCape = !!eqMap.cape;
@@ -290,9 +330,16 @@ const head = playerRig.head;
 const legs = playerRig.legs;
 const arms = playerRig.arms;
 const hand = playerRig.hand;
+const offhand = playerRig.offhand;
+
+window.playerRig = playerRig;
+window.hand = hand;
+window.offhand = offhand;
 
 function updatePlayerAppearance() {
   updateCharacterRig(playerRig, playerCustom, getEquippedMap());
+  if (typeof applyHeld === 'function') applyHeld();
+  if (typeof updateInventoryPreview === 'function') updateInventoryPreview();
 }
 
 // =============================================================================
@@ -467,12 +514,33 @@ function animateFullCharacterRig(rig, s, dt, now) {
   const normalArmX0 = armSwingL * (1 - airBlend) + airArmX0 * airBlend;
   const normalArmZ0 = -0.12 * (1 - airBlend) + airArmZ0 * airBlend;
 
-  arms[0].rotation.x = normalArmX0 * (1 - narutoBlend) + narutoArmX0 * narutoBlend;
-  arms[0].rotation.z = normalArmZ0 * (1 - narutoBlend) + narutoArmZ0 * narutoBlend;
-  arms[0].rotation.y = (0) * (1 - narutoBlend) + narutoArmY0 * narutoBlend;
+  const isLeftDom = (typeof dominantHand !== 'undefined' && dominantHand === 'left');
+  const isBlock = !!(s.blocking || (typeof isPlayerBlocking === 'function' && isPlayerBlocking()));
 
-  // 9. Pravá ruka (útoky zbraní a pěstí nebo klidové držení zbraně / švih / naruto běh)
-  const heldId = s.heldId || s.heldItem || null;
+  const mainHandId = (typeof getEquippedMainHandId === 'function') ? getEquippedMainHandId() : (s.heldId || s.heldItem || null);
+  const offHandId = (typeof getEquippedOffHandId === 'function') ? getEquippedOffHandId() : null;
+
+  const leftItem = isLeftDom ? mainHandId : offHandId;
+  const rightItem = isLeftDom ? offHandId : mainHandId;
+
+  // 9. Útočící a zbraňová ruka (útoky zbraní a pěstí nebo klidové držení zbraně / švih / naruto běh)
+  const attackHand = s.attackHand || (typeof getActiveAttackHand === 'function' ? getActiveAttackHand() : 'dominant');
+  const isSecAttack = (attackHand === 'secondary');
+  const activeArm = isSecAttack ? (isLeftDom ? arms[0] : arms[1]) : (isLeftDom ? arms[1] : arms[0]);
+  const otherArm = isSecAttack ? (isLeftDom ? arms[1] : arms[0]) : (isLeftDom ? arms[0] : arms[1]);
+  const otherItem = (activeArm === arms[0]) ? leftItem : rightItem;
+  const isOtherLeft = (otherArm === arms[1]);
+
+  let currentHeld = null;
+  if (isSecAttack && typeof getEquippedSecondaryHandId === 'function') {
+    currentHeld = getEquippedSecondaryHandId();
+  } else if (typeof getEquippedDominantHandId === 'function') {
+    currentHeld = getEquippedDominantHandId() || s.heldId || s.heldItem || null;
+  } else {
+    currentHeld = s.heldId || s.heldItem || null;
+  }
+
+  const heldId = currentHeld;
   const attacking = !!s.attacking;
   const attackDuration = s.attackDuration || 0.26;
   const attackTime = s.attackTime || 0;
@@ -481,30 +549,27 @@ function animateFullCharacterRig(rig, s, dt, now) {
   if (attacking) {
     const p = Math.min(1, attackTime / attackDuration);
     if (!heldId) {
-      // 1. Boxerský úder pěstmi (1-2 kombinace levá / pravá)
-      const isLeft = (attackCombo === 1);
+      // 1. Boxerský úder pěstmi
       const punchReach = Math.sin(p * Math.PI);
-      if (isLeft) {
-        arms[0].rotation.x = -1.55 - punchReach * 0.35;
-        arms[0].rotation.y = 0.25 * punchReach;
-        arms[0].rotation.z = -0.05;
-        arms[1].rotation.x = -1.1;
-        arms[1].rotation.y = 0.35;
-        arms[1].rotation.z = -0.25;
-        torso.rotation.y += 0.28 * punchReach;
-        torso.rotation.x += 0.08 * punchReach;
-      } else {
-        arms[1].rotation.x = -1.55 - punchReach * 0.35;
-        arms[1].rotation.y = -0.25 * punchReach;
-        arms[1].rotation.z = 0.05;
-        arms[0].rotation.x = -1.1;
-        arms[0].rotation.y = -0.35;
-        arms[0].rotation.z = 0.25;
-        torso.rotation.y -= 0.28 * punchReach;
-        torso.rotation.x += 0.08 * punchReach;
-      }
+      activeArm.rotation.x = -1.55 - punchReach * 0.35;
+      activeArm.rotation.y = (activeArm === arms[0] ? 0.25 : -0.25) * punchReach;
+      activeArm.rotation.z = (activeArm === arms[0] ? -0.05 : 0.05);
+      otherArm.rotation.x = -1.1;
+      otherArm.rotation.y = (otherArm === arms[0] ? -0.35 : 0.35);
+      otherArm.rotation.z = (otherArm === arms[0] ? 0.25 : -0.25);
+      torso.rotation.y += (activeArm === arms[0] ? 0.28 : -0.28) * punchReach;
+      torso.rotation.x += 0.08 * punchReach;
       hand.position.set(0, -8 * VX_VAL, 0);
       hand.rotation.set(0, 0, 0);
+    } else if (isSecAttack) {
+      // Rychlý sek / úder sekundární rukou (levá nebo pravá)
+      const slash = Math.sin(p * Math.PI);
+      const isLeftArm = (activeArm === arms[1]);
+      activeArm.rotation.x = -1.45 + (1 - p * 2) * 0.5;
+      activeArm.rotation.y = (isLeftArm ? 0.8 : -0.8) * slash;
+      activeArm.rotation.z = (isLeftArm ? -0.22 : 0.22);
+      otherArm.rotation.x = -0.7;
+      torso.rotation.y += (isLeftArm ? 0.25 : -0.25) * slash;
     } else if (heldId === 'spear') {
       // 2. Realistický obouruční bodný útok kopím PŘÍMO PŘED SEBE
       // 0.0 - 0.25: Nápřah vzad (zatažení ratiště dozadu k boku)
@@ -614,8 +679,8 @@ function animateFullCharacterRig(rig, s, dt, now) {
       head.rotation.y = 0.28 * draw;
       hand.rotation.set(-1.45, 0, 0);
       hand.position.set(0, -8 * VX_VAL, -0.25 * draw);
-    } else if (heldId === 'staff_fire') {
-      // 6. Magické kouzlení holí: Pozvednutí hole k nebi a výron plamene vpřed
+    } else if (heldId === 'staff_fire' || heldId === 'staff_frost') {
+      // 6. Magické kouzlení holí: Pozvednutí hole k nebi a výron plamene/mrazu vpřed
       if (p < 0.4) {
         const t = p / 0.4;
         arms[1].rotation.x = -0.78 - t * 1.5;
@@ -668,7 +733,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       }
     }
   } else {
-    // Klidová nebo běžecká pozice pravé ruky
+    // Klidová nebo běžecká pozice obou rukou podle vybavených zbraní a štítů
     const narutoArmX1 = 1.24 - Math.sin(phase * 1.4) * 0.06;
     const narutoArmZ1 = 0.26 + Math.sin(phase * 1.4) * 0.03;
     const narutoArmY1 = -0.14;
@@ -685,19 +750,38 @@ function animateFullCharacterRig(rig, s, dt, now) {
       airArmZ1 = 0.42;
     }
 
-    if (heldId) {
-      const idleWeaponX = -0.78 + (isMoving ? Math.sin(phase) * Math.min(1, mv / 3.2) * 0.18 : 0);
-      const normalWeaponX = idleWeaponX * (1 - airBlend) + airArmX1 * 0.5 * airBlend;
-      arms[1].rotation.x = normalWeaponX * (1 - narutoBlend) + narutoArmX1 * narutoBlend;
-      arms[1].rotation.y = -0.18 * (1 - narutoBlend) + narutoArmY1 * narutoBlend;
-      arms[1].rotation.z = (0.18 * (1 - airBlend) + airArmZ1 * 0.5 * airBlend) * (1 - narutoBlend) + narutoArmZ1 * narutoBlend;
+    // 1. Pravá ruka (arms[0] na pozici -5.5 * VX)
+    if (isBlock && rightItem && rightItem.startsWith('shield_')) {
+      arms[0].rotation.set(-1.45, 0.45, -0.22);
+    } else if (rightItem && rightItem.startsWith('shield_')) {
+      const shieldBob = isMoving ? Math.sin(phase) * Math.min(1, mv / 3.2) * 0.10 : 0;
+      arms[0].rotation.set(-0.65 + shieldBob, 0.35, -0.16);
+    } else if (rightItem) {
+      const weaponBob = isMoving ? Math.sin(phase) * Math.min(1, mv / 3.2) * 0.14 : 0;
+      arms[0].rotation.set(-0.68 + weaponBob, 0.18, -0.16);
+    } else {
+      arms[0].rotation.x = normalArmX0 * (1 - narutoBlend) + narutoArmX0 * narutoBlend;
+      arms[0].rotation.y = narutoArmY0 * narutoBlend;
+      arms[0].rotation.z = normalArmZ0 * (1 - narutoBlend) + narutoArmZ0 * narutoBlend;
+    }
+
+    // 2. Levá ruka (arms[1] na pozici +5.5 * VX)
+    if (isBlock && leftItem && leftItem.startsWith('shield_')) {
+      arms[1].rotation.set(-1.45, -0.45, 0.22);
+    } else if (leftItem && leftItem.startsWith('shield_')) {
+      const shieldBob = isMoving ? -Math.sin(phase) * Math.min(1, mv / 3.2) * 0.10 : 0;
+      arms[1].rotation.set(-0.65 + shieldBob, -0.35, 0.16);
+    } else if (leftItem) {
+      const weaponBob = isMoving ? -Math.sin(phase) * Math.min(1, mv / 3.2) * 0.14 : 0;
+      arms[1].rotation.set(-0.68 + weaponBob, -0.18, 0.16);
     } else {
       const armSwingR = isMoving ? Math.sin(phase) * Math.min(1, mv / 3.2) * (isSprinting ? 1.15 : 0.75) : 0;
       const normalArmX1 = armSwingR * (1 - airBlend) + airArmX1 * airBlend;
       arms[1].rotation.x = normalArmX1 * (1 - narutoBlend) + narutoArmX1 * narutoBlend;
-      arms[1].rotation.y = (0) * (1 - narutoBlend) + narutoArmY1 * narutoBlend;
+      arms[1].rotation.y = narutoArmY1 * narutoBlend;
       arms[1].rotation.z = (0.12 * (1 - airBlend) + airArmZ1 * airBlend) * (1 - narutoBlend) + narutoArmZ1 * narutoBlend;
     }
+
     hand.position.set(0, -8 * VX_VAL, 0);
     hand.rotation.set(0, 0, 0);
   }

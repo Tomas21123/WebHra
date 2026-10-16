@@ -19,6 +19,9 @@ class NetworkManager {
     this.peer = null;
     this.p2pRoomCode = null;
     this.isP2PHost = false;
+    this.isP2PClient = false;
+    this.hostCommandsAllowed = true; // Hostitel má příkazy v základu povolené
+    this.commandsAllowed = false; // Hosté mají příkazy v základu zakázané
     this.p2pHostConn = null; // Pokud jsme klient, spojení na hostitele
     this.p2pClients = new Map(); // Pokud jsme hostitel: peerId -> conn
     this.pendingP2PConn = null; // Čekající žádost o připojení
@@ -213,6 +216,11 @@ class NetworkManager {
     const modal = document.getElementById('p2pModal');
     if (!modal) return;
 
+    // Uvolnit myš pro možnost interakce s dialogem
+    if (document.exitPointerLock) {
+      try { document.exitPointerLock(); } catch(e) {}
+    }
+
     if (!this.isP2PHost || !this.peer || this.peer.destroyed) {
       this.startP2PHost();
     }
@@ -221,6 +229,7 @@ class NetworkManager {
     if (display && this.p2pRoomCode) display.textContent = this.p2pRoomCode;
 
     modal.hidden = false;
+    this.renderP2PPlayersList();
     this.updateP2PPlayerCount();
   }
 
@@ -301,6 +310,7 @@ class NetworkManager {
         this.p2pClients.delete(senderId);
         this.removeRemotePlayer(senderId);
         this.updateP2PPlayerCount();
+        this.renderP2PPlayersList();
         if (typeof addChatMessage === 'function') {
           addChatMessage('Systém', `Hráč opustil svět.`, 'system');
         }
@@ -387,6 +397,7 @@ class NetworkManager {
         this.p2pClients.delete(conn.peer);
         this.removeRemotePlayer(conn.peer);
         this.updateP2PPlayerCount();
+        this.renderP2PPlayersList();
         if (typeof addChatMessage === 'function') {
           addChatMessage('Systém', `Hráč opustil svět.`, 'system');
         }
@@ -485,6 +496,8 @@ class NetworkManager {
     if (popup) popup.style.display = 'none';
 
     // Přidat klienta do schválených
+    conn.nickname = data.nickname || 'Hráč';
+    conn.commandsAllowed = false; // Hosté mají příkazy v základu vypnuté
     this.p2pClients.set(conn.peer, conn);
 
     // Odeslat klientovi potvrzení, seed a existující svět
@@ -519,6 +532,7 @@ class NetworkManager {
     }, conn.peer);
 
     this.updateP2PPlayerCount();
+    this.renderP2PPlayersList();
 
     if (typeof addChatMessage === 'function') {
       addChatMessage('Systém', `Hráč ${data.nickname || 'Přítel'} vstoupil do tvého světa!`, 'system');
@@ -579,6 +593,7 @@ class NetworkManager {
       serverName: `Svět hráče ${hostNick}`,
       seed: currentSeed,
       isOp: false,
+      commandsAllowed: !!conn.commandsAllowed,
       worldDeltas: this.worldDeltas,
       players: existingPlayers
     });
@@ -648,6 +663,151 @@ class NetworkManager {
     }
   }
 
+  // Vykreslení seznamu hráčů a přepínačů oprávnění příkazů v P2P dialogu
+  renderP2PPlayersList() {
+    const listContainer = document.getElementById('p2pPlayersList');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    const isHost = this.isP2PHost;
+    const myNick = (typeof getPlayerNickname === 'function') ? getPlayerNickname() : 'Hostitel';
+
+    // 1. Karta hostitele (já, pokud hostuji)
+    const hostCard = document.createElement('div');
+    hostCard.className = 'p2p-player-card is-self';
+    const hostCmdAllowed = (this.hostCommandsAllowed !== false);
+
+    hostCard.innerHTML = `
+      <div class="p2p-player-left">
+        <div class="p2p-avatar host">👑</div>
+        <div class="p2p-player-meta">
+          <div class="p2p-player-name">
+            <span>${this.escape(myNick)}</span>
+            <span style="font-size:11px;color:#94a3b8;font-weight:normal;">${isHost ? '(Ty / Hostitel)' : '(Hostitel)'}</span>
+          </div>
+          <span class="p2p-role-badge host">Hostitel světa</span>
+        </div>
+      </div>
+      <div class="p2p-player-controls">
+        <div class="p2p-cmd-toggle-wrap" title="Povolit nebo zakázat používání herních příkazů (např. /tp, /time, /heal)">
+          <span class="p2p-cmd-status-text ${hostCmdAllowed ? 'enabled' : 'disabled'}" id="p2pHostCmdStatus">
+            ${hostCmdAllowed ? 'Povoleno' : 'Vypnuto'}
+          </span>
+          <label class="p2p-cmd-switch">
+            <input type="checkbox" id="p2pToggleHostCmd" ${hostCmdAllowed ? 'checked' : ''} ${!isHost ? 'disabled' : ''}>
+            <span class="p2p-cmd-slider"></span>
+          </label>
+        </div>
+      </div>
+    `;
+
+    listContainer.appendChild(hostCard);
+
+    const toggleHostInput = hostCard.querySelector('#p2pToggleHostCmd');
+    if (toggleHostInput && isHost) {
+      toggleHostInput.addEventListener('change', (e) => {
+        this.setPlayerCommandPermission('host', e.target.checked);
+      });
+    }
+
+    // 2. Karty pro připojené hosty / přátele
+    let guestCount = 0;
+    if (this.p2pClients && this.p2pClients.size > 0) {
+      for (const [peerId, conn] of this.p2pClients) {
+        guestCount++;
+        const rp = this.remotePlayers.get(peerId);
+        const guestNick = (rp && rp.nickname) || conn.nickname || `Host_${peerId.slice(-4)}`;
+        const cmdAllowed = !!conn.commandsAllowed;
+
+        const guestCard = document.createElement('div');
+        guestCard.className = 'p2p-player-card';
+        guestCard.innerHTML = `
+          <div class="p2p-player-left">
+            <div class="p2p-avatar">👤</div>
+            <div class="p2p-player-meta">
+              <div class="p2p-player-name">
+                <span>${this.escape(guestNick)}</span>
+              </div>
+              <span class="p2p-role-badge guest">Host / Přítel</span>
+            </div>
+          </div>
+          <div class="p2p-player-controls">
+            <div class="p2p-cmd-toggle-wrap" title="Povolit nebo zakázat hráči používat herní příkazy (např. /tp, /time)">
+              <span class="p2p-cmd-status-text ${cmdAllowed ? 'enabled' : 'disabled'}" id="p2pStatus_${peerId}">
+                ${cmdAllowed ? 'Povoleno' : 'Zakázáno'}
+              </span>
+              <label class="p2p-cmd-switch">
+                <input type="checkbox" id="p2pToggle_${peerId}" ${cmdAllowed ? 'checked' : ''} ${!isHost ? 'disabled' : ''}>
+                <span class="p2p-cmd-slider"></span>
+              </label>
+            </div>
+          </div>
+        `;
+
+        listContainer.appendChild(guestCard);
+
+        const guestSwitch = guestCard.querySelector(`#p2pToggle_${peerId}`);
+        if (guestSwitch && isHost) {
+          guestSwitch.addEventListener('change', (e) => {
+            this.setPlayerCommandPermission(peerId, e.target.checked);
+          });
+        }
+      }
+    }
+
+    // Pokud se zatím nepřipojil žádný host, zobrazit nápovědu
+    if (guestCount === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'p2p-empty-placeholder';
+      emptyDiv.innerHTML = `
+        <div style="font-size:20px;margin-bottom:2px;">🎮</div>
+        <div style="font-weight:600;color:#94a3b8;">Zatím se nepřipojil žádný přítel</div>
+        <div style="font-size:11.5px;color:#64748b;">Pošli kamarádovi kód zobrazený výše. Až se připojí, uvidíš ho zde a můžeš mu povolit příkazy.</div>
+      `;
+      listContainer.appendChild(emptyDiv);
+    }
+
+    this.updateP2PPlayerCount();
+  }
+
+  // Nastavení oprávnění příkazů pro hostitele nebo hosta
+  setPlayerCommandPermission(peerId, allowed) {
+    if (peerId === 'host') {
+      this.hostCommandsAllowed = !!allowed;
+      if (typeof addChatMessage === 'function') {
+        addChatMessage('Systém', `Příkazy pro hostitele byly ${this.hostCommandsAllowed ? 'povoleny' : 'vypnuty'}.`, 'system');
+      }
+      this.renderP2PPlayersList();
+      return;
+    }
+
+    const conn = this.p2pClients.get(peerId);
+    if (!conn) return;
+
+    conn.commandsAllowed = !!allowed;
+    try {
+      conn.send({
+        type: 'commandPermission',
+        allowed: conn.commandsAllowed
+      });
+    } catch(e) {
+      console.warn('[P2P] Chyba při odesílání oprávnění klientovi:', e);
+    }
+
+    const rp = this.remotePlayers.get(peerId);
+    const guestNick = (rp && rp.nickname) || conn.nickname || 'Host';
+
+    if (typeof addChatMessage === 'function') {
+      addChatMessage('Systém', `Příkazy pro hráče "${guestNick}" byly ${conn.commandsAllowed ? 'povoleny' : 'zakázány'}.`, 'system');
+    }
+    if (typeof toast === 'function') {
+      toast(`${guestNick}: Příkazy ${conn.commandsAllowed ? 'povoleny' : 'zakázány'}`);
+    }
+
+    this.renderP2PPlayersList();
+  }
+
   // ===========================================================================
   // 3. P2P KLIENT – Připojení ke světu přítele
   // ===========================================================================
@@ -663,6 +823,9 @@ class NetworkManager {
       P.moveX = 0; P.moveZ = 0; P.vx = 0; P.vz = 0;
     }
 
+    this.isP2PHost = false;
+    this.isP2PClient = true;
+    this.commandsAllowed = false;
     this.p2pRoomCode = `VOX-${cleanNum}`;
     this.approved = false;
     this.connected = false;
@@ -1060,6 +1223,7 @@ class NetworkManager {
         this.approved = true;
         this.playerId = msg.playerId;
         this.isOp = !!msg.isOp;
+        this.commandsAllowed = (typeof msg.commandsAllowed !== 'undefined') ? !!msg.commandsAllowed : false;
         this.hideNetStatus();
 
         if (this.localRetryTimer) clearInterval(this.localRetryTimer);
@@ -1153,6 +1317,20 @@ class NetworkManager {
 
       case 'playerLeave':
         this.removeRemotePlayer(msg.id);
+        break;
+
+      case 'commandPermission':
+        this.commandsAllowed = !!msg.allowed;
+        if (typeof addChatMessage === 'function') {
+          if (this.commandsAllowed) {
+            addChatMessage('Systém', '🔓 Hostitel ti povolil používání herních příkazů (např. <code>/tp</code>, <code>/time</code>).', 'info');
+          } else {
+            addChatMessage('Systém', '🔒 Hostitel ti zakázal používání herních příkazů.', 'info');
+          }
+        }
+        if (typeof toast === 'function') {
+          toast(this.commandsAllowed ? 'Herní příkazy povoleny' : 'Herní příkazy zakázány');
+        }
         break;
 
       case 'hostDisconnect':
@@ -1451,6 +1629,20 @@ class NetworkManager {
   handleLocalPlayerHit(msg) {
     if (typeof isRolling !== 'undefined' && isRolling && rollTimer > 0.04 && rollTimer < 0.52) return;
 
+    // Kontrola vykrytí útoků štítem
+    const shieldEquipped = (typeof getEquippedShield === 'function') ? getEquippedShield() : null;
+    const isBlocking = (typeof isPlayerBlocking === 'function') ? isPlayerBlocking() : false;
+    if (shieldEquipped && isBlocking) {
+      if (typeof playBlockSound === 'function') playBlockSound();
+      else if (typeof playAttackSound === 'function') playAttackSound('heavy');
+      if (typeof toast === 'function') toast(`🛡️ ÚTOK VYKRÝT ŠTÍTEM (${shieldEquipped.name})!`);
+      if (typeof addChatMessage === 'function') {
+        const atk = msg.attackerNick || 'Nepřítel';
+        addChatMessage('Boj', `🛡️ Vykryl jsi útok hráče ${atk} štítem (${shieldEquipped.name})!`, 'info');
+      }
+      return;
+    }
+
     const armorRed = (typeof getPlayerArmorReduction === 'function') ? getPlayerArmorReduction() : 0;
     const finalDmg = Math.max(1, Math.round(msg.damage * (1 - armorRed)));
 
@@ -1587,6 +1779,7 @@ class NetworkManager {
     if (p && typeof scene !== 'undefined') {
       scene.remove(p.group);
       this.remotePlayers.delete(id);
+      this.renderP2PPlayersList();
     }
   }
 
@@ -1728,7 +1921,12 @@ class NetworkManager {
       const escP2PBtn = document.getElementById('escOpenP2P');
       if (escP2PBtn) {
         escP2PBtn.onclick = () => {
-          if (typeof closeEscMenu === 'function') closeEscMenu();
+          const escMenu = document.getElementById('escMenu');
+          if (escMenu) escMenu.hidden = true;
+          if (typeof escOpen !== 'undefined') escOpen = false;
+          if (document.exitPointerLock) {
+            try { document.exitPointerLock(); } catch(e) {}
+          }
           this.openP2PHostDialog();
         };
       }
@@ -1739,6 +1937,7 @@ class NetworkManager {
         p2pClose.onclick = () => {
           const m = document.getElementById('p2pModal');
           if (m) m.hidden = true;
+          try { (window.cv || (window.renderer && renderer.domElement))?.requestPointerLock(); } catch (e) {}
         };
       }
 

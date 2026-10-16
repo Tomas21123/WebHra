@@ -153,9 +153,16 @@ addEventListener('keydown', e => {
     if (e.code === 'Escape') { closeEmotes(); e.preventDefault(); return; }
   }
   if (e.code === 'KeyM') {
-    if (typeof toggleMinimap === 'function') toggleMinimap();
-    e.preventDefault();
-    return;
+    const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
+    if (typeof minimapOpen !== 'undefined' && minimapOpen) {
+      if (typeof toggleMinimap === 'function') toggleMinimap(false);
+      e.preventDefault();
+      return;
+    } else if (!escOpen && !charOpen && !invOpen && !(typeof chatOpen !== 'undefined' && chatOpen) && !isP2POpen) {
+      if (typeof toggleMinimap === 'function') toggleMinimap(true);
+      e.preventDefault();
+      return;
+    }
   }
   if (e.code === 'Escape') {
     e.preventDefault();
@@ -175,6 +182,9 @@ addEventListener('keydown', e => {
       closeEmotes();
     } else if (typeof minimapOpen !== 'undefined' && minimapOpen) {
       toggleMinimap(false);
+    } else if (document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden) {
+      document.getElementById('p2pModal').hidden = true;
+      openEscMenu();
     } else if (charOpen) {
       closeCharEditor(); openEscMenu();
     } else if (invOpen) {
@@ -209,7 +219,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys[e.code] = 0);
 
 // Aplikace vzhledu a výbavy
-attachWeaponsToHand(hand);
+attachWeaponsToHand(hand, offhand);
 updatePlayerAppearance();
 renderHB();
 applyHeld();

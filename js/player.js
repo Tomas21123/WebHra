@@ -89,13 +89,13 @@ function triggerRoll() {
   if (typeof playRollSound === 'function') playRollSound();
 }
 
-function checkPvPHit() {
+function checkPvPHit(whichHand = 'dominant') {
   if (!window.networkManager || !window.networkManager.remotePlayers || window.networkManager.remotePlayers.size === 0) {
     return;
   }
 
-  const reach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach() : 2.4;
-  const atkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage() : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
+  const reach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach(whichHand) : 2.4;
+  const atkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage(whichHand) : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
 
   // Směr pohledu hráče
   const cp = Math.cos(pitch);
@@ -150,61 +150,130 @@ function checkPvPHit() {
   }
 }
 
-function triggerAttack() {
+let activeAttackHand = 'dominant'; // 'dominant' nebo 'secondary'
+window.activeAttackHand = activeAttackHand;
+window.getActiveAttackHand = () => activeAttackHand;
+
+function getHandItem(whichHand) {
+  if (whichHand === 'secondary') {
+    return (typeof getEquippedSecondaryHandItem === 'function') ? getEquippedSecondaryHandItem() : null;
+  } else {
+    return (typeof getEquippedDominantHandItem === 'function') ? getEquippedDominantHandItem() : null;
+  }
+}
+
+function handleHandAction(whichHand) {
+  if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || isRolling) return;
+
+  const item = getHandItem(whichHand);
+
+  // 1. Pokud je v této ruce štít: stisknutí tlačítka vykrývá útoky
+  if (item && item.subcat === 'shield') {
+    isPlayerBlocking = true;
+    blockingHand = whichHand;
+    return;
+  }
+
+  // 2. Pokud je v této ruce spotřební lektvar
+  if (item && item.id === 'potion_hp') {
+    if (G.hp < 100) {
+      G.hp = Math.min(100, G.hp + 40);
+      if (typeof ui === 'function') ui();
+      if (typeof playAttackSound === 'function') playAttackSound('punch');
+      if (typeof toast === 'function') toast('🧪 Vypit léčivý lektvar (+40 HP)');
+    }
+    return;
+  }
+
+  // 3. Útok danou rukou (dominantní nebo sekundární)
+  triggerHandAttack(whichHand);
+}
+
+function handleHandRelease(whichHand) {
+  if (blockingHand === whichHand) {
+    isPlayerBlocking = false;
+    blockingHand = null;
+  }
+}
+
+function triggerHandAttack(whichHand) {
   if (escOpen || charOpen || invOpen || isRolling) return;
+  const item = getHandItem(whichHand);
+  const itId = item ? item.id : null;
+
+  activeAttackHand = whichHand;
+  window.activeAttackHand = whichHand;
   attacking = true;
   attackTime = 0;
   attackCombo = (attackCombo + 1) % 2;
 
-  if (!heldId) {
+  if (!itId) {
     attackDuration = 0.22; playAttackSound('punch');
-  } else if (heldId === 'spear') {
+  } else if (itId === 'spear') {
     attackDuration = 0.28; playAttackSound('thrust');
-  } else if (heldId === 'dagger') {
+  } else if (itId === 'dagger') {
     attackDuration = 0.20; playAttackSound('slash');
-  } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
+  } else if (itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer') {
     attackDuration = 0.38; playAttackSound('heavy');
-  } else if (heldId === 'staff_fire') {
+  } else if (itId === 'staff_fire' || itId === 'staff_frost') {
     attackDuration = 0.32; playAttackSound('staff');
-  } else if (heldId === 'bow') {
+  } else if (itId === 'bow') {
     attackDuration = 0.30; playAttackSound('bow');
   } else {
     attackDuration = 0.26; playAttackSound('slash');
   }
 
-  // Detekce zásahu do hitboxu protihráče synchronizovaná s animací úderu
   setTimeout(() => {
-    checkPvPHit();
+    checkPvPHit(whichHand);
   }, Math.min(110, Math.round(attackDuration * 320)));
+}
+
+function triggerAttack() {
+  triggerHandAttack('dominant');
 }
 
 const keys = {};
 let drag = false;
+let isPlayerBlocking = false;
+let blockingHand = null;
+window.isPlayerBlocking = () => isPlayerBlocking;
 
 // Event listenery pro ovládání myší
 function initPlayerControls(cv) {
+  cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('mousedown', e => {
     if (typeof tryEnableFullscreen === 'function') tryEnableFullscreen();
-    if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen)) return;
+    const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
+    if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || (typeof minimapOpen !== 'undefined' && minimapOpen) || isP2POpen) return;
     if (e.button === 0) {
-      triggerAttack();
+      // LEVÉ TLAČÍTKO MYŠI (LMB) = DOMINANTNÍ RUKA
+      handleHandAction('dominant');
       if (!document.pointerLockElement) {
         drag = true;
         try { cv.requestPointerLock(); } catch (err) {}
       }
+    } else if (e.button === 2) {
+      // PRAVÉ TLAČÍTKO MYŠI (RMB) = SEKUNDÁRNÍ RUKA
+      handleHandAction('secondary');
     }
   });
 
-  addEventListener('mouseup', () => drag = false);
+  addEventListener('mouseup', e => {
+    drag = false;
+    if (e.button === 0) handleHandRelease('dominant');
+    if (e.button === 2) handleHandRelease('secondary');
+  });
   addEventListener('mousemove', e => {
-    if ((document.pointerLockElement || drag) && !escOpen && !charOpen && !invOpen && !(typeof chatOpen !== 'undefined' && chatOpen)) {
+    const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
+    if ((document.pointerLockElement || drag) && !escOpen && !charOpen && !invOpen && !(typeof chatOpen !== 'undefined' && chatOpen) && !(typeof minimapOpen !== 'undefined' && minimapOpen) && !isP2POpen) {
       yaw -= e.movementX * 0.0025;
       pitch = Math.min(1.4, Math.max(-0.4, pitch + e.movementY * 0.0025));
     }
   });
 
   addEventListener('wheel', e => {
-    if (escOpen || charOpen || (typeof chatOpen !== 'undefined' && chatOpen)) return;
+    const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
+    if (escOpen || charOpen || invOpen || (typeof chatOpen !== 'undefined' && chatOpen) || (typeof minimapOpen !== 'undefined' && minimapOpen) || isP2POpen) return;
     dist = Math.min(14, Math.max(0, dist + e.deltaY * 0.005));
   }, { passive: true });
 }

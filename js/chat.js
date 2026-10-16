@@ -551,6 +551,13 @@ function sendChatMessage() {
   hideChatAutocomplete();
 
   if (raw.startsWith('/')) {
+    // Ověření oprávnění používat příkazy (hostitel má povoleno, hosté v základu vypnuto)
+    if (typeof canUseCommands === 'function' && !canUseCommands()) {
+      addChatMessage('Systém', '⛔ Nemáš oprávnění používat herní příkazy. Hostitel ti musí povolit příkazy v menu [ESC] -> Otevřít pro přátele.', 'error');
+      closeChat();
+      return;
+    }
+
     // -------------------------------------------------------------------------
     // PŘÍKAZ (začíná lomítkem):
     // Zobrazuje se v historii POUZE hráči, který jej zadal!
@@ -660,8 +667,27 @@ function parseCoordinate(token, currentVal) {
   return isNaN(val) ? NaN : Math.round(val);
 }
 
+// Kontrola oprávnění pro příkazy
+function canUseCommands() {
+  if (typeof window.networkManager !== 'undefined' && window.networkManager) {
+    if (window.networkManager.isP2PClient) {
+      return !!window.networkManager.commandsAllowed;
+    }
+    if (window.networkManager.isP2PHost) {
+      return window.networkManager.hostCommandsAllowed !== false;
+    }
+  }
+  return true;
+}
+window.canUseCommands = canUseCommands;
+
 // Zpracování příkazů konzole
 function executeCommand(cmdStr) {
+  if (!canUseCommands()) {
+    addChatMessage('Systém', '⛔ Nemáš oprávnění používat herní příkazy. Hostitel ti musí povolit příkazy v menu [ESC] -> Otevřít pro přátele.', 'error');
+    return;
+  }
+
   const parts = cmdStr.trim().slice(1).split(/\s+/);
   const cmd = (parts[0] || '').toLowerCase();
   const args = parts.slice(1);

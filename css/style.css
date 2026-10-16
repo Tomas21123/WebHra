@@ -177,92 +177,306 @@ canvas {
   box-shadow: 0 0 12px rgba(255, 216, 107, .7);
 }
 
-/* Inventář */
+/* =============================================================================
+   NOVÝ 5-SEKČNÍ RPG INVENTÁŘ, VYBAVENÍ & CRAFTING
+   ============================================================================= */
 #inv {
   position: fixed;
   inset: 0;
-  background: rgba(8, 12, 20, .55);
+  background: rgba(4, 7, 15, 0.78);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+  z-index: 99999;
 }
-#inv .panel {
-  width: min(620px, 92vw);
-  background: #1b2433;
-  border: 3px solid #0b0e14;
-  border-radius: 6px;
-  padding: 14px 16px;
-  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+
+#inv .inv-panel-v2 {
+  width: min(1140px, 96vw);
+  height: min(710px, 92vh);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(11, 17, 32, 0.96));
+  border: 1.5px solid rgba(56, 189, 248, 0.28);
+  border-radius: 18px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+  color: #f8fafc;
+  padding: 0;
 }
-#inv .head {
+
+.inv-header-bar {
+  height: 48px;
+  padding: 0 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 20px;
-  margin-bottom: 10px;
+  background: rgba(2, 6, 23, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-#inv button {
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.tabs {
+.inv-header-left {
   display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-.tabs button {
-  background: #2a364a;
-  border: 2px solid #0b0e14;
-  border-radius: 4px;
-  padding: 6px 14px;
-  font-size: 14px;
-}
-.tabs button.on {
-  background: #3d5a85;
-  border-color: #8fb4ee;
-}
-#grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 92px);
+  align-items: center;
   gap: 10px;
-  min-height: 120px;
 }
-.tile {
-  width: 96px;
-  min-height: 110px;
+.inv-header-icon {
+  font-size: 20px;
+}
+.inv-header-title {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #38bdf8;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+.inv-capacity-pill {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #7dd3fc;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.inv-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.inv-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+  transform: scale(1.06);
+}
+
+/* Hlavní rozvržení na 3 sloupce dle nákresu */
+.inv-body-layout {
+  display: grid;
+  grid-template-columns: 175px 1.15fr 1.35fr;
+  height: calc(100% - 48px);
+  overflow: hidden;
+}
+
+/* 1) LEVÝ SLOUPEC: Hlavní kategorie */
+.inv-sec-1 {
+  background: rgba(2, 6, 23, 0.5);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inv-sec-1 .sec-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #64748b;
+  padding-left: 4px;
+}
+.inv-cat-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inv-cat-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+}
+.inv-cat-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #fff;
+  transform: translateX(2px);
+}
+.inv-cat-btn.active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 116, 144, 0.35));
+  border-color: #38bdf8;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+.inv-cat-btn .cat-ico {
+  font-size: 16px;
+}
+.inv-search-box {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.inv-search-box input {
+  width: 100%;
+  padding: 8px 10px;
   background: rgba(15, 23, 42, 0.85);
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.inv-search-box input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+/* STŘEDNÍ SLOUPEC: 2) Podkategorie + 3) Filtrované Itemy */
+.inv-middle-col {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background: rgba(11, 17, 32, 0.4);
+}
+
+/* 2) Podkategorie */
+.inv-sec-2 {
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  overflow-x: auto;
+  background: rgba(2, 6, 23, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.inv-sec-2::-webkit-scrollbar {
+  height: 3px;
+}
+.inv-sec-2::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.subcat-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.subcat-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+.subcat-pill.active {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #041324;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+}
+
+/* 3) Mřížka filtrovaných itemů */
+.inv-sec-3 {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+.inv-sec-3::-webkit-scrollbar {
+  width: 5px;
+}
+.inv-sec-3::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.inv-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+.inv-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  color: #64748b;
+  font-size: 13px;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+/* Dlaždice položek */
+.tile {
+  min-height: 96px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: #e2e8f0;
-  text-align: center;
-  padding: 8px 6px;
+  padding: 6px 4px;
   position: relative;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 .tile:hover {
-  transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
 }
 .tile img {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   image-rendering: pixelated;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
-  transition: transform 0.2s ease;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
+  transition: transform 0.15s ease;
 }
 .tile:hover img {
   transform: scale(1.08);
+}
+.tile .tile-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.tile-count-badge {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  background: rgba(2, 6, 23, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 
 /* Rarity pozadí dlaždic */
@@ -273,50 +487,752 @@ canvas {
 .tile.rarity-uncommon {
   border-color: rgba(34, 197, 94, 0.55);
   background: linear-gradient(135deg, rgba(20, 83, 45, 0.4), rgba(15, 23, 42, 0.92));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 16px rgba(34, 197, 94, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 14px rgba(34, 197, 94, 0.12);
 }
 .tile.rarity-rare {
   border-color: rgba(56, 189, 248, 0.65);
   background: linear-gradient(135deg, rgba(14, 116, 144, 0.42), rgba(15, 23, 42, 0.92));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 18px rgba(56, 189, 248, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 16px rgba(56, 189, 248, 0.15);
 }
 .tile.rarity-epic {
   border-color: rgba(168, 85, 247, 0.7);
   background: linear-gradient(135deg, rgba(107, 33, 168, 0.42), rgba(15, 23, 42, 0.92));
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(168, 85, 247, 0.22);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 0 18px rgba(168, 85, 247, 0.2);
 }
 .tile.rarity-legendary {
   border-color: rgba(245, 158, 11, 0.8);
   background: linear-gradient(135deg, rgba(146, 64, 14, 0.48), rgba(15, 23, 42, 0.92));
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), inset 0 0 24px rgba(245, 158, 11, 0.25), 0 0 10px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 0 20px rgba(245, 158, 11, 0.22), 0 0 10px rgba(245, 158, 11, 0.2);
 }
-
 .tile.eq {
   border-color: #fbbf24 !important;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.65), inset 0 0 14px rgba(251, 191, 36, 0.3) !important;
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.55), inset 0 0 12px rgba(251, 191, 36, 0.25) !important;
 }
 .tile.eq::after {
   content: '✓ AKTIVNÍ';
   position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 8px;
+  top: 3px;
+  right: 3px;
+  font-size: 7.5px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   background: #fbbf24;
   color: #1a1303;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.empty {
-  opacity: .7;
-  font-size: 14px;
+/* Aktivní rozbalená dlaždice se šipkou dolů */
+.tile.expanded-active {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.25) !important;
+  transform: translateY(-2px);
+  z-index: 4;
+}
+.tile.expanded-active::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #38bdf8;
+  z-index: 10;
+}
+
+/* Rozbalovací panel přímo pod itemem */
+.item-inline-drawer {
   grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(10, 14, 23, 0.98));
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 4px 0 8px 0;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(56, 189, 248, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: drawerSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 5;
 }
 
-/* RPG Karta Předmětu (Tooltip Pop) */
-#pop {
+@keyframes drawerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.drawer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drawer-ico {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+.drawer-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+.drawer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.drawer-rarity-badge {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  letter-spacing: 0.5px;
+}
+.drawer-type-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.drawer-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.drawer-close-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+/* Mřížka statistik v panelu */
+.drawer-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.drawer-stat-item {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+/* Popis */
+.drawer-desc {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #94a3b8;
+  font-style: italic;
+  border-left: 2.5px solid rgba(56, 189, 248, 0.5);
+  padding-left: 8px;
+}
+
+/* Akční tlačítka v panelu */
+.drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+.drawer-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.drawer-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(30, 41, 59, 0.7);
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+.drawer-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+.drawer-btn.hand-btn {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6px 6px;
+  gap: 1px;
+}
+.drawer-btn.hand-btn .btn-hand-icon {
+  font-size: 14px;
+}
+.drawer-btn.hand-btn .btn-hand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.drawer-btn.hand-btn .btn-hand-role {
+  font-size: 9px;
+  font-weight: 800;
+  color: #38bdf8;
+  opacity: 0.95;
+  letter-spacing: 0.3px;
+}
+.drawer-btn.hand-btn.equipped-active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.38));
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+.drawer-btn.hand-btn.equipped-active .btn-hand-role {
+  color: #fca5a5;
+}
+.drawer-btn.primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.45));
+  border-color: #10b981;
+  color: #a7f3d0;
+}
+.drawer-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.45), rgba(5, 150, 105, 0.6));
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+.drawer-btn.danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.35));
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+/* PRAVÝ SLOUPEC: 4) Volba + 5) Vybavení / Crafting */
+.inv-right-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+/* 4) Přepínač Vybavení / Crafting */
+.inv-sec-4 {
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(2, 6, 23, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.inv-mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.inv-mode-tab:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+.inv-mode-tab.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.35));
+  border-color: #10b981;
+  color: #34d399;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+/* 5) Obsah sekce 5 */
+.inv-sec-5 {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.inv-sec-5::-webkit-scrollbar {
+  width: 5px;
+}
+.inv-sec-5::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* SEKCE 5: VYBAVENÍ */
+.inv-equip-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inv-equip-upper-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 88px;
+  gap: 10px;
+  align-items: center;
+}
+.inv-gear-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gear-col-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  text-align: center;
+  padding-bottom: 2px;
+}
+
+/* Políčka výbavy */
+.gear-slot {
+  width: 100%;
+  height: 56px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.gear-slot:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(15, 23, 42, 0.95);
+  transform: scale(1.02);
+}
+.gear-slot .slot-placeholder {
+  font-size: 18px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.gear-slot .slot-name-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.gear-slot.filled {
+  border-style: solid;
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(2, 6, 23, 0.85);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.gear-slot.filled .slot-placeholder,
+.gear-slot.filled .slot-name-tag {
+  display: none;
+}
+.slot-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slot-item-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 6px;
+  position: relative;
+}
+.slot-item-card img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.slot-item-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: #f8fafc;
+  text-align: center;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slot-unequip-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.85);
+  border: none;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.gear-slot:hover .slot-unequip-btn {
+  display: flex;
+}
+
+/* 3D Náhled postavy */
+.inv-char-preview-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(14, 116, 144, 0.16) 0%, rgba(2, 6, 23, 0.65) 85%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
+  padding: 6px;
+  position: relative;
+}
+.inv-char-preview-box canvas {
+  border-radius: 8px;
+  cursor: grab;
+}
+.inv-char-preview-box canvas:active {
+  cursor: grabbing;
+}
+.preview-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 4px 6px;
+}
+.preview-mini-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preview-mini-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #fff;
+}
+.char-nick-chip {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Pás pro Ruce a Prsteny */
+.inv-hands-rings-strip {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1.2fr;
+  gap: 8px;
+}
+.gear-slot.hand-slot {
+  height: 54px;
+}
+.slot-hand-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.role-pill {
+  font-size: 7.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.role-pill.dom {
+  background: rgba(245, 158, 11, 0.22);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+/* Souhrn bonusů */
+.inv-bonus-summary {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.bonus-header {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #38bdf8;
+  margin-bottom: 6px;
+}
+.bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.bonus-badge {
+  font-size: 11px;
+  color: #94a3b8;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bonus-badge .bb-ico {
+  font-size: 12px;
+}
+.bonus-badge b {
+  color: #f8fafc;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+/* SEKCE 5: CRAFTING */
+.inv-craft-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.craft-cat-tabs {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.craft-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.craft-tab-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+  font-weight: 700;
+}
+.craft-workbench-body {
+  display: grid;
+  grid-template-columns: 145px 1fr;
+  gap: 10px;
+  margin-top: 10px;
+  flex: 1;
+  min-height: 380px;
+}
+.craft-recipes-pane {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+.craft-recipe-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.craft-recipe-card:hover {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+.craft-recipe-card.selected {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+}
+.craft-recipe-card img {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+.craft-recipe-card .recipe-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.craft-recipe-card .recipe-status {
+  font-size: 9px;
+  color: #64748b;
+}
+.craft-recipe-card.ready .recipe-status {
+  color: #34d399;
+  font-weight: 700;
+}
+.craft-info-pane {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.craft-detail-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.detail-big-icon {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+}
+.detail-title {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+.detail-desc {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+.craft-ingredients-box {
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.craft-ingredients-box .box-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.ing-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.ing-row:last-child {
+  border-bottom: none;
+}
+.ing-row.ok {
+  color: #34d399;
+}
+.ing-row.missing {
+  color: #f87171;
+}
+.craft-action-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 800;
+  margin-top: auto;
+  transition: all 0.18s ease;
+}
+.craft-action-btn.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+}
+.craft-action-btn.active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.5);
+}
+.craft-action-btn.disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+}
+
+/* Tlačítka dominantní ruky v nastavení */
+.setting-hand-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  transition: all 0.15s ease;
+}
+.setting-hand-btn.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35)) !important;
+  border-color: #f59e0b !important;
+  color: #fbbf24 !important;
+  font-weight: 800;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
+}
   position: fixed;
   background: rgba(15, 23, 42, 0.96);
   border: 2px solid #38bdf8;
@@ -804,81 +1720,79 @@ canvas {
 }
 
 /* 3D Minimapa (Cube World Style) */
+/* 3D Celoobrazovková Mapa Světa (Klávesa M) */
 #minimapBox {
   position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 85;
-  background: rgba(14, 21, 33, 0.92);
-  backdrop-filter: blur(8px);
-  border: 2px solid #22354e;
-  border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.65), 0 0 1px 1px rgba(0, 245, 255, 0.2);
-  width: 310px;
+  inset: 16px;
+  z-index: 1000;
+  background: rgba(10, 16, 28, 0.95);
+  backdrop-filter: blur(14px);
+  border: 2px solid #23354d;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(56, 189, 248, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), height 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), top 0.22s, right 0.22s;
   user-select: none;
+  animation: mapModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes mapModalFadeIn {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
 }
 #minimapBox[hidden] {
   display: none !important;
-}
-#minimapBox.expanded {
-  width: 640px;
-  top: 50%;
-  right: 50%;
-  transform: translate(50%, -50%);
-  box-shadow: 0 16px 60px rgba(0,0,0,0.85), 0 0 0 2px #ffd86b;
-  z-index: 100;
 }
 .minimap-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: #111a28;
+  padding: 10px 18px;
+  background: #0f1826;
   border-bottom: 2px solid #1e2c40;
-  font-size: 13px;
+  font-size: 15px;
   color: #ffd86b;
-  font-weight: bold;
+  font-weight: 800;
 }
 .minimap-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   letter-spacing: 0.5px;
 }
 .minimap-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 .minimap-actions button, .mm-controls button {
   background: #1c2738;
   border: 1px solid #2d3e58;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #dbe4f0;
   font-family: inherit;
-  font-size: 12px;
-  padding: 3px 7px;
+  font-size: 12.5px;
+  padding: 5px 12px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .minimap-actions button:hover, .mm-controls button:hover {
   background: #2b3b55;
-  border-color: #00f5ff;
+  border-color: #38bdf8;
   color: #fff;
+  transform: translateY(-1px);
 }
 .minimap-viewport {
   position: relative;
+  flex: 1;
   width: 100%;
-  height: 270px;
-  background: #0a0e17;
+  height: 100%;
+  min-height: 0;
+  background: radial-gradient(circle at 50% 50%, #111d30 0%, #070c14 100%);
   overflow: hidden;
   cursor: grab;
-}
-#minimapBox.expanded .minimap-viewport {
-  height: 500px;
 }
 .minimap-viewport:active {
   cursor: grabbing;
@@ -887,6 +1801,125 @@ canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* P2P Hráči & Správa příkazů */
+.p2p-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 9px 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.p2p-player-card:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.p2p-player-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.p2p-player-avatar {
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.p2p-player-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.p2p-role-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.p2p-role-badge.host {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.p2p-role-badge.guest {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.p2p-cmd-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.p2p-cmd-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.p2p-cmd-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.p2p-cmd-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.p2p-cmd-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #334155;
+  transition: .2s;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.p2p-cmd-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+}
+.p2p-cmd-switch input:checked + .p2p-cmd-slider {
+  background-color: #10b981;
+  border-color: #34d399;
+}
+.p2p-cmd-switch input:checked + .p2p-cmd-slider:before {
+  transform: translateX(20px);
+}
+.p2p-cmd-status-text {
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 65px;
+  text-align: right;
+  letter-spacing: 0.5px;
+}
+.p2p-cmd-status-text.enabled {
+  color: #34d399;
+}
+.p2p-cmd-status-text.disabled {
+  color: #94a3b8;
 }
 .minimap-compass {
   position: absolute;
@@ -1328,4 +2361,202 @@ canvas {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* =============================================================================
+   P2P Hostitel & Správa hráčů a oprávnění příkazů
+   ============================================================================= */
+.p2p-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  transition: all 0.18s ease;
+}
+
+.p2p-player-card:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.p2p-player-card.is-self {
+  border-left: 3px solid #10b981;
+}
+
+.p2p-player-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.p2p-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 116, 144, 0.4));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.p2p-avatar.host {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.4));
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #f59e0b;
+}
+
+.p2p-player-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.p2p-player-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.p2p-role-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.p2p-role-badge.host {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.p2p-role-badge.guest {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+}
+
+.p2p-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.p2p-cmd-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(2, 6, 23, 0.45);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.p2p-cmd-status-text {
+  font-size: 11.5px;
+  font-weight: 700;
+  min-width: 62px;
+  text-align: right;
+  letter-spacing: 0.3px;
+}
+
+.p2p-cmd-status-text.enabled {
+  color: #34d399;
+}
+
+.p2p-cmd-status-text.disabled {
+  color: #64748b;
+}
+
+/* Modern iOS-like switch */
+.p2p-cmd-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.p2p-cmd-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.p2p-cmd-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #334155;
+  transition: 0.22s;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.p2p-cmd-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #f1f5f9;
+  transition: 0.22s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.p2p-cmd-switch input:checked + .p2p-cmd-slider {
+  background-color: #10b981;
+  border-color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.p2p-cmd-switch input:checked + .p2p-cmd-slider:before {
+  transform: translateX(18px);
+  background-color: #ffffff;
+}
+
+.p2p-cmd-switch input:disabled + .p2p-cmd-slider {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.p2p-empty-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: rgba(2, 6, 23, 0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 12.5px;
+  text-align: center;
+  gap: 6px;
+}
+
 
