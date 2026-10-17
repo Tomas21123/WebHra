@@ -418,6 +418,9 @@ function checkPvPHit(whichHand = 'dominant', opts = null) {
 
     if (cand.type === 'creature') {
       cand.target.takeDamage(atkInfo.damage, knockback, atkInfo.isCrit, 'player');
+      if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.onPlayerAttacked === 'function') {
+        window.PetManager.onPlayerAttacked(cand.target);
+      }
       if (typeof toast === 'function') {
         const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
         const heavyLabel = isHeavy ? '⚡ Těžký zásah' : 'Zásah';
@@ -1206,9 +1209,9 @@ function physics(dt) {
   P.ground = false;
 
   // Plynulé vyběhnutí schodů/břehu (Step-assist):
-  // Funguje na souši i při výstupu z vody na břeh
-  const stepLimit = 0.55;
-  const canStep = (wasG || (inW && (waterTopY > -900 ? P.y >= waterTopY - 1.25 : true))) && (fx || fz);
+  // Funguje na souši i při výstupu z vody na břeh, s vyšším prahem při jízdě na mazlíčkovi
+  const stepLimit = P.isRiding ? 1.15 : 0.55;
+  const canStep = (wasG || P.isRiding || (inW && (waterTopY > -900 ? P.y >= waterTopY - 1.25 : true))) && (fx || fz);
 
   // Pohyb po ose X
   const dx = P.vx * dt;
@@ -1216,12 +1219,19 @@ function physics(dt) {
     if (!hits(P.x + dx, P.y, P.z)) {
       P.x += dx;
     } else if (canStep) {
-      const stepY = (Math.floor(P.y / S) + 1) * S;
-      if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x + dx, stepY, P.z)) {
-        P.x += dx;
-        P.y = stepY;
-        P.ground = true;
-      } else {
+      let stepped = false;
+      const maxSteps = P.isRiding ? 2 : 1;
+      for (let sIdx = 1; sIdx <= maxSteps; sIdx++) {
+        const stepY = (Math.floor(P.y / S) + sIdx) * S;
+        if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x + dx, stepY, P.z)) {
+          P.x += dx;
+          P.y = stepY;
+          P.ground = true;
+          stepped = true;
+          break;
+        }
+      }
+      if (!stepped) {
         P.vx *= 0.2;
       }
     } else {
@@ -1235,12 +1245,19 @@ function physics(dt) {
     if (!hits(P.x, P.y, P.z + dz)) {
       P.z += dz;
     } else if (canStep) {
-      const stepY = (Math.floor(P.y / S) + 1) * S;
-      if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x, stepY, P.z + dz)) {
-        P.z += dz;
-        P.y = stepY;
-        P.ground = true;
-      } else {
+      let stepped = false;
+      const maxSteps = P.isRiding ? 2 : 1;
+      for (let sIdx = 1; sIdx <= maxSteps; sIdx++) {
+        const stepY = (Math.floor(P.y / S) + sIdx) * S;
+        if (stepY > P.y && stepY - P.y <= stepLimit && !hits(P.x, P.y + stepLimit, P.z) && !hits(P.x, stepY, P.z + dz)) {
+          P.z += dz;
+          P.y = stepY;
+          P.ground = true;
+          stepped = true;
+          break;
+        }
+      }
+      if (!stepped) {
         P.vz *= 0.2;
       }
     } else {

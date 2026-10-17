@@ -1084,13 +1084,13 @@ function animateFullCharacterRig(rig, s, dt, now) {
   }
 
   // 11b. Posed při jízdě na mazlíčkovi (Mount Riding Pose)
-  if (s.isRiding && !isRolling) {
-    const rideBob = (mv > 0.2 && ground) ? Math.abs(Math.sin(st.phase * 1.6)) * 0.045 : 0;
+  if (s.isRiding && !s.isRolling) {
+    const rideBob = (mv > 0.2 && onGround) ? Math.abs(Math.sin(phase * 1.6)) * 0.045 : 0;
     body.position.y = rideBob;
     legs[0].rotation.set(-1.15, -0.25, -0.22);
     legs[1].rotation.set(-1.15, 0.25, 0.22);
     if (!attacking) {
-      arms[0].rotation.x = -0.55 + Math.sin(st.phase * 1.6) * 0.08;
+      arms[0].rotation.x = -0.55 + Math.sin(phase * 1.6) * 0.08;
       arms[0].rotation.z = -0.15;
     }
   }

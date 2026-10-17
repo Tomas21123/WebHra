@@ -680,8 +680,9 @@ const INV = [
     rarity: 'rare',
     rideSpeed: 9.8,
     jumpBoost: 10.2,
-    desc: 'Věrný a statný německý ovčák. Po vybavení do slotu mazlíčka ho přivoláš klávesou [R] a můžeš na něm rychle jezdit.',
-    statList: ['🐾 Druh: Pes (Ovčák)', '🏇 Rychlost jízdy: 9.8 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+    baseDamage: 18,
+    desc: 'Věrný a statný německý ovčák. Po vybavení do slotu mazlíčka ho přivoláš klávesou [R]. Rychle na něm jezdíš a aktivně bojuje po tvém boku.',
+    statList: ['🐾 Druh: Pes (Ovčák)', '🏇 Rychlost jízdy: 9.8 m/s', '⚔️ Útok mazlíčka: 18 DMG', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
   },
   {
     id: 'pet_dog_husky',
@@ -694,8 +695,9 @@ const INV = [
     rarity: 'epic',
     rideSpeed: 10.6,
     jumpBoost: 10.5,
-    desc: 'Vytrvalý severský husky s modrýma očima. Vyniká mimořádnou rychlostí jízdy v každém terénu.',
-    statList: ['🐾 Druh: Pes (Husky)', '🏇 Rychlost jízdy: 10.6 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+    baseDamage: 22,
+    desc: 'Vytrvalý severský husky s modrýma očima. Vyniká vysokou rychlostí i silným útočným kousnutím.',
+    statList: ['🐾 Druh: Pes (Husky)', '🏇 Rychlost jízdy: 10.6 m/s', '⚔️ Útok mazlíčka: 22 DMG', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
   },
   {
     id: 'pet_dog_dachshund',
@@ -708,8 +710,9 @@ const INV = [
     rarity: 'rare',
     rideSpeed: 8.8,
     jumpBoost: 9.6,
-    desc: 'Odvážný dlouhý jezevčík s veselou povahou. Spolehlivý společník na cesty.',
-    statList: ['🐾 Druh: Pes (Jezevčík)', '🏇 Rychlost jízdy: 8.8 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+    baseDamage: 14,
+    desc: 'Odvážný dlouhý jezevčík s veselou povahou. Rychle seká zuby do kotníků nepřátel a spolehlivě tě vozí.',
+    statList: ['🐾 Druh: Pes (Jezevčík)', '🏇 Rychlost jízdy: 8.8 m/s', '⚔️ Útok mazlíčka: 14 DMG', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
   },
   {
     id: 'pet_cat',
@@ -722,8 +725,9 @@ const INV = [
     rarity: 'rare',
     rideSpeed: 9.5,
     jumpBoost: 11.4,
-    desc: 'Mrštná mourovatá kočka s tichým krokem a vysokým skokem. Přivolej ji klávesou [R] a vyraz na cestu.',
-    statList: ['🐾 Druh: Kočka', '🏇 Rychlost jízdy: 9.5 m/s', '🦘 Vysoký skok: 11.4', '🐟 Ochočeno pomocí: Čerstvý losos']
+    baseDamage: 16,
+    desc: 'Mrštná mourovatá kočka s tichým krokem a vysokým skokem. Drápy bleskově škrábe nepřátele v okolí.',
+    statList: ['🐾 Druh: Kočka', '🏇 Rychlost jízdy: 9.5 m/s', '🦘 Vysoký skok: 11.4', '⚔️ Útok drápy: 16 DMG', '🐟 Ochočeno pomocí: Čerstvý losos']
   },
   {
     id: 'pet_cow',
@@ -736,8 +740,9 @@ const INV = [
     rarity: 'uncommon',
     rideSpeed: 8.4,
     jumpBoost: 9.4,
-    desc: 'Silná a klidná strakatá kráva, která tě spolehlivě poveze přes hory i údolí.',
-    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.4 m/s', '🌾 Ochočeno pomocí: Zlatá pšenice', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+    baseDamage: 26,
+    desc: 'Silná strakatá kráva, která tě pohodlně poveze přes hory i údolí a drtivě dupne na každého nepřítele.',
+    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.4 m/s', '⚔️ Drtivé dupnutí: 26 DMG', '🌾 Ochočeno pomocí: Zlatá pšenice', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
   },
   {
     id: 'pet_sheep',
@@ -750,8 +755,9 @@ const INV = [
     rarity: 'uncommon',
     rideSpeed: 8.6,
     jumpBoost: 10.0,
-    desc: 'Měkká a přátelská ovečka s hustou vlnou. Pohodlné sedlo zaručeno!',
-    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.6 m/s', '🍀 Ochočeno pomocí: Sladký jetel', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+    baseDamage: 16,
+    desc: 'Měkká ovečka s hustou vlnou. Tvrdým beranním nárazem sráží nepřátele.',
+    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.6 m/s', '⚔️ Trknutí berana: 16 DMG', '🍀 Ochočeno pomocí: Sladký jetel', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
   },
   {
     id: 'pet_goat',
@@ -764,8 +770,9 @@ const INV = [
     rarity: 'epic',
     rideSpeed: 9.6,
     jumpBoost: 13.0,
-    desc: 'Neohrožený horský kozel se zatočenými rohy. Dokáže vyskočit i na ty nejstrmější skály.',
-    statList: ['🐾 Druh: Horské zvíře', '🏇 Rychlost jízdy: 9.6 m/s', '🏔️ Obří horský skok: 13.0', '🍎 Ochočeno pomocí: Horské jablko']
+    baseDamage: 22,
+    desc: 'Neohrožený horský kozel se zatočenými rohy. Skáče po strmých skalách a rohy odhazuje nepřátele.',
+    statList: ['🐾 Druh: Horské zvíře', '🏇 Rychlost jízdy: 9.6 m/s', '🏔️ Obří horský skok: 13.0', '⚔️ Rohový úder: 22 DMG', '🍎 Ochočeno pomocí: Horské jablko']
   },
   {
     id: 'pet_squirrel',
@@ -778,8 +785,9 @@ const INV = [
     rarity: 'legendary',
     rideSpeed: 10.4,
     jumpBoost: 12.2,
-    desc: 'Bleskurychlá lesní veverka s huňatým ocasem. Překvapivě silný a neuvěřitelně mrštný jezdecký mazlíček!',
-    statList: ['🐾 Druh: Lesní zvíře', '🏇 Rychlost jízdy: 10.4 m/s', '⚡ Mrštný skok: 12.2', '🌰 Ochočeno pomocí: Dubový žalud']
+    baseDamage: 12,
+    desc: 'Bleskurychlá lesní veverka s huňatým ocasem. Neuvěřitelně mrštný jezdecký mazlíček s hyperaktivním útokem.',
+    statList: ['🐾 Druh: Lesní zvíře', '🏇 Rychlost jízdy: 10.4 m/s', '⚡ Mrštný skok: 12.2', '⚔️ Lesní kousnutí: 12 DMG', '🌰 Ochočeno pomocí: Dubový žalud']
   }
 ];
 

@@ -438,8 +438,10 @@ function loop(now) {
   // Plynulé vertikální vyhlazení modelu a kamery při vyběhnutí schodů/kopce
   if (typeof P.renderY === 'undefined') P.renderY = P.y;
   const dy = P.y - P.renderY;
-  if (Math.abs(dy) < 0.75 && P.ground) {
-    P.renderY += dy * Math.min(1, dt * 26);
+  const maxSmoothDiff = P.isRiding ? 3.5 : 2.5;
+  if (Math.abs(dy) < maxSmoothDiff) {
+    const smoothFactor = P.isRiding ? Math.min(1, dt * 18) : Math.min(1, dt * 24);
+    P.renderY += dy * smoothFactor;
   } else {
     P.renderY = P.y;
   }
@@ -535,16 +537,24 @@ function loop(now) {
   const dir = [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
   const targetHeadY = (P.isSwimming) ? 0.85 : (1.55 + mountOffset * 0.65);
   const hx = P.x, hy = (P.renderY ?? P.y) + targetHeadY, hz = P.z;
-  let dd = dist;
-  for (let t = 0.3; t <= dist; t += 0.25) {
+  const targetCamDist = dist + (P.isRiding ? 0.75 : 0);
+  let dd = targetCamDist;
+  for (let t = 0.3; t <= targetCamDist; t += 0.25) {
     if (solid(hx + dir[0] * t, hy + dir[1] * t, hz + dir[2] * t)) {
       dd = Math.max(0, t - 0.35);
       break;
     }
   }
-  cam.position.set(hx + dir[0] * dd, hy + dir[1] * dd, hz + dir[2] * dd);
+  if (typeof P._smoothCamDist === 'undefined') P._smoothCamDist = dd;
+  if (dd < P._smoothCamDist) {
+    P._smoothCamDist = Math.max(dd, P._smoothCamDist - dt * 20);
+  } else {
+    P._smoothCamDist += (dd - P._smoothCamDist) * Math.min(1, dt * 10);
+  }
+  const effectiveDist = P._smoothCamDist;
+  cam.position.set(hx + dir[0] * effectiveDist, hy + dir[1] * effectiveDist, hz + dir[2] * effectiveDist);
   cam.lookAt(cam.position.x - dir[0], cam.position.y - dir[1], cam.position.z - dir[2]);
-  model.visible = dd > 0.8;
+  model.visible = effectiveDist > 0.8;
   dome.position.copy(cam.position);
 
   for (const g of clouds.children) {

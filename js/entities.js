@@ -103,12 +103,12 @@
       jumpBoost: 10.2,
       mountHeight: 0.56,
       baseHp: 55,
-      baseDamage: 0,
+      baseDamage: 18,
       speedChase: 5.5,
       speedWander: 2.3,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.8,
+      attackCooldown: 1.2,
       hitboxRadius: 0.65,
       height: 0.82,
       xpBase: 30,
@@ -128,12 +128,12 @@
       jumpBoost: 10.5,
       mountHeight: 0.56,
       baseHp: 60,
-      baseDamage: 0,
+      baseDamage: 22,
       speedChase: 6.0,
       speedWander: 2.5,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.8,
+      attackCooldown: 1.1,
       hitboxRadius: 0.65,
       height: 0.82,
       xpBase: 35,
@@ -153,12 +153,12 @@
       jumpBoost: 9.6,
       mountHeight: 0.38,
       baseHp: 45,
-      baseDamage: 0,
+      baseDamage: 14,
       speedChase: 4.8,
       speedWander: 2.1,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.2,
+      attackCooldown: 0.9,
       hitboxRadius: 0.60,
       height: 0.62,
       xpBase: 30,
@@ -178,12 +178,12 @@
       jumpBoost: 11.4,
       mountHeight: 0.42,
       baseHp: 40,
-      baseDamage: 0,
+      baseDamage: 16,
       speedChase: 5.5,
       speedWander: 2.4,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.4,
+      attackCooldown: 0.8,
       hitboxRadius: 0.55,
       height: 0.65,
       xpBase: 30,
@@ -203,12 +203,12 @@
       jumpBoost: 9.4,
       mountHeight: 0.88,
       baseHp: 85,
-      baseDamage: 0,
+      baseDamage: 26,
       speedChase: 4.0,
       speedWander: 1.5,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 3.2,
+      attackCooldown: 1.6,
       hitboxRadius: 0.85,
       height: 1.15,
       xpBase: 30,
@@ -228,12 +228,12 @@
       jumpBoost: 10.0,
       mountHeight: 0.68,
       baseHp: 65,
-      baseDamage: 0,
+      baseDamage: 16,
       speedChase: 4.2,
       speedWander: 1.7,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.6,
+      attackCooldown: 1.3,
       hitboxRadius: 0.72,
       height: 0.92,
       xpBase: 28,
@@ -254,12 +254,12 @@
       jumpBoost: 13.0,
       mountHeight: 0.70,
       baseHp: 70,
-      baseDamage: 0,
+      baseDamage: 22,
       speedChase: 5.0,
       speedWander: 2.1,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.8,
+      attackCooldown: 1.2,
       hitboxRadius: 0.70,
       height: 0.95,
       xpBase: 35,
@@ -279,12 +279,12 @@
       jumpBoost: 12.2,
       mountHeight: 0.36,
       baseHp: 35,
-      baseDamage: 0,
+      baseDamage: 12,
       speedChase: 6.2,
       speedWander: 2.8,
       aggroRadius: 0,
-      attackReach: 0,
-      attackCooldown: 2.0,
+      attackReach: 2.2,
+      attackCooldown: 0.7,
       hitboxRadius: 0.50,
       height: 0.58,
       xpBase: 35,
@@ -2199,6 +2199,9 @@
       ctx.shadowBlur = 0;
 
       if (pet.labelTexture) pet.labelTexture.needsUpdate = true;
+      if (pet.labelSprite) {
+        pet.labelSprite.visible = !isRiding;
+      }
     },
 
     summonPet: function (petItemId) {
@@ -2273,6 +2276,12 @@
         jumpBoost: petItem.jumpBoost || cfg.jumpBoost || 10.5,
         mountHeight: cfg.mountHeight || 0.56,
         height: cfg.height || 0.8,
+        baseDamage: petItem.baseDamage || cfg.baseDamage || 16,
+        attackReach: cfg.attackReach || 2.8,
+        attackCooldown: cfg.attackCooldown || 1.1,
+        attackCooldownTimer: 0,
+        attackAnimTimer: 0,
+        targetEnemy: null,
         group,
         limbMeshes,
         labelSprite,
@@ -2313,9 +2322,15 @@
       P.rideSpeed = this.activePet.rideSpeed || 9.5;
       P.rideJumpBoost = this.activePet.jumpBoost || 10.5;
 
-      // Přesunout hráče přímo na hřbet mazlíčka
-      P.x = this.activePet.x;
-      P.z = this.activePet.z;
+      // Umístit mazlíčka přímo pod hráče bez trhání nebo kolizního zaseknutí hráče
+      this.activePet.x = P.x;
+      this.activePet.z = P.z;
+      this.activePet.y = (typeof P.renderY === 'number') ? P.renderY : P.y;
+      this.activePet.rotationY = (typeof model !== 'undefined' && model) ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0);
+      if (this.activePet.group) {
+        this.activePet.group.position.set(this.activePet.x, this.activePet.y, this.activePet.z);
+        this.activePet.group.rotation.y = this.activePet.rotationY;
+      }
       this._updatePetLabel();
 
       if (typeof toast === 'function') {
@@ -2348,6 +2363,57 @@
         }
       }
       return true;
+    },
+
+    // Útok mazlíčka na nepřátelskou entitu
+    attackTarget: function (target) {
+      const pet = this.activePet;
+      if (!pet || !target || target.state === 'Dead' || target.hp <= 0) return false;
+      if (pet.attackCooldownTimer > 0) return false;
+
+      pet.attackCooldownTimer = pet.attackCooldown || 1.1;
+      pet.attackAnimTimer = 0.35;
+
+      // Zranění škáluje se základním útokem mazlíčka a úrovní hráče
+      const playerLvl = (typeof P !== 'undefined' && P && P.level) ? P.level : 1;
+      const lvlBonus = (playerLvl - 1) * 2;
+      const baseDmg = pet.baseDamage || 16;
+      const isCrit = Math.random() < 0.22;
+      const critMult = isCrit ? 1.5 : 1.0;
+      const totalDmg = Math.max(1, Math.round((baseDmg + lvlBonus) * critMult));
+
+      const dx = target.x - pet.x;
+      const dz = target.z - pet.z;
+      const dist = Math.hypot(dx, dz) || 1;
+      const kb = {
+        x: (dx / dist) * 1.35,
+        z: (dz / dist) * 1.35
+      };
+
+      target.takeDamage(totalDmg, kb, isCrit, 'pet');
+
+      if (typeof playAttackSound === 'function') {
+        playAttackSound('punch');
+      }
+
+      if (typeof toast === 'function') {
+        const critText = isCrit ? ' 💥 KRITICKÝ ÚTOK!' : '';
+        toast(`🐾 Mazlíček (${pet.name}) zaútočil na ${target.name || 'nepřítele'}: -${totalDmg} HP${critText}`);
+      }
+
+      return true;
+    },
+
+    // Reakce na hráčův útok: mazlíček okamžitě zaměří napadeného nepřítele
+    onPlayerAttacked: function (target) {
+      if (!this.activePet || !target || target.state === 'Dead') return;
+      this.activePet.targetEnemy = target;
+      if (this.isRiding) {
+        const d = Math.hypot(target.x - this.activePet.x, target.z - this.activePet.z);
+        if (d <= (this.activePet.attackReach || 2.8) + (target.hitboxRadius || 0.75)) {
+          this.attackTarget(target);
+        }
+      }
     },
 
     // Obsluha klávesy [R]:
@@ -2429,12 +2495,55 @@
 
       const animTime = now || ((typeof performance !== 'undefined') ? performance.now() : Date.now());
 
+      // Aktualizace časovačů útoku mazlíčka
+      if (pet.attackCooldownTimer > 0) pet.attackCooldownTimer -= dt;
+      if (pet.attackAnimTimer > 0) pet.attackAnimTimer -= dt;
+
+      // Animace výpadu / kousnutí při útoku
+      let attackLungeHead = 0;
+      let attackLungeRoot = 0;
+      if (pet.attackAnimTimer > 0) {
+        const progress = (0.35 - pet.attackAnimTimer) / 0.35;
+        const lunge = Math.sin(progress * Math.PI);
+        attackLungeHead = -lunge * 0.45;
+        attackLungeRoot = lunge * 0.12;
+      }
+
+      // Pomocná funkce pro vyhledání nejlepšího nepřátelského cíle
+      const findBestEnemy = () => {
+        if (typeof window === 'undefined' || !window.EntityManager || !Array.isArray(window.EntityManager.creatures)) return null;
+        if (pet.targetEnemy && pet.targetEnemy.state !== 'Dead' && pet.targetEnemy.hp > 0) {
+          const distToP = Math.hypot(pet.targetEnemy.x - pObj.x, pet.targetEnemy.z - pObj.z);
+          if (distToP <= 16) return pet.targetEnemy;
+        }
+        let best = null;
+        let bestDist = 12;
+        for (const c of window.EntityManager.creatures) {
+          if (!c || c.isPassive || c.state === 'Dead' || c.hp <= 0) continue;
+          const d = Math.hypot(c.x - pObj.x, c.z - pObj.z);
+          if (d < bestDist) {
+            bestDist = d;
+            best = c;
+          }
+        }
+        return best;
+      };
+
       if (pObj.isRiding) {
         // Hráč jede na mazlíčkovi: mazlíček je přímo pod hráčem a kopíruje jeho pohyb
         pet.x = pObj.x;
         pet.y = (typeof pObj.renderY === 'number') ? pObj.renderY : pObj.y;
         pet.z = pObj.z;
         pet.rotationY = (typeof model !== 'undefined' && model) ? model.rotation.y : ((typeof face !== 'undefined') ? face : 0);
+
+        // Automatický útok mazlíčka na nepřátele v dosahu při jízdě
+        const enemy = findBestEnemy();
+        if (enemy && pet.attackCooldownTimer <= 0) {
+          const d = Math.hypot(enemy.x - pet.x, enemy.z - pet.z);
+          if (d <= (pet.attackReach || 2.8) + (enemy.hitboxRadius || 0.75)) {
+            this.attackTarget(enemy);
+          }
+        }
 
         const mv = Math.hypot(pObj.vx || 0, pObj.vz || 0);
         const ridePhase = animTime * 0.014 * Math.max(4, mv);
@@ -2449,34 +2558,67 @@
           }
         }
         if (pet.limbMeshes && pet.limbMeshes.root) {
-          pet.limbMeshes.root.position.y = (mv > 0.15 && pObj.ground !== false) ? Math.abs(Math.sin(ridePhase)) * 0.035 : 0;
+          const bob = (mv > 0.15 && pObj.ground !== false) ? Math.abs(Math.sin(ridePhase)) * 0.035 : 0;
+          pet.limbMeshes.root.position.y = bob;
+          pet.limbMeshes.root.position.z = attackLungeRoot;
         }
         if (pet.limbMeshes && pet.limbMeshes.head) {
-          pet.limbMeshes.head.rotation.x = (mv > 0.15) ? Math.sin(ridePhase * 2) * 0.05 : 0;
+          const headBob = (mv > 0.15) ? Math.sin(ridePhase * 2) * 0.05 : 0;
+          pet.limbMeshes.head.rotation.x = headBob + attackLungeHead;
         }
         if (pet.limbMeshes && pet.limbMeshes.tail) {
           pet.limbMeshes.tail.rotation.z = Math.sin(animTime * 0.01) * 0.25;
         }
       } else {
-        // Mazlíček věrně následuje vedle hráče
-        const targetAngle = ((typeof face !== 'undefined') ? face : 0) - Math.PI * 0.45;
-        const targetX = pObj.x + Math.sin(targetAngle) * 1.65;
-        const targetZ = pObj.z + Math.cos(targetAngle) * 1.65;
-        const dx = targetX - pet.x;
-        const dz = targetZ - pet.z;
-        const dist = Math.hypot(dx, dz);
-
+        // Mazlíček je věrný společník a ochránce!
+        const enemy = findBestEnemy();
+        let targetX, targetZ;
         let moveSpd = 0;
-        if (dist > 22) {
-          pet.x = targetX;
-          pet.z = targetZ;
-        } else if (dist > 0.65) {
-          moveSpd = Math.min(pet.rideSpeed || 9.5, dist * 3.8);
-          const nx = dx / dist;
-          const nz = dz / dist;
-          pet.x += nx * moveSpd * dt;
-          pet.z += nz * moveSpd * dt;
-          pet.rotationY = Math.atan2(nx, nz);
+
+        if (enemy) {
+          // Mazlíček útočí na nepřítele
+          pet.targetEnemy = enemy;
+          targetX = enemy.x;
+          targetZ = enemy.z;
+          const dx = targetX - pet.x;
+          const dz = targetZ - pet.z;
+          const distToEnemy = Math.hypot(dx, dz);
+          const reach = (pet.attackReach || 2.5) + (enemy.hitboxRadius || 0.65);
+
+          pet.rotationY = Math.atan2(dx, dz);
+
+          if (distToEnemy <= reach) {
+            if (pet.attackCooldownTimer <= 0) {
+              this.attackTarget(enemy);
+            }
+          } else {
+            moveSpd = Math.min((pet.rideSpeed || 9.5) * 1.15, distToEnemy * 4.0);
+            const nx = dx / distToEnemy;
+            const nz = dz / distToEnemy;
+            pet.x += nx * moveSpd * dt;
+            pet.z += nz * moveSpd * dt;
+          }
+        } else {
+          // Žádný nepřítel: mazlíček věrně následuje hráče po boku
+          pet.targetEnemy = null;
+          const targetAngle = ((typeof face !== 'undefined') ? face : 0) - Math.PI * 0.45;
+          targetX = pObj.x + Math.sin(targetAngle) * 1.65;
+          targetZ = pObj.z + Math.cos(targetAngle) * 1.65;
+          const dx = targetX - pet.x;
+          const dz = targetZ - pet.z;
+          const dist = Math.hypot(dx, dz);
+
+          if (dist > 22) {
+            pet.x = targetX;
+            pet.z = targetZ;
+          } else if (dist > 0.65) {
+            moveSpd = Math.min(pet.rideSpeed || 9.5, dist * 3.8);
+            const nx = dx / dist;
+            const nz = dz / dist;
+            pet.x += nx * moveSpd * dt;
+            pet.z += nz * moveSpd * dt;
+            pet.rotationY = Math.atan2(nx, nz);
+          }
         }
 
         if (typeof height === 'function') {
@@ -2499,10 +2641,13 @@
           }
         }
         if (pet.limbMeshes && pet.limbMeshes.root) {
-          pet.limbMeshes.root.position.y = (moveSpd > 0.2) ? Math.abs(Math.sin(followPhase)) * 0.035 : 0;
+          const bob = (moveSpd > 0.2) ? Math.abs(Math.sin(followPhase)) * 0.035 : 0;
+          pet.limbMeshes.root.position.y = bob;
+          pet.limbMeshes.root.position.z = attackLungeRoot;
         }
         if (pet.limbMeshes && pet.limbMeshes.head) {
-          pet.limbMeshes.head.rotation.x = (moveSpd > 0.2) ? Math.sin(followPhase * 2) * 0.05 : Math.sin(animTime * 0.003) * 0.04;
+          const idleHead = (moveSpd > 0.2) ? Math.sin(followPhase * 2) * 0.05 : Math.sin(animTime * 0.003) * 0.04;
+          pet.limbMeshes.head.rotation.x = idleHead + attackLungeHead;
         }
         if (pet.limbMeshes && pet.limbMeshes.tail) {
           pet.limbMeshes.tail.rotation.z = Math.sin(animTime * 0.008) * 0.22;
