@@ -128,7 +128,49 @@ const GameStorage = {
       if (playerState) worlds[idx].playerState = playerState;
       if (worldDeltas) worlds[idx].worldDeltas = worldDeltas;
       this.saveWorlds(worlds);
+
+      if (playerState && (playerState.inventory || playerState.equippedSlots)) {
+        this.savePlayerInventory(id, playerState.inventory, playerState.equippedSlots, playerState.activePetId);
+      }
     }
+  },
+
+  // Uložit inventář a mazlíčky hráče pro daný svět
+  savePlayerInventory(worldId, invData, equippedSlots, activePetId) {
+    if (!worldId) {
+      const active = this.getActiveGame();
+      worldId = active ? active.worldId : 'world_default';
+    }
+    try {
+      const key = `voxel_inventory_${worldId}`;
+      const payload = {
+        inventory: invData || [],
+        equippedSlots: equippedSlots || {},
+        activePetId: activePetId || null,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(key, JSON.stringify(payload));
+      return true;
+    } catch (e) {
+      console.error('[Storage] Chyba ukládání inventáře:', e);
+      return false;
+    }
+  },
+
+  // Načíst inventář a mazlíčky hráče pro daný svět
+  loadPlayerInventory(worldId) {
+    if (!worldId) {
+      const active = this.getActiveGame();
+      worldId = active ? active.worldId : 'world_default';
+    }
+    try {
+      const key = `voxel_inventory_${worldId}`;
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.error('[Storage] Chyba načítání inventáře:', e);
+    }
+    return null;
   },
 
   // Smazat svět

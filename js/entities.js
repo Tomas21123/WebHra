@@ -2004,6 +2004,11 @@
       if (typeof renderInv === 'function') renderInv();
       if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
 
+      // Okamžitě trvale uložit svět i inventář, aby mazlíček nezmizel po restartu
+      if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+        try { window.networkManager.saveSingleplayerWorld(); } catch (e) {}
+      }
+
       if (typeof toast === 'function') {
         toast(`🐾 Ochočeno: ${tamedName}! Najdeš ho v inventáři [I] -> Mazlíčci. Stiskni [R] pro přivolání a jízdu!`);
       }

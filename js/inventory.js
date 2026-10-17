@@ -1073,6 +1073,9 @@ function equip(id) {
   if (window.networkManager && typeof window.networkManager.sendEquipmentChange === 'function') {
     window.networkManager.sendEquipmentChange();
   }
+  if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+    try { window.networkManager.saveSingleplayerWorld(); } catch (e) {}
+  }
 }
 
 function unequipSlot(slotKey) {
@@ -1103,6 +1106,9 @@ function unequipSlot(slotKey) {
 
   if (window.networkManager && typeof window.networkManager.sendEquipmentChange === 'function') {
     window.networkManager.sendEquipmentChange();
+  }
+  if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+    try { window.networkManager.saveSingleplayerWorld(); } catch (e) {}
   }
 }
 

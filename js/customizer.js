@@ -417,6 +417,9 @@ $('escRespawn').onclick = () => {
 const escMainMenuBtn = $('escMainMenu');
 if (escMainMenuBtn) {
   escMainMenuBtn.onclick = () => {
+    if (window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+      try { window.networkManager.saveSingleplayerWorld(); } catch(e) {}
+    }
     if (window.networkManager && window.networkManager.isP2PHost) {
       try {
         window.networkManager.broadcastP2P({

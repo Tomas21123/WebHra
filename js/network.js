@@ -130,6 +130,51 @@ class NetworkManager {
               EQ.length = 0;
               ps.equipped.forEach(item => EQ.push(item));
             }
+
+            // Obnova uloženého inventáře a mazlíčků
+            let savedInv = ps.inventory;
+            let savedEquippedSlots = ps.equippedSlots;
+            let savedActivePet = ps.activePetId;
+
+            if ((!savedInv || savedInv.length === 0) && typeof GameStorage !== 'undefined' && typeof GameStorage.loadPlayerInventory === 'function') {
+              const fallback = GameStorage.loadPlayerInventory(this.activeGame && this.activeGame.worldId);
+              if (fallback) {
+                if (!savedInv && fallback.inventory) savedInv = fallback.inventory;
+                if (!savedEquippedSlots && fallback.equippedSlots) savedEquippedSlots = fallback.equippedSlots;
+                if (!savedActivePet && fallback.activePetId) savedActivePet = fallback.activePetId;
+              }
+            }
+
+            if (savedInv && Array.isArray(savedInv) && typeof INV !== 'undefined') {
+              savedInv.forEach(savedIt => {
+                const target = INV.find(it => it.id === savedIt.id);
+                if (target) {
+                  if (typeof savedIt.count === 'number') target.count = savedIt.count;
+                  if (typeof savedIt.upgradeLevel === 'number') target.upgradeLevel = savedIt.upgradeLevel;
+                  if (savedIt.skillSlots && Array.isArray(savedIt.skillSlots)) target.skillSlots = [...savedIt.skillSlots];
+                  if (typeof updateItemStatList === 'function') updateItemStatList(target);
+                }
+              });
+            }
+
+            if (savedEquippedSlots && typeof EQUIPPED_SLOTS !== 'undefined') {
+              Object.assign(EQUIPPED_SLOTS, savedEquippedSlots);
+              if (typeof syncEQArray === 'function') syncEQArray();
+            }
+
+            // Obnova a případné přivolání aktivního mazlíčka
+            const petIdToSummon = savedActivePet || (typeof EQUIPPED_SLOTS !== 'undefined' ? EQUIPPED_SLOTS.pet : null);
+            if (petIdToSummon && window.PetManager && typeof window.PetManager.summonPet === 'function') {
+              const petItem = (typeof INV !== 'undefined') ? INV.find(it => it.id === petIdToSummon && (it.count || 0) > 0) : null;
+              if (petItem) {
+                window.PetManager.summonPet(petIdToSummon);
+              }
+            }
+
+            if (typeof renderHB === 'function') renderHB();
+            if (typeof renderInv === 'function') renderInv();
+            if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+
             if (ps.custom && typeof playerCustom !== 'undefined') {
               Object.assign(playerCustom, ps.custom);
               if (typeof updatePlayerAppearance === 'function') updatePlayerAppearance();
@@ -150,6 +195,25 @@ class NetworkManager {
             if (typeof toast === 'function') {
               toast(`Svět "${savedWorld.name}" načten.`);
             }
+          } else if (typeof GameStorage !== 'undefined' && typeof GameStorage.loadPlayerInventory === 'function') {
+            const fallback = GameStorage.loadPlayerInventory(this.activeGame && this.activeGame.worldId);
+            if (fallback && fallback.inventory && typeof INV !== 'undefined') {
+              fallback.inventory.forEach(savedIt => {
+                const target = INV.find(it => it.id === savedIt.id);
+                if (target && typeof savedIt.count === 'number') target.count = savedIt.count;
+              });
+              if (fallback.equippedSlots && typeof EQUIPPED_SLOTS !== 'undefined') {
+                Object.assign(EQUIPPED_SLOTS, fallback.equippedSlots);
+                if (typeof syncEQArray === 'function') syncEQArray();
+              }
+              const petIdToSummon = fallback.activePetId || (typeof EQUIPPED_SLOTS !== 'undefined' ? EQUIPPED_SLOTS.pet : null);
+              if (petIdToSummon && window.PetManager && typeof window.PetManager.summonPet === 'function') {
+                const petItem = INV.find(it => it.id === petIdToSummon && (it.count || 0) > 0);
+                if (petItem) window.PetManager.summonPet(petIdToSummon);
+              }
+              if (typeof renderInv === 'function') renderInv();
+              if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+            }
           }
         }, 500);
       });
@@ -160,12 +224,14 @@ class NetworkManager {
       this.saveSingleplayerWorld();
     }, 5000);
 
-    window.addEventListener('beforeunload', () => {
+    const saveOnExit = () => {
       this.saveSingleplayerWorld();
       if (this.isP2PHost) {
         this.broadcastP2P({ type: 'hostDisconnect', message: 'Hostitel se odpojil ze světa.' });
       }
-    });
+    };
+    window.addEventListener('beforeunload', saveOnExit);
+    window.addEventListener('pagehide', saveOnExit);
 
     // Automaticky připravit P2P hostitelský kanál na pozadí se stálým kódem tohoto světa
     this.startP2PHost();
@@ -175,6 +241,25 @@ class NetworkManager {
     if (this.activeGame.mode !== 'singleplayer' && !this.isP2PHost) return;
     if (typeof P === 'undefined' || typeof GameStorage === 'undefined') return;
     const worldId = this.activeGame.worldId || 'world_default';
+
+    // Extrahovat data inventáře (všechny předměty s count > 0, vylepšením nebo mazlíčky)
+    const inventoryData = (typeof INV !== 'undefined' && Array.isArray(INV))
+      ? INV.filter(it => (it.count || 0) > 0 || (it.upgradeLevel || 0) > 0 || it.cat === 'pets')
+           .map(it => ({
+             id: it.id,
+             count: it.count || 0,
+             upgradeLevel: it.upgradeLevel || 0,
+             skillSlots: it.skillSlots ? [...it.skillSlots] : null
+           }))
+      : [];
+
+    const equippedSlotsData = (typeof EQUIPPED_SLOTS !== 'undefined')
+      ? Object.assign({}, EQUIPPED_SLOTS)
+      : {};
+
+    const activePetId = (window.PetManager && window.PetManager.activePet)
+      ? window.PetManager.activePet.petItemId
+      : (equippedSlotsData.pet || null);
 
     const playerState = {
       x: P.x,
@@ -186,10 +271,16 @@ class NetworkManager {
       st: typeof G !== 'undefined' ? G.st : 100,
       hotbar: (typeof HB !== 'undefined') ? [...HB] : [],
       equipped: (typeof EQ !== 'undefined') ? [...EQ] : [],
+      equippedSlots: equippedSlotsData,
+      inventory: inventoryData,
+      activePetId: activePetId,
       custom: this.getLocalPlayerSkin()
     };
 
     GameStorage.updateWorldData(worldId, playerState, this.worldDeltas);
+    if (typeof GameStorage.savePlayerInventory === 'function') {
+      GameStorage.savePlayerInventory(worldId, inventoryData, equippedSlotsData, activePetId);
+    }
     this.showAutoSaveBadge();
   }
 
