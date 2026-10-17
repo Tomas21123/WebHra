@@ -550,6 +550,13 @@ function animateFullCharacterRig(rig, s, dt, now) {
   if (attacking) {
     const p = Math.min(1, attackTime / attackDuration);
 
+    // Easing křivky pro dynamický pocit váhy a údernosti (Game Feel / Combat Juice)
+    const easeOutQuad = t => t * (2 - t);
+    const easeInQuad = t => t * t;
+    const easeInCubic = t => t * t * t;
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+    const easeSnap = t => 1 - Math.pow(1 - t, 4);
+
     if (isHeavyAttack) {
       // =========================================================================
       // POMALEJŠÍ TĚŽKÝ ÚTOK S POHYBEM CELÉHO TĚLA (RMB / Slot 2)
@@ -564,7 +571,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
         legs[1].rotation.x = 0.55 * arch;
         body.position.y -= 0.14 * arch;
         body.position.z = 0.22 * arch;
-        torso.rotation.y = (p < 0.3 ? -(p / 0.3) * 0.55 : -0.55 + ((p - 0.3) / 0.7) * 1.35);
+        torso.rotation.y = (p < 0.3 ? -easeOutQuad(p / 0.3) * 0.55 : -0.55 + easeSnap((p - 0.3) / 0.7) * 1.35);
         torso.rotation.x = 0.28 * arch;
         activeArm.rotation.x = -1.55 - 0.35 * arch;
         activeArm.rotation.y = (activeArm === arms[0] ? 0.85 : -0.85) * arch;
@@ -577,14 +584,14 @@ function animateFullCharacterRig(rig, s, dt, now) {
         // 2. Kopí (Hluboký šermířský výpad v pokleku s dlouhým skluzem těla vpřed)
         let lunge = 0;
         if (p < 0.28) {
-          const t = p / 0.28;
+          const t = easeOutQuad(p / 0.28);
           lunge = -0.25 * t;
           torso.rotation.y = -0.45 * t;
           torso.rotation.x = -0.15 * t;
           legs[0].rotation.x = 0.35 * t;
           legs[1].rotation.x = -0.45 * t;
         } else if (p < 0.68) {
-          const t = (p - 0.28) / 0.40;
+          const t = easeSnap((p - 0.28) / 0.40);
           lunge = -0.25 + t * 1.35;
           torso.rotation.y = -0.45 + t * 0.95;
           torso.rotation.x = -0.15 + t * 0.52;
@@ -593,7 +600,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
           legs[0].rotation.x = -0.92 * Math.sin(t * Math.PI);
           legs[1].rotation.x = 0.82 * Math.sin(t * Math.PI);
         } else {
-          const t = (p - 0.68) / 0.32;
+          const t = easeOutCubic((p - 0.68) / 0.32);
           lunge = 1.10 * (1 - t);
           torso.rotation.y = 0.50 * (1 - t);
           torso.rotation.x = 0.37 * (1 - t);
@@ -606,7 +613,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
         hand.position.set(0, -8 * VX_VAL, lunge * 0.95);
       } else if (heldId === 'dagger') {
         // 3. Dýka (Akrobatická nízká 360° pirueta celým tělem s dvojitým podřezem)
-        const spinAngle = p * Math.PI * 2;
+        const spinAngle = (p < 0.2 ? easeInQuad(p / 0.2) * 0.15 : 0.15 + easeSnap((p - 0.2) / 0.8) * 0.85) * Math.PI * 2;
         body.rotation.y = spinAngle;
         body.position.y -= 0.22 * arch;
         body.position.z = 0.28 * arch;
@@ -621,9 +628,10 @@ function animateFullCharacterRig(rig, s, dt, now) {
         hand.rotation.set(-0.65, 0, 0.45);
         hand.position.set(0, -8 * VX_VAL, 0.32 * arch);
       } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer' || heldId === 'mace') {
-        // 4. Těžké zbraně a palcáty (Skokový drtivý dopad celým tělem do dřepu)
+        // 4. Těžké zbraně a palcáty (Citelné zpoždění, masivní nápřah a drtivý dopad do dřepu)
         if (p < 0.35) {
-          const t = p / 0.35;
+          // Windup fáze: Pomalé zvednutí těžké čepele s nápřahem těla vzad
+          const t = easeOutQuad(p / 0.35);
           body.position.y += 0.22 * Math.sin(t * Math.PI * 0.5);
           torso.rotation.x = -0.38 * t;
           torso.rotation.y = 0.25 * t;
@@ -634,7 +642,9 @@ function animateFullCharacterRig(rig, s, dt, now) {
           arms[0].rotation.x = -0.6 - t * 1.95;
           hand.rotation.set(0.45 * t, 0, 0);
         } else if (p < 0.72) {
-          const t = (p - 0.35) / 0.37;
+          // Active strike: Explozivní meteorický dopad s akcelerací těla
+          const rawT = (p - 0.35) / 0.37;
+          const t = easeInCubic(rawT);
           body.position.y -= 0.26 * Math.sin(t * Math.PI);
           body.position.z = 0.30 * Math.sin(t * Math.PI);
           torso.rotation.x = -0.38 + t * 0.95;
@@ -646,7 +656,9 @@ function animateFullCharacterRig(rig, s, dt, now) {
           hand.rotation.set(0.45 - t * 0.95, 0, 0);
           hand.position.set(0, -8 * VX_VAL, t * 0.32);
         } else {
-          const t = (p - 0.72) / 0.28;
+          // Recovery fáze: Absorpce zpětného rázu a pomalý návrat do postoje
+          const rawT = (p - 0.72) / 0.28;
+          const t = easeOutCubic(rawT);
           torso.rotation.x = 0.57 * (1 - t);
           torso.rotation.y = -0.23 * (1 - t);
           arms[1].rotation.x = 0.3 * (1 - t) + (-0.78) * t;
@@ -656,7 +668,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
         }
       } else if (heldId === 'bow') {
         // 5. Luk (Zakleknutí ostrostřelce, vytočení trupu a zpětný ráz tělem při výstřelu)
-        const draw = p < 0.68 ? (p / 0.68) : 1 - (p - 0.68) / 0.32;
+        const draw = p < 0.68 ? easeOutQuad(p / 0.68) : 1 - easeSnap((p - 0.68) / 0.32);
         const recoil = p >= 0.68 ? Math.sin(((p - 0.68) / 0.32) * Math.PI) : 0;
         body.position.y -= 0.20 * arch;
         body.position.z = -0.18 * recoil;
@@ -672,7 +684,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       } else if (heldId === 'staff_fire' || heldId === 'staff_frost') {
         // 6. Čarovná hůl (Rituální vzepětí oběma rukama s výkrokem a prudkým švihem těla vpřed)
         if (p < 0.42) {
-          const t = p / 0.42;
+          const t = easeOutQuad(p / 0.42);
           body.position.y += 0.12 * t;
           torso.rotation.x = -0.28 * t;
           legs[0].rotation.x = 0.35 * t;
@@ -681,11 +693,13 @@ function animateFullCharacterRig(rig, s, dt, now) {
           arms[0].rotation.x = -0.6 - t * 1.55;
           hand.rotation.set(0.35 * t, 0, 0);
         } else {
-          const t = (p - 0.42) / 0.58;
-          const surge = Math.sin(t * Math.PI);
+          const rawT = (p - 0.42) / 0.58;
+          const t = easeSnap(rawT);
+          const surge = Math.sin(rawT * Math.PI);
           body.position.y -= 0.16 * surge;
           body.position.z = 0.28 * surge;
           torso.rotation.x = -0.28 + surge * 0.68;
+          legs[0].rotation.x = -0.72 * surge;
           legs[0].rotation.x = -0.72 * surge;
           legs[1].rotation.x = 0.62 * surge;
           arms[1].rotation.x = -2.55 + t * 1.75;
@@ -696,8 +710,8 @@ function animateFullCharacterRig(rig, s, dt, now) {
       } else {
         // 7. Meče a katany (Výpadový sek s 360° otočkou celého těla v podřepu)
         const spinEase = p < 0.22
-          ? -(p / 0.22) * 0.45
-          : -0.45 + ((p - 0.22) / 0.78) * (Math.PI * 2 + 0.45);
+          ? -easeOutQuad(p / 0.22) * 0.45
+          : -0.45 + easeSnap((p - 0.22) / 0.78) * (Math.PI * 2 + 0.45);
         body.rotation.y = spinEase;
         body.position.y -= 0.18 * arch;
         body.position.z = 0.30 * arch;
@@ -715,7 +729,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       }
     } else if (!heldId) {
       // 1. Boxerský úder pěstmi (Rychlý LMB)
-      const punchReach = Math.sin(p * Math.PI);
+      const punchReach = p < 0.25 ? easeOutQuad(p / 0.25) * 0.3 : (p < 0.6 ? 0.3 + easeSnap((p - 0.25) / 0.35) * 0.7 : 1 - easeOutCubic((p - 0.6) / 0.4));
       activeArm.rotation.x = -1.55 - punchReach * 0.35;
       activeArm.rotation.y = (activeArm === arms[0] ? 0.25 : -0.25) * punchReach;
       activeArm.rotation.z = (activeArm === arms[0] ? -0.05 : 0.05);
@@ -728,7 +742,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       hand.rotation.set(0, 0, 0);
     } else if (isSecAttack) {
       // Rychlý sek / úder sekundární rukou (levá nebo pravá)
-      const slash = Math.sin(p * Math.PI);
+      const slash = p < 0.2 ? easeOutQuad(p / 0.2) * 0.3 : (p < 0.65 ? 0.3 + easeSnap((p - 0.2) / 0.45) * 0.7 : 1 - easeOutCubic((p - 0.65) / 0.35));
       const isLeftArm = (activeArm === arms[1]);
       activeArm.rotation.x = -1.45 + (1 - p * 2) * 0.5;
       activeArm.rotation.y = (isLeftArm ? 0.8 : -0.8) * slash;
@@ -742,17 +756,17 @@ function animateFullCharacterRig(rig, s, dt, now) {
       // 0.60 - 1.00: Plynulé stažení kopí zpět do střehu
       let thrust = 0;
       if (p < 0.25) {
-        const t = p / 0.25;
+        const t = easeOutQuad(p / 0.25);
         thrust = -t * 0.22; // Zatažení o 22cm vzad pro nápřah
         torso.rotation.y -= t * 0.18;
         torso.rotation.x -= t * 0.06;
       } else if (p < 0.6) {
-        const t = (p - 0.25) / 0.35;
+        const t = easeSnap((p - 0.25) / 0.35);
         thrust = -0.22 + t * 1.12; // Prudký výpad až o +90cm DOPŘEDU před hráče!
         torso.rotation.y = -0.18 + t * 0.44;
         torso.rotation.x = -0.06 + t * 0.26;
       } else {
-        const t = (p - 0.6) / 0.4;
+        const t = easeOutQuad((p - 0.6) / 0.4);
         thrust = 0.90 * (1 - t);
         torso.rotation.y = 0.26 * (1 - t);
         torso.rotation.x = 0.20 * (1 - t);
@@ -774,7 +788,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
     } else if (heldId === 'dagger') {
       // 3. Rychlé zákeřné bodnutí dýkou (Combo 0: hluboký bod vpřed, Combo 1: bleskový řez)
       if (attackCombo === 0) {
-        const stab = Math.sin(p * Math.PI);
+        const stab = p < 0.2 ? easeOutQuad(p / 0.2) * 0.25 : (p < 0.55 ? 0.25 + easeSnap((p - 0.2) / 0.35) * 0.75 : 1 - easeOutCubic((p - 0.55) / 0.45));
         arms[1].rotation.x = -0.65 - stab * 0.45;
         arms[1].rotation.y = -0.18 * stab;
         arms[1].rotation.z = 0.08;
@@ -786,7 +800,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
         hand.rotation.set(-0.15, 0, 0);
         hand.position.set(0, -8 * VX_VAL, stab * 0.55);
       } else {
-        const slice = Math.sin(p * Math.PI);
+        const slice = p < 0.18 ? easeOutQuad(p / 0.18) * 0.25 : (p < 0.52 ? 0.25 + easeSnap((p - 0.18) / 0.34) * 0.75 : 1 - easeOutCubic((p - 0.52) / 0.48));
         arms[1].rotation.x = -1.45;
         arms[1].rotation.y = 0.8 - p * 1.7;
         arms[1].rotation.z = 0.22;
@@ -796,9 +810,9 @@ function animateFullCharacterRig(rig, s, dt, now) {
         hand.position.set(0, -8 * VX_VAL, slice * 0.2);
       }
     } else if (heldId === 'greatsword' || heldId === 'battleaxe' || heldId === 'hammer') {
-      // 4. Masivní obouruční drtivý úder shora dolů (Heavy Slam)
+      // 4. Masivní obouruční drtivý úder shora dolů (Heavy Slam s pocitem setrvačnosti)
       if (p < 0.32) {
-        const t = p / 0.32;
+        const t = easeOutQuad(p / 0.32);
         arms[1].rotation.x = -0.8 - t * 1.55;
         arms[1].rotation.y = 0.25 * t;
         arms[1].rotation.z = 0.18 + 0.35 * t;
@@ -809,7 +823,8 @@ function animateFullCharacterRig(rig, s, dt, now) {
         hand.rotation.set(0.3 * t, 0, 0);
         hand.position.set(0, -8 * VX_VAL, 0);
       } else if (p < 0.68) {
-        const t = (p - 0.32) / 0.36;
+        const rawT = (p - 0.32) / 0.36;
+        const t = easeInCubic(rawT);
         arms[1].rotation.x = -2.35 + t * 2.65;
         arms[1].rotation.y = 0.25 * (1 - t);
         arms[1].rotation.z = 0.53 - t * 0.45;
@@ -817,11 +832,12 @@ function animateFullCharacterRig(rig, s, dt, now) {
         arms[0].rotation.y = -0.28 * (1 - t);
         torso.rotation.x = -0.25 + t * 0.62;
         torso.rotation.y = 0.18 - t * 0.32;
-        body.position.y -= Math.sin(t * Math.PI) * 0.14;
+        body.position.y -= Math.sin(rawT * Math.PI) * 0.14;
         hand.rotation.set(0.3 - t * 0.7, 0, 0);
         hand.position.set(0, -8 * VX_VAL, t * 0.2);
       } else {
-        const t = (p - 0.68) / 0.32;
+        const rawT = (p - 0.68) / 0.32;
+        const t = easeOutCubic(rawT);
         arms[1].rotation.x = 0.3 * (1 - t) + (-0.78) * t;
         arms[1].rotation.y = -0.18 * t;
         arms[1].rotation.z = 0.18;
@@ -833,7 +849,7 @@ function animateFullCharacterRig(rig, s, dt, now) {
       }
     } else if (heldId === 'bow') {
       // 5. Realistická střelba z luku: Napnutí tětivy k líci a výstřel
-      const draw = p < 0.65 ? (p / 0.65) : 1 - (p - 0.65) / 0.35;
+      const draw = p < 0.65 ? easeOutQuad(p / 0.65) : 1 - easeSnap((p - 0.65) / 0.35);
       arms[0].rotation.x = -1.55;
       arms[0].rotation.y = 0.38;
       arms[0].rotation.z = -0.06;
@@ -847,47 +863,52 @@ function animateFullCharacterRig(rig, s, dt, now) {
     } else if (heldId === 'staff_fire' || heldId === 'staff_frost') {
       // 6. Magické kouzlení holí: Pozvednutí hole k nebi a výron plamene/mrazu vpřed
       if (p < 0.4) {
-        const t = p / 0.4;
+        const t = easeOutQuad(p / 0.4);
         arms[1].rotation.x = -0.78 - t * 1.5;
         arms[1].rotation.z = 0.18 + t * 0.25;
         torso.rotation.x = -0.12 * t;
         hand.rotation.set(0.3 * t, 0, 0);
         hand.position.set(0, -8 * VX_VAL, 0);
       } else if (p < 0.75) {
-        const t = (p - 0.4) / 0.35;
+        const rawT = (p - 0.4) / 0.35;
+        const t = easeSnap(rawT);
         arms[1].rotation.x = -2.28 + t * 0.85;
         arms[1].rotation.z = 0.43 - t * 0.25;
         torso.rotation.x = -0.12 + t * 0.32;
         hand.rotation.set(-0.6 * t, 0, 0);
         hand.position.set(0, -8 * VX_VAL, t * 0.42);
       } else {
-        const t = (p - 0.75) / 0.25;
+        const t = easeOutQuad((p - 0.75) / 0.25);
         arms[1].rotation.x = -1.43 * (1 - t) + (-0.78) * t;
         torso.rotation.x = 0.2 * (1 - t);
         hand.rotation.set(0, 0, 0);
         hand.position.set(0, -8 * VX_VAL, 0);
       }
     } else {
-      // 7. Meče, katany a palcáty: Plynulé diagonální seky s rotací trupu
+      // 7. Meče, katany a palcáty: Svižná komba s nápřahem, bleskovým active frame a plynulým návratem
       const swingSign = attackCombo === 0 ? 1 : -1;
       if (p < 0.26) {
-        const t = p / 0.26;
+        // Windup (nápřah čepelí)
+        const t = easeOutQuad(p / 0.26);
         arms[1].rotation.x = -0.78 - t * 0.95;
         arms[1].rotation.y = swingSign * t * 0.65;
         arms[1].rotation.z = 0.18 + swingSign * t * 0.45;
         torso.rotation.y = -swingSign * t * 0.28;
         hand.rotation.set(0.3 * t, 0, 0);
       } else if (p < 0.68) {
-        const t = (p - 0.26) / 0.42;
+        // Active frame (bleskový švih)
+        const rawT = (p - 0.26) / 0.42;
+        const t = easeSnap(rawT);
         arms[1].rotation.x = -1.73 + t * 1.95;
         arms[1].rotation.y = swingSign * (0.65 - t * 1.35);
         arms[1].rotation.z = 0.63 - t * 0.85;
         torso.rotation.y = swingSign * (-0.28 + t * 0.65);
-        torso.rotation.x = Math.sin(t * Math.PI) * 0.12;
+        torso.rotation.x = Math.sin(rawT * Math.PI) * 0.12;
         hand.rotation.set(0.3 - t * 0.6, 0, 0);
-        hand.position.set(0, -8 * VX_VAL, Math.sin(t * Math.PI) * 0.25);
+        hand.position.set(0, -8 * VX_VAL, Math.sin(rawT * Math.PI) * 0.25);
       } else {
-        const t = (p - 0.68) / 0.32;
+        // Recovery (plynulý návrat do střehu)
+        const t = easeOutQuad((p - 0.68) / 0.32);
         arms[1].rotation.x = 0.22 * (1 - t) + (-0.78) * t;
         arms[1].rotation.y = (-0.7 * swingSign) * (1 - t) + (-0.18) * t;
         arms[1].rotation.z = 0.18;

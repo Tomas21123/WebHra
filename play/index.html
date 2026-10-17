@@ -41,10 +41,7 @@
     }
   </script>
   <div id="hud"></div>
-  <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera ·
-    Kolečko – zoom · [ ] –
-    dohled<br>ESC – menu & nastavení ovládání · I – inventář & dovednosti · M – 3D mapa · V – emoty · T – chat · 1–5 / LMB / RMB – akční lišta
-  </div>
+  <div id="help" style="display:none;" hidden></div>
   <div id="bars">
     <div class="b xp-row" title="Úroveň postavy a zkušenosti (XP)" style="display:flex;align-items:center;gap:6px;">
       <div id="hudLevelBadge" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#0f172a;font-weight:800;font-size:11.5px;padding:2px 7px;border-radius:6px;box-shadow:0 2px 8px rgba(245,158,11,0.4);white-space:nowrap;">Lv. 1</div>
@@ -315,16 +312,88 @@
                     <span class="slot-placeholder" style="font-size:18px;">🐾</span>
                     <div class="slot-hand-info">
                       <span class="slot-name-tag">Jezdecký mazlíček</span>
-                      <span class="role-pill" style="background:rgba(34,197,94,0.2);color:#4ade80;border-color:rgba(34,197,94,0.4);">Klávesa [R]</span>
+                      <span class="role-pill" style="background:rgba(34,197,94,0.2);color:#4ade80;border-color:rgba(34,197,94,0.4);">Přivolat [R] · Sednout [E]</span>
                     </div>
                   </div>
                   <div class="slot-fill" id="slot_pet"></div>
                 </div>
               </div>
 
+              <!-- Panel RPG Statistik Postavy & Volné body -->
+              <div class="inv-rpg-stats-panel" id="invRpgStatsPanel">
+                <div class="rpg-stats-header">
+                  <div class="rpg-stats-title"><span>📊</span> ATRIBUTY POSTAVY</div>
+                  <div class="rpg-points-badge" id="rpgSkillPointsBadge">
+                    Volné body: <b id="rpgPointsVal">0</b>
+                  </div>
+                </div>
+                <div class="rpg-stats-list">
+                  <div class="rpg-stat-row" data-stat="hp">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">❤️</span>
+                      <span class="rpg-stat-name">Životy (HP)</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValHp">100</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddHp" data-stat="hp" title="Přidat bod (+15 HP)">+</button>
+                    </div>
+                  </div>
+                  <div class="rpg-stat-row" data-stat="stamina">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">⚡</span>
+                      <span class="rpg-stat-name">Stamina</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValStamina">100</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddStamina" data-stat="stamina" title="Přidat bod (+10 Staminy)">+</button>
+                    </div>
+                  </div>
+                  <div class="rpg-stat-row" data-stat="damage">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">⚔️</span>
+                      <span class="rpg-stat-name">Poškození</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValDamage">10</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddDamage" data-stat="damage" title="Přidat bod (+3 Útok)">+</button>
+                    </div>
+                  </div>
+                  <div class="rpg-stat-row" data-stat="defense">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">🛡️</span>
+                      <span class="rpg-stat-name">Obrana</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValDefense">0%</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddDefense" data-stat="defense" title="Přidat bod (+3% Obrana)">+</button>
+                    </div>
+                  </div>
+                  <div class="rpg-stat-row" data-stat="crit">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">💥</span>
+                      <span class="rpg-stat-name">Kritický zásah</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValCrit">5%</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddCrit" data-stat="crit" title="Přidat bod (+1.5% Kritický zásah)">+</button>
+                    </div>
+                  </div>
+                  <div class="rpg-stat-row" data-stat="speed">
+                    <div class="rpg-stat-meta">
+                      <span class="rpg-stat-icon">🏃</span>
+                      <span class="rpg-stat-name">Rychlost</span>
+                    </div>
+                    <div class="rpg-stat-right">
+                      <span class="rpg-stat-val" id="rpgValSpeed">100%</span>
+                      <button class="rpg-stat-add-btn" id="rpgAddSpeed" data-stat="speed" title="Přidat bod (+2.5% Rychlost)">+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Souhrn aktuálních bonusů -->
               <div class="inv-bonus-summary">
-                <div class="bonus-header">⚡ SOUHRN BONUSŮ POSTAVY</div>
+                <div class="bonus-header">⚡ SOUHRN BONUSŮ Z VÝBAVY A EFEKTŮ</div>
                 <div class="bonus-grid">
                   <div class="bonus-badge"><span class="bb-ico">🛡️</span> Obrana: <b id="statSumArmor">+0%</b></div>
                   <div class="bonus-badge"><span class="bb-ico">⚔️</span> Útok: <b id="statSumDamage">10 HP</b></div>
@@ -776,6 +845,42 @@
     </div>
   </div>
 
+  <!-- Modal: Detailní Nápověda Příkazů (/help detail) -->
+  <div id="modalHelpDetail" class="overlay" hidden style="z-index:99999999;">
+    <div class="panel help-detail-panel">
+      <div class="help-detail-head">
+        <div class="help-detail-title">
+          <span class="help-detail-icon">📖</span>
+          <div>
+            <div class="help-detail-main-title">Herní Příkazy & Konzole (/help detail)</div>
+            <div class="help-detail-subtitle">Podrobný přehled syntaxe, parametrů a ukázek použití</div>
+          </div>
+        </div>
+        <button id="closeHelpDetailBtn" class="close-btn" title="Zavřít [ESC]">✕</button>
+      </div>
+
+      <div class="help-detail-toolbar">
+        <input type="text" id="helpDetailSearch" class="help-search-input" placeholder="🔍 Vyhledat příkaz, parametr nebo klíčové slovo (např. give, xp, tp, pet)...">
+        <div class="help-detail-tabs">
+          <button class="help-tab-btn active" data-cat="all">Všechny</button>
+          <button class="help-tab-btn" data-cat="items">🎒 Předměty & XP</button>
+          <button class="help-tab-btn" data-cat="player">⚔️ Postava & Boj</button>
+          <button class="help-tab-btn" data-cat="teleport">🧭 Pohyb & Svět</button>
+          <button class="help-tab-btn" data-cat="utility">⚙️ Ostatní</button>
+        </div>
+      </div>
+
+      <div id="helpDetailList" class="help-detail-list">
+        <!-- Dynamicky generováno nebo předvyplněno -->
+      </div>
+
+      <div class="help-detail-footer">
+        <span class="help-detail-hint">💡 Kliknutím na kterýkoliv příkaz jej vložíš přímo do chatovací konzole.</span>
+        <button id="closeHelpDetailBtnBottom" class="btn-main" style="padding:7px 20px;">Rozumím</button>
+      </div>
+    </div>
+  </div>
+
   <div id="load">
     <div id="loadContent" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
       Generuji svět…<div id="bar"><i></i></div>
@@ -820,6 +925,7 @@
   <script src="../js/world.js?v=20"></script>
   <script src="../js/voxelBuilder.js?v=20"></script>
   <script src="../js/items.js?v=21"></script>
+  <script src="../js/combatJuice.js?v=21"></script>
   <script src="../js/skills.js?v=21"></script>
   <script src="../js/character.js?v=21"></script>
   <script src="../js/entities.js?v=20"></script>

@@ -291,6 +291,66 @@
       goldBase: 2,
       color: 0xc2410c,
       drops: [{ id: 'tame_acorn', min: 1, max: 1, chance: 0.6 }]
+    },
+
+    // --- DRAČÍ WYVERNY (Ice and Fire Wyverns - 2 zadní nohy + 2 křídla jako přední končetiny) ---
+    WyvernFire: {
+      type: 'WyvernFire',
+      aliases: ['wyvernfire', 'wyvern_fire', 'wyverna', 'ohniva wyverna', 'ohnivy drak', 'fire wyvern', 'fire dragon', 'drak'],
+      name: 'Ohnivá wyverna',
+      isDragon: true,
+      dragonType: 'fire',
+      baseHp: 650,
+      baseDamage: 52,
+      speedChase: 5.8,
+      speedWander: 2.3,
+      aggroRadius: 28.0,
+      attackReach: 5.5,
+      attackCooldown: 2.1,
+      hitboxRadius: 2.2,
+      height: 3.2,
+      xpBase: 500,
+      goldBase: 120,
+      color: 0xdc2626,
+      canFly: true,
+      petItemId: 'pet_wyvern_fire',
+      rideSpeed: 14.5,
+      jumpBoost: 14.0,
+      mountHeight: 1.35,
+      drops: [
+        { id: 'dragon_scales_fire', min: 3, max: 6, chance: 1.0 },
+        { id: 'dragon_bone', min: 2, max: 4, chance: 1.0 },
+        { id: 'dragon_blood_fire', min: 1, max: 2, chance: 0.8 }
+      ]
+    },
+    WyvernIce: {
+      type: 'WyvernIce',
+      aliases: ['wyvernice', 'wyvern_ice', 'ledova wyverna', 'ledovy drak', 'ice wyvern', 'ice dragon'],
+      name: 'Ledová wyverna',
+      isDragon: true,
+      dragonType: 'ice',
+      baseHp: 620,
+      baseDamage: 48,
+      speedChase: 5.6,
+      speedWander: 2.3,
+      aggroRadius: 28.0,
+      attackReach: 5.5,
+      attackCooldown: 2.1,
+      hitboxRadius: 2.2,
+      height: 3.2,
+      xpBase: 500,
+      goldBase: 120,
+      color: 0x38bdf8,
+      canFly: true,
+      petItemId: 'pet_wyvern_ice',
+      rideSpeed: 14.0,
+      jumpBoost: 13.8,
+      mountHeight: 1.35,
+      drops: [
+        { id: 'dragon_scales_ice', min: 3, max: 6, chance: 1.0 },
+        { id: 'dragon_bone', min: 2, max: 4, chance: 1.0 },
+        { id: 'dragon_blood_ice', min: 1, max: 2, chance: 0.8 }
+      ]
     }
   };
 
@@ -311,6 +371,13 @@
     }
 
     // 2. Částečná shoda klíčových slov
+    if (s.includes('ice') || s.includes('led')) {
+      if (s.includes('wyvern') || s.includes('drak') || s.includes('dragon')) return 'WyvernIce';
+    }
+    if (s.includes('fire') || s.includes('ohen') || s.includes('ohniv')) {
+      if (s.includes('wyvern') || s.includes('drak') || s.includes('dragon')) return 'WyvernFire';
+    }
+    if (s.includes('wyvern') || s.includes('drak') || s.includes('dragon')) return 'WyvernFire';
     if (s.includes('husky')) return 'DogHusky';
     if (s.includes('jezevc') || s.includes('dachs')) return 'DogDachshund';
     if (s.includes('ovcak') || s.includes('shepherd') || s.includes('pes') || s.includes('dog')) return 'DogShepherd';
@@ -1341,6 +1408,307 @@
       });
 
       addTwoLegs(0.42, 0.72, 0.42, 0.34, 0, stoneMat, darkStoneMat);
+
+    } else if (type === 'WyvernFire' || type === 'WyvernIce') {
+      // Wyverna (Ice and Fire): 2 zadní nohy + 2 křídla tvořící přední končetiny, rohy, dlouhý krk a ocas
+      const isIce = (type === 'WyvernIce');
+      const scaleColor = isIce ? 0x0369a1 : 0x991b1b; // Hluboká modrá vs temně rudá dračí šupina
+      const accentScale= isIce ? 0x0284c7 : 0xb91c1c; // Sekundární tón šupin
+      const bellyColor = isIce ? 0x7dd3fc : 0xf97316; // Mrazivý tyrkys vs plamenná oranž na břiše
+      const darkColor  = isIce ? 0x082f49 : 0x450a0a; // Obsidiánové ostny a hřeben
+      const hornColor  = isIce ? 0x0c4a6e : 0x262626; // Mohutné zahnuté rohy
+      const eyeColor   = isIce ? 0x38bdf8 : 0xfbbf24; // Zářící safírové vs jantarově žluté oči
+      const wingColor  = isIce ? 0x38bdf8 : 0xdc2626; // Blána křídla
+      const talonMat   = new THREE.MeshLambertMaterial({ color: 0x18181b });
+      const toothMat   = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const throatMat  = new THREE.MeshLambertMaterial({ color: 0x7f1d1d });
+
+      const scaleMat   = new THREE.MeshLambertMaterial({ color: scaleColor });
+      const accentMat  = new THREE.MeshLambertMaterial({ color: accentScale });
+      const bellyMat   = new THREE.MeshLambertMaterial({ color: bellyColor });
+      const darkMat    = new THREE.MeshLambertMaterial({ color: darkColor });
+      const hornMat    = new THREE.MeshLambertMaterial({ color: hornColor });
+      const wingMat    = new THREE.MeshLambertMaterial({ color: wingColor, side: THREE.DoubleSide });
+
+      // 1. Tělo / Masivní hruď a trup
+      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.82, 0.90), scaleMat);
+      chest.position.set(0, 0.95, 0.35);
+      root.add(chest);
+
+      const waist = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.70, 0.85), accentMat);
+      waist.position.set(0, 0.90, -0.45);
+      root.add(waist);
+
+      // Segmentované břišní pláty (Underbelly)
+      const bellyFront = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.24, 0.82), bellyMat);
+      bellyFront.position.set(0, 0.58, 0.35);
+      root.add(bellyFront);
+
+      const bellyRear = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.20, 0.78), bellyMat);
+      bellyRear.position.set(0, 0.60, -0.45);
+      root.add(bellyRear);
+
+      // Hřbetní ostny podél celé páteře
+      for (let sIdx = -3; sIdx <= 3; sIdx++) {
+        const spineH = 0.22 + (1 - Math.abs(sIdx) / 4) * 0.16;
+        const spine = new THREE.Mesh(new THREE.BoxGeometry(0.08, spineH, 0.16), darkMat);
+        spine.position.set(0, 1.35 + (sIdx > 0 ? 0.05 : 0), sIdx * 0.24);
+        root.add(spine);
+      }
+
+      // Sedlo pro ochočenou wyvernu
+      if (isTamedPet) {
+        const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.16, 0.72), new THREE.MeshLambertMaterial({ color: 0x451a03 }));
+        saddle.position.set(0, 1.38, 0.05);
+        const stirrupL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.06), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        stirrupL.position.set(-0.46, 0.95, 0.05);
+        const stirrupR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.06), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        stirrupR.position.set(0.46, 0.95, 0.05);
+        root.add(saddle); root.add(stirrupL); root.add(stirrupR);
+      }
+
+      // 2. Dlouhý hadí krk ve 3 segmentových obloucích
+      const neckBase = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.52, 0.55), scaleMat);
+      neckBase.position.set(0, 1.15, 0.85);
+      neckBase.rotation.x = -0.32;
+      root.add(neckBase);
+
+      const neckSpine1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.18), darkMat);
+      neckSpine1.position.set(0, 1.48, 0.85);
+      root.add(neckSpine1);
+
+      const neckMid = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.48, 0.55), accentMat);
+      neckMid.position.set(0, 1.40, 1.25);
+      neckMid.rotation.x = -0.15;
+      root.add(neckMid);
+
+      const neckSpine2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.18), darkMat);
+      neckSpine2.position.set(0, 1.72, 1.25);
+      root.add(neckSpine2);
+
+      const neckTop = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.44, 0.50), scaleMat);
+      neckTop.position.set(0, 1.62, 1.65);
+      neckTop.rotation.x = 0.12;
+      root.add(neckTop);
+
+      const throatUnder = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 1.15), bellyMat);
+      throatUnder.position.set(0, 1.22, 1.28);
+      throatUnder.rotation.x = -0.35;
+      root.add(throatUnder);
+
+      // 3. Majestátní dračí hlava s otevíratelnou tlamou plnou zubů
+      const headGrp = new THREE.Group();
+      headGrp.position.set(0, 1.76, 1.95);
+      root.add(headGrp);
+      limbMeshes.head = headGrp;
+
+      // Lebka
+      const skull = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.42, 0.60), scaleMat);
+      skull.position.set(0, 0.12, 0);
+      headGrp.add(skull);
+
+      // Čenich a horní čelist
+      const upperSnout = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.22, 0.62), scaleMat);
+      upperSnout.position.set(0, 0.05, 0.52);
+      headGrp.add(upperSnout);
+
+      // Nozdry
+      [-0.10, 0.10].forEach(nx => {
+        const nostril = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.10), darkMat);
+        nostril.position.set(nx, 0.18, 0.75);
+        headGrp.add(nostril);
+      });
+
+      // Vnitřek horní tlamy
+      const upperMouth = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.06, 0.52), throatMat);
+      upperMouth.position.set(0, -0.06, 0.52);
+      headGrp.add(upperMouth);
+
+      // Horní řada zubů
+      [-0.17, 0.17].forEach(sideX => {
+        for (let tIdx = 0; tIdx < 4; tIdx++) {
+          const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.10, 0.05), toothMat);
+          tooth.position.set(sideX, -0.10, 0.32 + tIdx * 0.12);
+          headGrp.add(tooth);
+        }
+      });
+      [-0.08, 0.08].forEach(fx => {
+        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.04), toothMat);
+        frontTooth.position.set(fx, -0.10, 0.81);
+        headGrp.add(frontTooth);
+      });
+
+      // Spodní čelist (Hinged Jaw)
+      const jawPivot = new THREE.Group();
+      jawPivot.position.set(0, -0.04, 0.12);
+      headGrp.add(jawPivot);
+      limbMeshes.jaw = jawPivot;
+
+      const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.14, 0.65), bellyMat);
+      lowerJaw.position.set(0, -0.08, 0.38);
+      jawPivot.add(lowerJaw);
+
+      // Jazyk
+      const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.45), throatMat);
+      tongue.position.set(0, -0.01, 0.38);
+      jawPivot.add(tongue);
+
+      // Dolní řada zubů
+      [-0.15, 0.15].forEach(sideX => {
+        for (let tIdx = 0; tIdx < 4; tIdx++) {
+          const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.09, 0.05), toothMat);
+          tooth.position.set(sideX, 0.03, 0.20 + tIdx * 0.12);
+          jawPivot.add(tooth);
+        }
+      });
+      [-0.07, 0.07].forEach(fx => {
+        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.10, 0.04), toothMat);
+        frontTooth.position.set(fx, 0.03, 0.68);
+        jawPivot.add(frontTooth);
+      });
+
+      // Zářící oči
+      addExpressiveEyes(headGrp, 0.30, 0.18, 0.18, eyeColor, 0x0f172a, 1.4, true);
+
+      // Rohy: 2 hlavní dlouhé + 2 lícní hroty
+      [-1, 1].forEach(side => {
+        const hornBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.50), hornMat);
+        hornBase.position.set(side * 0.22, 0.34, -0.22);
+        hornBase.rotation.x = -0.52;
+        hornBase.rotation.y = side * 0.20;
+        headGrp.add(hornBase);
+
+        const hornTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.42), hornMat);
+        hornTip.position.set(side * 0.28, 0.52, -0.58);
+        hornTip.rotation.x = -0.82;
+        hornTip.rotation.y = side * 0.26;
+        headGrp.add(hornTip);
+
+        const cheekSpike = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.30), darkMat);
+        cheekSpike.position.set(side * 0.30, 0.05, -0.10);
+        cheekSpike.rotation.x = -0.30;
+        cheekSpike.rotation.y = side * 0.45;
+        headGrp.add(cheekSpike);
+      });
+
+      // 4. Masivní křídla tvořící přední končetiny wyverny
+      limbMeshes.wings = [];
+      [-1, 1].forEach(side => {
+        const wingPivot = new THREE.Group();
+        wingPivot.position.set(side * 0.50, 1.25, 0.45);
+
+        const armHumerus = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.85), scaleMat);
+        armHumerus.position.set(side * 0.38, 0.08, 0.15);
+        armHumerus.rotation.y = side * 0.40;
+        armHumerus.rotation.z = side * 0.15;
+        wingPivot.add(armHumerus);
+
+        const elbow = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.20, 0.22), accentMat);
+        elbow.position.set(side * 0.72, 0.15, 0.45);
+        wingPivot.add(elbow);
+
+        const thumbClaw = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, 0.10), talonMat);
+        thumbClaw.position.set(side * 0.72, -0.05, 0.55);
+        thumbClaw.rotation.x = 0.45;
+        wingPivot.add(thumbClaw);
+
+        const ribAngles = [-0.35, -0.05, 0.25, 0.55];
+        ribAngles.forEach((an, rIdx) => {
+          const ribLen = 2.10 - rIdx * 0.25;
+          const rib = new THREE.Mesh(new THREE.BoxGeometry(ribLen, 0.07, 0.07), darkMat);
+          rib.position.set(side * (0.80 + ribLen * 0.48), 0.10 - rIdx * 0.04, 0.35 - rIdx * 0.32);
+          rib.rotation.y = side * (an * 0.75);
+          wingPivot.add(rib);
+        });
+
+        const membrane = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.04, 1.45), wingMat);
+        membrane.position.set(side * 1.55, 0.08, 0.05);
+        wingPivot.add(membrane);
+
+        root.add(wingPivot);
+        limbMeshes.wings.push(wingPivot);
+      });
+
+      // 5. Dvě silné zadní končetiny
+      limbMeshes.legs = [];
+      [-1, 1].forEach(side => {
+        const legPivot = new THREE.Group();
+        legPivot.position.set(side * 0.42, 0.88, -0.42);
+
+        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.50, 0.38), scaleMat);
+        thigh.position.set(0, -0.20, 0.05);
+        thigh.rotation.x = -0.22;
+        legPivot.add(thigh);
+
+        const shin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.48, 0.24), accentMat);
+        shin.position.set(0, -0.52, -0.08);
+        shin.rotation.x = 0.30;
+        legPivot.add(shin);
+
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.48), talonMat);
+        foot.position.set(0, -0.80, 0.12);
+        legPivot.add(foot);
+
+        [-0.10, 0, 0.10].forEach(cx => {
+          const claw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.18), darkMat);
+          claw.position.set(cx, -0.82, 0.38);
+          claw.rotation.x = 0.25;
+          legPivot.add(claw);
+        });
+        const rearClaw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.14), darkMat);
+        rearClaw.position.set(0, -0.82, -0.14);
+        rearClaw.rotation.x = -0.35;
+        legPivot.add(rearClaw);
+
+        root.add(legPivot);
+        limbMeshes.legs.push(legPivot);
+      });
+
+      // 6. Dlouhý ještěří ocas (4 segmenty) s ostnatou ploutví na konci
+      const tail = new THREE.Group();
+      tail.position.set(0, 0.85, -0.80);
+
+      const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.38, 0.75), scaleMat);
+      t1.position.set(0, 0, -0.35);
+      tail.add(t1);
+      const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.16), darkMat);
+      s1.position.set(0, 0.24, -0.35);
+      tail.add(s1);
+
+      const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.30, 0.75), accentMat);
+      t2.position.set(0, -0.06, -1.05);
+      tail.add(t2);
+      const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.16), darkMat);
+      s2.position.set(0, 0.16, -1.05);
+      tail.add(s2);
+
+      const t3 = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.75), scaleMat);
+      t3.position.set(0, -0.12, -1.75);
+      tail.add(t3);
+      const s3 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.20, 0.14), darkMat);
+      s3.position.set(0, 0.08, -1.75);
+      tail.add(s3);
+
+      const t4 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.70), accentMat);
+      t4.position.set(0, -0.16, -2.45);
+      tail.add(t4);
+
+      const finL = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.55), wingMat);
+      finL.position.set(-0.24, -0.15, -2.70);
+      finL.rotation.y = 0.40;
+      tail.add(finL);
+
+      const finR = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.55), wingMat);
+      finR.position.set(0.24, -0.15, -2.70);
+      finR.rotation.y = -0.40;
+      tail.add(finR);
+
+      const finCenter = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.36, 0.55), darkMat);
+      finCenter.position.set(0, -0.05, -2.70);
+      tail.add(finCenter);
+
+      root.add(tail);
+      limbMeshes.tail = tail;
     }
 
     limbMeshes.root = root;
@@ -1350,10 +1718,170 @@
   let nextEntityId = 1;
 
   // ---------------------------------------------------------------------------
+  // Impozantní masivní chrlení dračího ohně a ledu (Torrent of Flames / Blizzard)
+  // Inspirováno Ice and Fire módem - desítky expandujících vířících voxelů s dynamickým světlem
+  // ---------------------------------------------------------------------------
+  function spawnSpectacularDragonBreath(originX, originY, originZ, dirX, dirY, dirZ, isIce, tierScale = 1.0, isPlayerMount = false, damage = 50) {
+    if (typeof scene === 'undefined' || !scene || typeof THREE === 'undefined') return;
+
+    // Normalizace směru
+    const len = Math.hypot(dirX, dirY, dirZ) || 1;
+    const ndx = dirX / len;
+    const ndy = dirY / len;
+    const ndz = dirZ / len;
+
+    // Zvukový doprovod řevu a plamenů/vichřice
+    if (typeof playDragonRoar === 'function') playDragonRoar(isIce);
+    if (typeof playDragonBreath === 'function') playDragonBreath(isIce);
+
+    // Dynamické bodové světlo vrhané plamenem na okolní svět
+    const breathLight = new THREE.PointLight(isIce ? 0x38bdf8 : 0xf97316, 4.0 * Math.min(2.0, tierScale), 26 * Math.min(2.0, tierScale));
+    breathLight.position.set(originX + ndx * 1.5, originY + ndy * 1.5, originZ + ndz * 1.5);
+    scene.add(breathLight);
+
+    const grp = new THREE.Group();
+    grp.position.set(originX, originY, originZ);
+    scene.add(grp);
+
+    // Barevné spektrum: plameny, rozžhavené jádro i kouř
+    const fireColors = [0xffffff, 0xfef08a, 0xfacc15, 0xf97316, 0xef4444, 0xdc2626, 0x991b1b, 0x27272a];
+    const iceColors  = [0xffffff, 0xe0f2fe, 0xbae6fd, 0x7dd3fc, 0x38bdf8, 0x0284c7, 0x0369a1, 0x94a3b8];
+    const colors = isIce ? iceColors : fireColors;
+
+    const particles = [];
+    const particleCount = Math.round(55 + tierScale * 25);
+    const baseGeo = new THREE.BoxGeometry(1, 1, 1);
+
+    for (let i = 0; i < particleCount; i++) {
+      const col = colors[i % colors.length];
+      const mat = new THREE.MeshBasicMaterial({
+        color: col,
+        transparent: true,
+        opacity: 0.95
+      });
+      const mesh = new THREE.Mesh(baseGeo, mat);
+
+      const initScale = 0.18 + Math.random() * 0.18;
+      mesh.scale.set(initScale, initScale, initScale);
+
+      // Postupné uvolňování částic v proudu
+      const delay = (i / particleCount) * 0.42;
+
+      // Kuželovitý rozptyl směru (Conical spread)
+      const spreadAngle = (Math.random() * 0.35 + 0.05);
+      const spreadPhi = Math.random() * Math.PI * 2;
+      const perpX = -ndz * Math.cos(spreadPhi);
+      const perpZ = ndx * Math.cos(spreadPhi);
+      const perpY = Math.sin(spreadPhi);
+
+      const spd = (16.0 + Math.random() * 12.0) * Math.min(1.5, Math.max(0.8, tierScale * 0.7));
+
+      particles.push({
+        mesh,
+        delay,
+        life: 0,
+        maxLife: 0.75 + Math.random() * 0.35,
+        targetScale: (0.45 + Math.random() * 0.85) * Math.max(0.8, tierScale * 0.85),
+        vx: (ndx + perpX * spreadAngle) * spd,
+        vy: (ndy + perpY * spreadAngle) * spd + (isIce ? -0.5 : 0.8),
+        vz: (ndz + perpZ * spreadAngle) * spd,
+        spawned: false
+      });
+    }
+
+    // Kamera shake
+    if (isPlayerMount && typeof window !== 'undefined' && typeof window.triggerCameraShake === 'function') {
+      window.triggerCameraShake(0.18, 0.25);
+    }
+
+    // Poškození nepřátel v kuželu (AoE Cone Hit)
+    if (isPlayerMount && typeof EntityManager !== 'undefined' && Array.isArray(EntityManager.creatures)) {
+      const maxDist = (20.0 + tierScale * 6.0);
+      const hitConeAngle = 0.78;
+
+      EntityManager.creatures.forEach(c => {
+        if (!c || c.state === 'Dead') return;
+        const cdx = c.x - originX;
+        const cdz = c.z - originZ;
+        const distToCreature = Math.hypot(cdx, cdz);
+
+        if (distToCreature <= maxDist) {
+          const dot = (cdx * ndx + cdz * ndz) / (distToCreature || 1);
+          if (dot >= Math.cos(hitConeAngle)) {
+            const isCrit = Math.random() < 0.25;
+            const finalDmg = Math.round(damage * (isCrit ? 1.5 : 1.0));
+            c.takeDamage(finalDmg, { x: ndx * 1.5, z: ndz * 1.5 }, isCrit, isIce ? 'ice_breath' : 'dragon_fire');
+
+            if (typeof EntityManager.spawnDamageNumber === 'function') {
+              EntityManager.spawnDamageNumber(c.x, c.y + (c.height || 1.0) * 0.5, c.z, finalDmg, isCrit);
+            }
+            if (typeof toast === 'function' && Math.random() < 0.35) {
+              toast(`${isIce ? '❄️ Mrazivý dech' : '🔥 Plameny draka'} zasáhly ${c.name} za -${finalDmg} HP!`);
+            }
+          }
+        }
+      });
+    }
+
+    let elapsed = 0;
+    const iv = setInterval(() => {
+      elapsed += 0.033;
+
+      const lightProg = Math.min(1.0, elapsed / 0.6);
+      breathLight.position.set(
+        originX + ndx * (lightProg * 14.0 * Math.max(0.8, tierScale)),
+        originY + ndy * (lightProg * 14.0 * Math.max(0.8, tierScale)),
+        originZ + ndz * (lightProg * 14.0 * Math.max(0.8, tierScale))
+      );
+      breathLight.intensity = Math.max(0, 4.0 * (1 - lightProg * 0.8));
+
+      let allDone = true;
+      for (const p of particles) {
+        if (elapsed < p.delay) {
+          allDone = false;
+          continue;
+        }
+
+        if (!p.spawned) {
+          p.spawned = true;
+          grp.add(p.mesh);
+        }
+
+        p.life += 0.033;
+        if (p.life < p.maxLife) {
+          allDone = false;
+          const prog = p.life / p.maxLife;
+
+          p.mesh.position.x += p.vx * 0.033;
+          p.mesh.position.y += p.vy * 0.033;
+          p.mesh.position.z += p.vz * 0.033;
+
+          const curScale = THREE.MathUtils.lerp(0.20, p.targetScale, Math.min(1.0, prog * 2.2));
+          p.mesh.scale.set(curScale, curScale, curScale);
+          p.mesh.material.opacity = Math.max(0, (1 - prog) * 0.95);
+        } else if (p.mesh.parent) {
+          grp.remove(p.mesh);
+          p.mesh.geometry.dispose();
+          p.mesh.material.dispose();
+        }
+      }
+
+      if (allDone || elapsed >= 1.4) {
+        clearInterval(iv);
+        if (grp.parent) scene.remove(grp);
+        if (breathLight.parent) scene.remove(breathLight);
+      }
+    }, 33);
+  }
+  if (typeof window !== 'undefined') {
+    window.spawnSpectacularDragonBreath = spawnSpectacularDragonBreath;
+  }
+
+  // ---------------------------------------------------------------------------
   // Třída CreatureInstance
   // ---------------------------------------------------------------------------
   class CreatureInstance {
-    constructor(type, x, y, z, level = 1) {
+    constructor(type, x, y, z, level = 1, tier = null) {
       const normType = normalizeCreatureType(type);
       const cfg = CREATURE_CONFIGS[normType] || CREATURE_CONFIGS.Wolf;
 
@@ -1362,6 +1890,8 @@
       this.name = cfg.name;
       this.level = Math.max(1, Math.floor(level));
       this.isPassive = !!cfg.isPassive;
+      this.isDragon = !!cfg.isDragon;
+      this.dragonType = cfg.dragonType || null;
       this.tameItem = cfg.tameItem || null;
       this.altTameItem = cfg.altTameItem || null;
       this.tameItemName = cfg.tameItemName || '';
@@ -1380,26 +1910,55 @@
       // Zdraví & Škálování podle úrovně
       this.maxHp = cfg.baseHp + (this.level - 1) * 15;
       this.hp = this.maxHp;
-      this.baseDamage = Math.floor(cfg.baseDamage * (1 + (this.level - 1) * 0.12));
+      this.baseDamage = Math.floor(cfg.baseDamage * (1 + (this.level - 1) * 0.15));
 
-      // Vzdálenosti & Rychlosti
-      this.speedChase = cfg.speedChase;
+      // Vzdálenosti & Rychlosti (škálování rychlosti pro vyšší levely: +2.5% za level nad 1, max +25%)
+      const lvlSpeedMult = 1 + Math.min(0.25, Math.max(0, this.level - 1) * 0.025);
+      this.speedChase = cfg.speedChase * lvlSpeedMult;
       this.speedWander = cfg.speedWander;
       this.aggroRadius = cfg.aggroRadius;
       this.attackReach = cfg.attackReach;
-      this.attackCooldown = cfg.attackCooldown;
+      this.attackCooldown = Math.max(0.7, cfg.attackCooldown * (1 - Math.min(0.25, (this.level - 1) * 0.02)));
       this.attackTimer = 0;
       this.hitboxRadius = cfg.hitboxRadius;
       this.height = cfg.height;
 
-      // Kořist
+      // Kořist a XP škálování
       this.loot = {
-        gold: cfg.goldBase * this.level,
-        wood: 2,
-        ore_iron: 1,
-        xp: cfg.xpBase * this.level
+        gold: Math.round(cfg.goldBase * (1 + (this.level - 1) * 0.75)),
+        wood: Math.min(6, 2 + Math.floor(this.level / 2)),
+        ore_iron: Math.min(5, 1 + Math.floor(this.level / 2)),
+        xp: Math.round(cfg.xpBase * (1 + (this.level - 1) * 0.8))
       };
       this.dropTemplates = cfg.drops;
+
+      // Škálování draků podle TIERŮ 1-5 (Mládě -> Mladá -> Dospělá -> Prastará -> Veleještěr)
+      this.tier = 3;
+      this.tierScale = 1.0;
+      if (this.isDragon) {
+        if (typeof tier === 'number' && tier >= 1 && tier <= 5) {
+          this.tier = Math.floor(tier);
+        } else {
+          this.tier = Math.min(5, Math.max(1, 1 + Math.floor(Math.random() * 5)));
+        }
+        const TIER_DEFS = [
+          { tier: 1, name: 'Mládě', hpMult: 0.55, dmgMult: 0.60, scale: 0.65, reachMult: 0.70, xpMult: 0.50 },
+          { tier: 2, name: 'Mladá', hpMult: 0.80, dmgMult: 0.80, scale: 0.85, reachMult: 0.85, xpMult: 0.75 },
+          { tier: 3, name: 'Dospělá', hpMult: 1.10, dmgMult: 1.05, scale: 1.10, reachMult: 1.00, xpMult: 1.00 },
+          { tier: 4, name: 'Prastará', hpMult: 1.65, dmgMult: 1.40, scale: 1.50, reachMult: 1.25, xpMult: 1.60 },
+          { tier: 5, name: 'Veleještěr', hpMult: 2.50, dmgMult: 1.90, scale: 2.05, reachMult: 1.50, xpMult: 2.40 }
+        ];
+        const tDef = TIER_DEFS[this.tier - 1];
+        this.tierScale = tDef.scale;
+        this.name = `[Tier ${this.tier} ${tDef.name}] ${cfg.name}`;
+        this.maxHp = Math.round((cfg.baseHp + (this.level - 1) * 25) * tDef.hpMult);
+        this.hp = this.maxHp;
+        this.baseDamage = Math.round(cfg.baseDamage * (1 + (this.level - 1) * 0.15) * tDef.dmgMult);
+        this.attackReach = cfg.attackReach * tDef.reachMult;
+        this.hitboxRadius = cfg.hitboxRadius * tDef.scale;
+        this.height = cfg.height * tDef.scale;
+        this.loot.xp = Math.round(this.loot.xp * tDef.xpMult);
+      }
 
       // AI Stavový automat (6 stavů: Idle, Wander, Chase, Attack, Hurt, Dead)
       this.state = 'Idle';
@@ -1439,6 +1998,9 @@
       if (typeof THREE === 'undefined') return;
       const root = buildCreatureVoxelGroup(this.type, this.limbMeshes, false);
       if (root) {
+        if (this.isDragon && this.tierScale) {
+          root.scale.set(this.tierScale, this.tierScale, this.tierScale);
+        }
         this.group.add(root);
       }
     }
@@ -1472,29 +2034,48 @@
 
       ctx.clearRect(0, 0, 256, 80);
 
-      // Titulek: Level & Jméno
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px sans-serif';
+      const pLvl = (typeof P !== 'undefined' && P && P.level) ? P.level : 1;
+      const lvlDiff = this.level - pLvl;
+
+      // Pozadí a rámeček jména
       ctx.textAlign = 'center';
       ctx.shadowColor = '#000000';
       ctx.shadowBlur = 4;
-      ctx.fillText(this.isPassive ? `🐾 ${this.name}` : `[Lv.${this.level}] ${this.name}`, 128, 22);
+
+      if (this.isPassive) {
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText(`🐾 ${this.name}`, 128, 20);
+      } else {
+        // Barevné odlišení nebezpečnosti protivníka
+        let badgeColor = '#38bdf8'; // Vyrovnaný
+        if (lvlDiff >= 3) badgeColor = '#ef4444'; // Smrtící nebezpečí
+        else if (lvlDiff >= 1) badgeColor = '#f59e0b'; // Vyšší výzva
+        else if (lvlDiff <= -2) badgeColor = '#94a3b8'; // Slabý protivník
+
+        // Vykreslení Level odznaku a jména
+        ctx.fillStyle = badgeColor;
+        ctx.font = 'bold 19px sans-serif';
+        ctx.fillText(`[Lv.${this.level}] ${this.name}`, 128, 20);
+      }
 
       // Pokud jde o zvíře k ochočení, ukázat čím se ochočuje
       if (this.tameItemName) {
         ctx.fillStyle = '#fde047';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.fillText(`[E] Ochočit: ${this.tameItemName}`, 128, 42);
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(`[E] Ochočit: ${this.tameItemName}`, 128, 38);
       }
       ctx.shadowBlur = 0;
 
-      const barY = this.tameItemName ? 50 : 36;
-      // Pozadí baru
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(20, barY, 216, 16);
+      const barY = this.tameItemName ? 48 : 32;
+      const barH = 18;
+
+      // Pozadí baru s jemným stínem
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillRect(16, barY, 224, barH);
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 2;
-      ctx.strokeRect(20, barY, 216, 16);
+      ctx.strokeRect(16, barY, 224, barH);
 
       // Vyplnění zdraví
       const pct = Math.max(0, Math.min(1, this.hp / (this.maxHp || 1)));
@@ -1503,7 +2084,16 @@
       else if (pct < 0.55) barColor = '#f59e0b';
 
       ctx.fillStyle = barColor;
-      ctx.fillRect(22, barY + 2, Math.floor(212 * pct), 12);
+      ctx.fillRect(18, barY + 2, Math.floor(220 * pct), barH - 4);
+
+      // Textové zobrazení životů (např. 85 / 100 HP)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 3;
+      ctx.fillText(`${Math.ceil(this.hp)} / ${this.maxHp}`, 128, barY + 14);
+      ctx.shadowBlur = 0;
 
       if (this.healthTexture) this.healthTexture.needsUpdate = true;
     }
@@ -1528,7 +2118,12 @@
         this.ground = false;
       }
 
-      this.flashTimer = 0.2; // Červený záblesk po zásahu
+      this.flashTimer = 0.22; // Červený záblesk po zásahu
+
+      // CombatJuice: Zásahové jiskry při poškození
+      if (typeof CombatJuice !== 'undefined' && typeof CombatJuice.spawnHitSparks === 'function') {
+        CombatJuice.spawnHitSparks(this.x, this.y + (this.height || 1.0) * 0.5, this.z, isCrit);
+      }
 
       if (this.hp <= 0) {
         this.state = 'Dead';
@@ -1549,6 +2144,12 @@
       // Zrušení zdravíčka
       if (this.healthSprite) {
         this.healthSprite.visible = false;
+      }
+
+      // CombatJuice: Dramatický rozpad nestvůry na voxelové částice (Creature Death Shatter)
+      if (typeof CombatJuice !== 'undefined' && typeof CombatJuice.spawnCreatureDeathShatter === 'function') {
+        const cfg = CREATURE_CONFIGS[this.type] || {};
+        CombatJuice.spawnCreatureDeathShatter(this.x, this.y + (this.height || 1.0) * 0.5, this.z, cfg.color || 0xd97706);
       }
 
       // Udělení zkušeností hráči
@@ -1578,6 +2179,34 @@
         if (this.loot.ore_iron > 0) {
           window.EntityManager.spawnLootDrop('ore_iron', this.loot.ore_iron, this.x - 0.3, this.y + 0.2, this.z);
         }
+
+        // Unikátní bonusový loot z nepřátel vyšších levelů (Lv. 2+)
+        if (this.level >= 2 && !this.isPassive) {
+          if (this.level >= 3 && Math.random() < 0.45) {
+            window.EntityManager.spawnLootDrop('gem_ruby', 1, this.x, this.y + 0.2, this.z + 0.3);
+          } else if (Math.random() < 0.60) {
+            window.EntityManager.spawnLootDrop('ore_gold', 1, this.x, this.y + 0.2, this.z + 0.3);
+          } else {
+            window.EntityManager.spawnLootDrop('potion_health', 1, this.x, this.y + 0.2, this.z - 0.3);
+          }
+        }
+      }
+
+      // Pro draky/wyverny zanechat na zemi trvalou mrtvolu k prozkoumání a vybrání kořisti
+      if (this.isDragon) {
+        if (typeof window !== 'undefined' && window.EntityManager && typeof window.EntityManager.spawnDragonCorpse === 'function') {
+          window.EntityManager.spawnDragonCorpse({
+            dragonType: this.dragonType,
+            typeName: this.type,
+            name: this.name,
+            tier: this.tier || 3,
+            tierScale: this.tierScale || 1.1,
+            x: this.x,
+            y: this.renderY || this.y,
+            z: this.z,
+            rotationY: this.rotationY
+          });
+        }
       }
 
       // Animace pádu / kolapsu
@@ -1591,6 +2220,18 @@
     update(playerPos, dt = 0.016) {
       if (this.state === 'Dead') {
         this.deathTimer -= dt;
+        const deathP = Math.max(0, Math.min(1, 1 - (this.deathTimer / 1.2)));
+        if (this.limbMeshes && this.limbMeshes.root) {
+          this.limbMeshes.root.rotation.x = (Math.PI / 2) * Math.min(1, deathP * 2.8);
+          this.limbMeshes.root.rotation.z = Math.sin(deathP * Math.PI) * 0.22;
+          this.limbMeshes.root.position.y = 0.2 - deathP * 0.14;
+        }
+        if (this.group) {
+          if (deathP > 0.6) {
+            const scaleDown = Math.max(0.01, 1 - (deathP - 0.6) / 0.4);
+            this.group.scale.set(scaleDown, scaleDown, scaleDown);
+          }
+        }
         return;
       }
 
@@ -1601,13 +2242,37 @@
       if (this.attackTimer > 0) this.attackTimer -= dt;
 
       // -----------------------------------------------------------------------
-      // AI Stav Hurt (stagger / ochromení po zásahu)
+      // AI Stav Hurt (Hit Stun / stagger / ochromení po zásahu)
       // -----------------------------------------------------------------------
       if (this.state === 'Hurt') {
         this.hurtTimer -= dt;
         if (this.hurtTimer <= 0) {
           this.state = this.isPassive ? 'Wander' : ((dist <= this.attackReach) ? 'Attack' : 'Chase');
         }
+        // Flinch / Hit-Stun stagger animace těla a končetin
+        const hurtProgress = Math.max(0, this.hurtTimer / 0.35);
+        const shudder = Math.sin(hurtProgress * Math.PI * 6) * 0.12 * hurtProgress;
+        if (this.limbMeshes && this.limbMeshes.root) {
+          this.limbMeshes.root.rotation.x = -0.38 * hurtProgress;
+          this.limbMeshes.root.rotation.z = shudder;
+        }
+        if (this.limbMeshes && this.limbMeshes.head) {
+          this.limbMeshes.head.rotation.x = -0.42 * hurtProgress;
+        }
+        if (this.limbMeshes && this.limbMeshes.legs) {
+          this.limbMeshes.legs.forEach((leg, i) => {
+            leg.rotation.x = (i < 2 ? -0.45 : 0.35) * hurtProgress;
+          });
+        }
+        // Fyzický posuv při knockbacku
+        this.vx *= 0.90;
+        this.vz *= 0.90;
+        this.x += this.vx * dt;
+        this.z += this.vz * dt;
+        if (this.group) {
+          this.group.position.set(this.x, this.renderY || this.y, this.z);
+        }
+        this._updateMeshFlash(dt);
         return; // Creature reels/staggers, freezing movement & attack during hurtTimer
       }
 
@@ -1788,10 +2453,73 @@
         this.limbMeshes.tail.rotation.z = Math.sin(animNow * tailFreq + this.id) * tailAmp;
       }
 
+      // Živé máchání dračími křídly (Wyvern Wings)
+      if (this.limbMeshes.wings && this.limbMeshes.wings.length > 0) {
+        const wingFreq = moveSpeed > 0.05 ? 0.016 : 0.004;
+        const wingAmp = moveSpeed > 0.05 ? 0.58 : 0.18;
+        const flap = Math.sin(animNow * wingFreq + this.id) * wingAmp;
+        this.limbMeshes.wings.forEach((w, i) => {
+          w.rotation.z = (i === 0 ? -1 : 1) * flap;
+        });
+      }
+
+      // Základní pozice a rotace těla
+      let rootRotX = 0;
+      let rootPosZ = 0;
+      const strideBounce = (moveSpeed > 0.05) ? Math.abs(Math.sin(walkPhase)) * 0.035 : 0;
+      let rootPosY = strideBounce;
+
+      // Telegrafování a úderová animace při útoku (windup & active lunging strike)
+      if (this.state === 'Attack') {
+        if (this.attackTimer > 0 && this.attackTimer <= 0.45) {
+          // 1. Windup (Nápřah a telegrafování - zaklonění hlavy a těla vzad, zvednutí předních tlapek/zbraně)
+          const tw = 1 - (this.attackTimer / 0.45);
+          const windupSin = Math.sin(tw * Math.PI);
+          rootRotX = -0.32 * windupSin;
+          rootPosY = strideBounce + 0.12 * windupSin;
+          if (this.limbMeshes.head) {
+            this.limbMeshes.head.rotation.x = -0.38 * windupSin;
+          }
+          if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
+            this.limbMeshes.arms.forEach(arm => { arm.rotation.x = -1.6 * windupSin; });
+          }
+        } else if (this.attackTimer > this.attackCooldown - 0.22) {
+          // 2. Active Strike (Výpad a drtivý dopad do cíle)
+          const ts = (this.attackCooldown - this.attackTimer) / 0.22;
+          const strikeSin = Math.sin(ts * Math.PI);
+          rootRotX = 0.32 * strikeSin;
+          rootPosZ = 0.22 * strikeSin;
+          if (this.limbMeshes.head) {
+            this.limbMeshes.head.rotation.x = 0.35 * strikeSin;
+          }
+          if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
+            this.limbMeshes.arms.forEach(arm => { arm.rotation.x = 0.55 * strikeSin; });
+          }
+        }
+      }
+
+      // Animace rozevření čelisti draka při útoku nebo chrlení
+      if (this.limbMeshes.jaw) {
+        if (this.state === 'Attack') {
+          if (this.attackTimer > 0 && this.attackTimer <= 0.45) {
+            const tw = 1 - (this.attackTimer / 0.45);
+            this.limbMeshes.jaw.rotation.x = 0.70 * Math.sin(tw * Math.PI);
+          } else if (this.attackTimer > this.attackCooldown - 0.22) {
+            const ts = (this.attackCooldown - this.attackTimer) / 0.22;
+            this.limbMeshes.jaw.rotation.x = 0.60 * Math.sin(ts * Math.PI);
+          } else {
+            this.limbMeshes.jaw.rotation.x = 0;
+          }
+        } else {
+          this.limbMeshes.jaw.rotation.x = 0;
+        }
+      }
+
       // Lehký odraz tělíčka směrem VZHŮRU při každém kroku (zaručuje, že tlapky nikdy nezajedou pod zem)
       if (this.limbMeshes.root && this.state !== 'Dead') {
-        const strideBounce = (moveSpeed > 0.05) ? Math.abs(Math.sin(walkPhase)) * 0.035 : 0;
-        this.limbMeshes.root.position.y = strideBounce;
+        this.limbMeshes.root.rotation.x = rootRotX;
+        this.limbMeshes.root.rotation.z = 0;
+        this.limbMeshes.root.position.set(0, rootPosY, rootPosZ);
       }
 
       // Synchronizace 3D scény
@@ -1799,11 +2527,61 @@
         this.group.position.set(this.x, this.renderY, this.z);
         this.group.rotation.y = this.rotationY;
       }
+
+      // Červený záblesk poškození na 3D modelu
+      this._updateMeshFlash(dt);
+    }
+
+    _updateMeshFlash(dt) {
+      if (this.flashTimer > 0) {
+        this.flashTimer = Math.max(0, this.flashTimer - dt);
+        this._setMeshFlash(this.flashTimer > 0);
+      }
+    }
+
+    _setMeshFlash(isFlashing) {
+      if (!this.group || !this.group.children) return;
+      if (typeof this.group.traverse !== 'function') return;
+      this.group.traverse(obj => {
+        if (obj && obj.material) {
+          const mat = obj.material;
+          if (mat && mat.emissive && typeof mat.emissive.setHex === 'function') {
+            mat.emissive.setHex(isFlashing ? 0xcc2222 : 0x000000);
+          }
+        }
+      });
+    }
+
+    // Impozantní vizuální dech draka (plameny / mráz) - přesně jako na obrázku 3!
+    _spawnDragonBreathVisual(isIce) {
+      const rotY = this.rotationY;
+      const fwdX = Math.sin(rotY);
+      const fwdZ = Math.cos(rotY);
+      if (typeof window.spawnSpectacularDragonBreath === 'function') {
+        window.spawnSpectacularDragonBreath(
+          this.x,
+          (this.renderY || this.y) + 1.2 * (this.tierScale || 1.0),
+          this.z,
+          fwdX,
+          0,
+          fwdZ,
+          isIce,
+          this.tierScale || 1.0,
+          false,
+          this.baseDamage
+        );
+      }
     }
 
     _performAttack(dist) {
       if (this.isPassive || this.baseDamage <= 0) return;
       if (dist > this.attackReach + 0.6) return;
+
+      // Zvuk a masivní vizuální efekt dračího dechu
+      if (this.isDragon) {
+        const isIce = (this.dragonType === 'ice');
+        this._spawnDragonBreathVisual(isIce);
+      }
 
       // Hráčský dodge roll i-frames check
       if (typeof P !== 'undefined' && P.isRolling) {
@@ -1832,7 +2610,8 @@
       }
 
       if (typeof toast === 'function') {
-        toast(`⚠️ ${this.name} tě zasáhl za -${dmg} HP!`);
+        const breathPrefix = this.isDragon ? (this.dragonType === 'ice' ? '❄️ Ledový dech wyverny: ' : '🔥 Ohnivý dech wyverny: ') : '';
+        toast(`⚠️ ${breathPrefix}${this.name} tě zasáhl za -${dmg} HP!`);
       }
 
       // Červený záblesk obrazovky při zranění
@@ -1857,6 +2636,7 @@
   // ---------------------------------------------------------------------------
   const EntityManager = {
     creatures: [],
+    corpses: [],
     projectiles: [],
     droppedLoot: [],
     damageNumbers: [],
@@ -1873,13 +2653,33 @@
       }));
     },
 
-    spawnCreature: function (type, x, y, z, level = 1) {
-      const creature = new CreatureInstance(type, x, y, z, level);
+    computeScaledLevel: function(x = 0, z = 0, baseLevel = null) {
+      const pLvl = (typeof P !== 'undefined' && P && typeof P.level === 'number') ? Math.max(1, P.level) : 1;
+      if (typeof baseLevel === 'number' && baseLevel > 1) {
+        // Pokud je explicitně zadán vyšší level (např. strážce ruin Lv. 2), posílíme ho dle hráče
+        return Math.max(baseLevel, pLvl + (baseLevel - 1));
+      }
+      // Škálování podle vzdálenosti od startovního bodu (každých 180 metrů = +1 level)
+      const distFromSpawn = Math.hypot(x, z);
+      const distLvlBoost = Math.floor(distFromSpawn / 180);
+
+      // Škálování dle hráče v rozmezí [-1, +2]
+      const delta = Math.floor(Math.random() * 4) - 1; // -1, 0, +1, +2
+      const targetLvl = pLvl + delta + distLvlBoost;
+      return Math.max(1, Math.min(60, targetLvl));
+    },
+
+    spawnCreature: function (type, x, y, z, level = null, tier = null) {
+      let finalLvl = level;
+      if (typeof finalLvl !== 'number' || finalLvl < 1) {
+        finalLvl = this.computeScaledLevel(x, z, null);
+      }
+      const creature = new CreatureInstance(type, x, y, z, finalLvl, tier);
       this.creatures.push(creature);
       return creature;
     },
 
-    spawnCreatureInFrontOfPlayer: function (query, level = 1) {
+    spawnCreatureInFrontOfPlayer: function (query, level = 1, tier = null) {
       const resolvedType = resolveCreatureType(query);
       if (!resolvedType) {
         return { error: true, query };
@@ -1896,7 +2696,7 @@
         spawnY = getFootprintSurfaceY(spawnX, spawnZ, 0.22, pObj.y);
       }
 
-      const creature = this.spawnCreature(resolvedType, spawnX, spawnY, spawnZ, level);
+      const creature = this.spawnCreature(resolvedType, spawnX, spawnY, spawnZ, level, tier);
       // Otočit čelem k hráči
       creature.rotationY = Math.atan2(pObj.x - spawnX, pObj.z - spawnZ);
       if (creature.group) {
@@ -2022,6 +2822,168 @@
         c.dispose();
         this.creatures.splice(idx, 1);
       }
+    },
+
+    // Vytvoření trvalé 3D mrtvoly draka/wyverny s interakcí [E]
+    spawnDragonCorpse: function (dataOrType, x, y, z, tier = null) {
+      const data = (typeof dataOrType === 'object' && dataOrType !== null) ? dataOrType : {
+        typeName: dataOrType,
+        x: x || 0,
+        y: y || 0,
+        z: z || 0,
+        tier: tier || 3
+      };
+      if (typeof THREE === 'undefined' || typeof scene === 'undefined' || !scene) return null;
+      const corpseGroup = new THREE.Group();
+      corpseGroup.position.set(data.x, data.y, data.z);
+      corpseGroup.rotation.y = data.rotationY || 0;
+
+      const limbMeshes = {};
+      const root = buildCreatureVoxelGroup(data.typeName || 'WyvernFire', limbMeshes, false);
+      if (root) {
+        // Poražená poloha: tělo leží na zemi s mírně přeloženými křídly a skloněnou hlavou
+        root.position.y = 0.08;
+        root.rotation.z = 0.35;
+        root.rotation.x = 0.15;
+        if (limbMeshes.head) {
+          limbMeshes.head.rotation.x = 0.45;
+          limbMeshes.head.rotation.z = -0.35;
+        }
+        if (limbMeshes.wings) {
+          limbMeshes.wings.forEach((w, i) => {
+            w.rotation.z = (i === 0 ? 0.75 : -0.75);
+          });
+        }
+        if (data.tierScale) {
+          root.scale.set(data.tierScale, data.tierScale, data.tierScale);
+        }
+        corpseGroup.add(root);
+      }
+
+      // Interaktivní štítek nad mrtvolou: [E] Prozkoumat mrtvolu draka
+      let labelSprite = null;
+      let labelCanvas = null;
+      let labelTexture = null;
+      if (typeof document !== 'undefined') {
+        labelCanvas = document.createElement('canvas');
+        labelCanvas.width = 320;
+        labelCanvas.height = 76;
+        const ctx = labelCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 6;
+          ctx.fillText(`🐉 Mrtvola draka (${data.name || 'Wyverna'})`, 160, 28);
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 18px sans-serif';
+          ctx.fillText(`[E] Prozkoumat a sebrat kořist`, 160, 58);
+        }
+        labelTexture = new THREE.CanvasTexture(labelCanvas);
+        const spMat = new THREE.SpriteMaterial({ map: labelTexture, transparent: true, depthTest: false });
+        labelSprite = new THREE.Sprite(spMat);
+        labelSprite.scale.set(3.4, 0.80, 1);
+        labelSprite.position.set(0, 1.85 * (data.tierScale || 1.0), 0);
+        corpseGroup.add(labelSprite);
+      }
+
+      scene.add(corpseGroup);
+
+      const corpseObj = {
+        id: nextEntityId++,
+        x: data.x,
+        y: data.y,
+        z: data.z,
+        dragonType: data.dragonType || (data.typeName === 'WyvernIce' ? 'ice' : 'fire'),
+        typeName: data.typeName,
+        tier: data.tier || 3,
+        group: corpseGroup,
+        labelSprite,
+        labelTexture,
+        looted: false
+      };
+
+      if (!this.corpses) this.corpses = [];
+      this.corpses.push(corpseObj);
+      return corpseObj;
+    },
+
+    // Prozkoumání nejbližší mrtvoly draka stiskem klávesy [E]
+    tryLootClosestCorpse: function (px, py, pz) {
+      if (!this.corpses || this.corpses.length === 0) return false;
+      let closest = null;
+      let closestDist = 4.0;
+
+      for (const c of this.corpses) {
+        if (c.looted) continue;
+        const d = Math.hypot(c.x - px, c.z - pz);
+        if (d < closestDist) {
+          closestDist = d;
+          closest = c;
+        }
+      }
+
+      if (!closest) return false;
+
+      // Vybrání kořisti z dračí mrtvoly!
+      closest.looted = true;
+      const isIce = (closest.dragonType === 'ice');
+      const tier = closest.tier || 3;
+      const scaleItemId = isIce ? 'dragon_scales_ice' : 'dragon_scales_fire';
+      const bloodItemId = isIce ? 'dragon_blood_ice' : 'dragon_blood_fire';
+      const eggItemId   = `egg_dragon_${isIce ? 'ice' : 'fire'}_t${tier}`;
+
+      const scaleCount = 3 + Math.floor(Math.random() * 4); // 3 - 6 šupin
+      const boneCount  = 2 + Math.floor(Math.random() * 3); // 2 - 4 kostí
+      const bloodCount = 1 + Math.floor(Math.random() * 2); // 1 - 2 krve
+      const rollEgg    = Math.random() < 0.30; // 30% šance na dračí vejce!
+
+      if (typeof INV !== 'undefined' && Array.isArray(INV)) {
+        const addIt = (id, count) => {
+          const item = INV.find(it => it.id === id);
+          if (item) item.count = (item.count || 0) + count;
+        };
+        addIt(scaleItemId, scaleCount);
+        addIt('dragon_bone', boneCount);
+        addIt(bloodItemId, bloodCount);
+        if (rollEgg) {
+          addIt(eggItemId, 1);
+          // Přidat i do obecného egg_dragon_* pro maximální kompatibilitu
+          addIt(isIce ? 'egg_dragon_ice' : 'egg_dragon_fire', 1);
+        }
+      }
+
+      // Audio zpětná vazba
+      if (typeof playAttackSound === 'function') playAttackSound('heavy');
+      if (rollEgg && typeof playDragonHatch === 'function') playDragonHatch();
+
+      if (typeof toast === 'function') {
+        const eggMsg = rollEgg ? ` 🥚✨ NALEZENO VZÁCNÉ DRAČÍ VEJCE (Tier ${tier})!` : '';
+        toast(`🐉 Mrtvola draka prozkoumána: +${scaleCount}x šupiny, +${boneCount}x dračí kost, +${bloodCount}x dračí krev!${eggMsg}`);
+      }
+
+      // Rozpad mrtvoly na částice
+      if (closest.group && typeof scene !== 'undefined' && scene) {
+        if (typeof CombatJuice !== 'undefined' && typeof CombatJuice.spawnCreatureDeathShatter === 'function') {
+          CombatJuice.spawnCreatureDeathShatter(closest.x, closest.y + 0.6, closest.z, isIce ? 0x38bdf8 : 0xdc2626);
+        }
+        scene.remove(closest.group);
+        if (closest.labelTexture) closest.labelTexture.dispose();
+      }
+
+      const idx = this.corpses.indexOf(closest);
+      if (idx >= 0) this.corpses.splice(idx, 1);
+
+      if (typeof renderInv === 'function') renderInv();
+      if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+
+      // Uložit stav světa
+      if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+        try { window.networkManager.saveSingleplayerWorld(); } catch (e) {}
+      }
+
+      return true;
     },
 
     getNearbyCreatures: function (x, z, radius = 20) {
@@ -2156,6 +3118,15 @@
           }
         }
       }
+
+      // 4. Aktualizace 3D štítků dračích mrtvol (viditelnost do 25 m)
+      if (this.corpses && this.corpses.length > 0) {
+        for (const c of this.corpses) {
+          if (!c.labelSprite) continue;
+          const d = Math.hypot(c.x - playerPos.x, c.z - playerPos.z);
+          c.labelSprite.visible = (d <= 25);
+        }
+      }
     },
 
     clearAll: function () {
@@ -2170,6 +3141,13 @@
         if (typeof scene !== 'undefined' && scene) scene.remove(l.group);
       });
       this.droppedLoot = [];
+      if (this.corpses) {
+        this.corpses.forEach(c => {
+          if (c.group && typeof scene !== 'undefined' && scene) scene.remove(c.group);
+          if (c.labelTexture) c.labelTexture.dispose();
+        });
+        this.corpses = [];
+      }
     }
   };
 
@@ -2196,11 +3174,15 @@
       ctx.textAlign = 'center';
       ctx.shadowColor = '#000000';
       ctx.shadowBlur = 4;
-      ctx.fillText(`🐾 ${pet.name}`, 128, 24);
+      ctx.fillText(`${pet.canFly ? '🐉' : '🐾'} ${pet.name}`, 128, 24);
 
       ctx.fillStyle = '#fde047';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(isRiding ? '🏇 Jedeš ([E] sesednout, [R] odvolat)' : '🏇 Jezdit [R / E]', 128, 46);
+      ctx.font = 'bold 14px sans-serif';
+      if (pet.canFly) {
+        ctx.fillText(isRiding ? '✈️ Létáš ([E] sesednout, [R] schovat)' : '🐉 [E] Nasednout & létat · [R] Schovat', 128, 46);
+      } else {
+        ctx.fillText(isRiding ? '🏇 Jedeš ([E] sesednout, [R] schovat)' : '🐾 [E] Nasednout · [R] Schovat', 128, 46);
+      }
       ctx.shadowBlur = 0;
 
       if (pet.labelTexture) pet.labelTexture.needsUpdate = true;
@@ -2244,11 +3226,20 @@
       let labelCanvas = null;
       let labelTexture = null;
 
+      const isDragon = (petType === 'WyvernFire' || petType === 'WyvernIce');
+      const parsedTier = petItem.tier || (petItemId.match(/_t([1-5])/)?.[1]) || (isDragon ? '3' : '1');
+      const tier = Math.min(5, Math.max(1, parseInt(parsedTier, 10)));
+      const tierScales = [0.70, 0.95, 1.35, 1.80, 2.45];
+      const tierScale = isDragon ? (tierScales[tier - 1] || 1.35) : 1.0;
+
       if (typeof THREE !== 'undefined') {
         group = new THREE.Group();
         group.position.set(px, py, pz);
         const root = buildCreatureVoxelGroup(petType, limbMeshes, true);
         if (root) group.add(root);
+        if (isDragon) {
+          group.scale.set(tierScale, tierScale, tierScale);
+        }
 
         if (typeof document !== 'undefined') {
           labelCanvas = document.createElement('canvas');
@@ -2258,7 +3249,7 @@
           const spMat = new THREE.SpriteMaterial({ map: labelTexture, transparent: true, depthTest: false });
           labelSprite = new THREE.Sprite(spMat);
           labelSprite.scale.set(2.0, 0.52, 1);
-          labelSprite.position.set(0, (cfg.height || 0.8) + 0.45, 0);
+          labelSprite.position.set(0, (cfg.height || 0.8) * tierScale + 0.45, 0);
           group.add(labelSprite);
         }
 
@@ -2271,6 +3262,10 @@
         petItemId: petItem.id,
         petType,
         name: petItem.name || cfg.name,
+        tier,
+        tierScale,
+        isDragon,
+        dragonType: isDragon ? (petType === 'WyvernIce' ? 'ice' : 'fire') : null,
         x: px,
         y: py,
         z: pz,
@@ -2279,10 +3274,11 @@
         rotationY: (typeof face !== 'undefined') ? face : 0,
         rideSpeed: petItem.rideSpeed || cfg.rideSpeed || 9.5,
         jumpBoost: petItem.jumpBoost || cfg.jumpBoost || 10.5,
-        mountHeight: cfg.mountHeight || 0.56,
-        height: cfg.height || 0.8,
-        baseDamage: petItem.baseDamage || cfg.baseDamage || 16,
-        attackReach: cfg.attackReach || 2.8,
+        mountHeight: (cfg.mountHeight || 0.56) * tierScale,
+        height: (cfg.height || 0.8) * tierScale,
+        baseDamage: petItem.baseDamage || (isDragon ? [35, 60, 95, 140, 220][tier - 1] : cfg.baseDamage || 16),
+        canFly: !!(petItem.canFly || cfg.canFly),
+        attackReach: (cfg.attackReach || 2.8) * tierScale,
         attackCooldown: cfg.attackCooldown || 1.1,
         attackCooldownTimer: 0,
         attackAnimTimer: 0,
@@ -2322,10 +3318,12 @@
     mountPet: function () {
       if (!this.activePet || typeof P === 'undefined' || !P) return false;
       P.isRiding = true;
+      P.ridingPet = this.activePet;
       P.ridingPetType = this.activePet.petType;
       P.mountHeight = this.activePet.mountHeight || 0.55;
       P.rideSpeed = this.activePet.rideSpeed || 9.5;
       P.rideJumpBoost = this.activePet.jumpBoost || 10.5;
+      P.canFly = !!this.activePet.canFly;
 
       // Umístit mazlíčka přímo pod hráče bez trhání nebo kolizního zaseknutí hráče
       this.activePet.x = P.x;
@@ -2339,7 +3337,8 @@
       this._updatePetLabel();
 
       if (typeof toast === 'function') {
-        toast(`🏇 Jedeš na mazlíčkovi: ${this.activePet.name}! ([E] sesednout, [R] odvolat)`);
+        const flyNote = this.activePet.canFly ? ' (Mezerník = stoupání, Shift = klesání, LMB = chrlení)' : '';
+        toast(`🏇 Jedeš na mazlíčkovi: ${this.activePet.name}!${flyNote} ([E] sesednout, [R] schovat)`);
       }
       return true;
     },
@@ -2347,8 +3346,10 @@
     dismountPet: function (silent = false) {
       if (typeof P === 'undefined' || !P || !P.isRiding) return false;
       P.isRiding = false;
+      P.ridingPet = null;
       P.ridingPetType = null;
       P.mountHeight = 0;
+      P.canFly = false;
 
       if (this.activePet) {
         const playerYaw = (typeof yaw !== 'undefined') ? yaw : 0;
@@ -2370,6 +3371,44 @@
       return true;
     },
 
+    // Chrlení dračího ohně nebo mrazu při jízdě na drakovi (místo útoku zbraní!)
+    triggerMountDragonBreath: function () {
+      if (!this.activePet || !this.activePet.isDragon) return false;
+      const pet = this.activePet;
+      if (pet.attackCooldownTimer > 0) return false;
+
+      pet.attackCooldownTimer = 0.85; // plynulý cooldown mezi chrleními
+      pet.attackAnimTimer = 0.70;
+
+      // Otevřít tlamu dokořán
+      if (pet.limbMeshes && pet.limbMeshes.jaw) {
+        pet.limbMeshes.jaw.rotation.x = 0.65;
+      }
+
+      const pObj = (typeof P !== 'undefined') ? P : { x: pet.x, y: pet.y, z: pet.z };
+      const yawVal = (typeof yaw !== 'undefined') ? yaw : 0;
+      const pitchVal = (typeof pitch !== 'undefined') ? pitch : 0;
+
+      const dirX = -Math.sin(yawVal) * Math.cos(pitchVal);
+      const dirY = Math.sin(pitchVal);
+      const dirZ = -Math.cos(yawVal) * Math.cos(pitchVal);
+
+      // Pozice tlamy draka
+      const mouthDist = 1.8 * (pet.tierScale || 1.0);
+      const originX = pet.x + dirX * mouthDist;
+      const originY = (pet.y || pObj.y) + 1.2 * (pet.tierScale || 1.0);
+      const originZ = pet.z + dirZ * mouthDist;
+
+      const isIce = (pet.dragonType === 'ice');
+      const dmg = Math.round(pet.baseDamage * 1.5);
+
+      if (typeof window.spawnSpectacularDragonBreath === 'function') {
+        window.spawnSpectacularDragonBreath(originX, originY, originZ, dirX, dirY, dirZ, isIce, pet.tierScale || 1.0, true, dmg);
+      }
+
+      return true;
+    },
+
     // Útok mazlíčka na nepřátelskou entitu
     attackTarget: function (target) {
       const pet = this.activePet;
@@ -2377,7 +3416,7 @@
       if (pet.attackCooldownTimer > 0) return false;
 
       pet.attackCooldownTimer = pet.attackCooldown || 1.1;
-      pet.attackAnimTimer = 0.35;
+      pet.attackAnimTimer = 0.45;
 
       // Zranění škáluje se základním útokem mazlíčka a úrovní hráče
       const playerLvl = (typeof P !== 'undefined' && P && P.level) ? P.level : 1;
@@ -2397,8 +3436,26 @@
 
       target.takeDamage(totalDmg, kb, isCrit, 'pet');
 
-      if (typeof playAttackSound === 'function') {
-        playAttackSound('punch');
+      if (pet.isDragon) {
+        const isIce = (pet.dragonType === 'ice');
+        if (typeof window.spawnSpectacularDragonBreath === 'function') {
+          window.spawnSpectacularDragonBreath(
+            pet.x,
+            (pet.y || 50) + 1.2 * (pet.tierScale || 1.0),
+            pet.z,
+            dx / dist,
+            0,
+            dz / dist,
+            isIce,
+            pet.tierScale || 1.0,
+            true,
+            totalDmg
+          );
+        }
+      } else {
+        if (typeof playAttackSound === 'function') {
+          playAttackSound('punch');
+        }
       }
 
       if (typeof toast === 'function') {
@@ -2422,9 +3479,9 @@
     },
 
     // Obsluha klávesy [R]:
-    // 1. Pokud mazlíček není přivolán -> spawne ho vedle hráče a rovnou umožní jízdu (nasedne)
-    // 2. Pokud je mazlíček přivolán vedle hráče a hráč nejede -> nasedne na něj a jede!
-    // 3. Pokud hráč už na mazlíčkovi jede -> sesedne a odvolá ho
+    // 1. Pokud mazlíček není přivolán -> pouze ho vyvolá vedle hráče (BEZ nasednutí!)
+    // 2. Pokud je mazlíček již vyvolán -> pouze ho schová / odvolá
+    // (Nasednutí a sesednutí je výhradně klávesou [E])
     handleKeyR: function () {
       if (typeof EQUIPPED_SLOTS === 'undefined' || typeof INV === 'undefined') return false;
 
@@ -2439,26 +3496,27 @@
           if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
         } else {
           if (typeof toast === 'function') {
-            toast('🐾 Nemáš žádného mazlíčka! Ochoč si zvíře v přírodě klávesou [E] a dej si ho do slotu.');
+            toast('🐾 Nemáš žádného mazlíčka! Ochoč si zvíře v přírodě nebo vylíhni dračí vejce.');
           }
           return false;
         }
       }
 
+      // 1. Pokud mazlíček není přivolán (nebo je ve slotu jiný) -> vyvolat vedle hráče
       if (!this.activePet || this.activePet.petItemId !== equippedPetId) {
         const pet = this.summonPet(equippedPetId);
-        if (pet) {
-          this.mountPet();
+        if (pet && typeof toast === 'function') {
+          toast(`🐾 Mazlíček (${pet.name}) byl přivolán. Pro nasednutí stiskni [E], pro schování [R].`);
         }
         return !!pet;
       }
 
-      if (typeof P !== 'undefined' && P && !P.isRiding) {
-        return this.mountPet();
-      } else {
-        this.despawnPet(false);
-        return true;
+      // 2. Pokud je mazlíček již vyvolán (nebo na něm hráč sedí) -> schovat / odvolat
+      if (typeof P !== 'undefined' && P && P.isRiding) {
+        this.dismountPet(true);
       }
+      this.despawnPet(false);
+      return true;
     },
 
     // Interakce klávesou [E] s přivolaným mazlíčkem (nasednutí / sesednutí)
@@ -2504,14 +3562,17 @@
       if (pet.attackCooldownTimer > 0) pet.attackCooldownTimer -= dt;
       if (pet.attackAnimTimer > 0) pet.attackAnimTimer -= dt;
 
-      // Animace výpadu / kousnutí při útoku
+      // Animace výpadu / kousnutí a rozevření čelisti při útoku nebo chrlení
       let attackLungeHead = 0;
       let attackLungeRoot = 0;
+      let attackJawOpen = 0;
       if (pet.attackAnimTimer > 0) {
-        const progress = (0.35 - pet.attackAnimTimer) / 0.35;
+        const animDuration = pet.isDragon ? 0.70 : 0.35;
+        const progress = Math.max(0, Math.min(1, 1 - (pet.attackAnimTimer / animDuration)));
         const lunge = Math.sin(progress * Math.PI);
         attackLungeHead = -lunge * 0.45;
         attackLungeRoot = lunge * 0.12;
+        attackJawOpen = lunge * 0.75;
       }
 
       // Pomocná funkce pro vyhledání nejlepšího nepřátelského cíle
@@ -2573,6 +3634,15 @@
         }
         if (pet.limbMeshes && pet.limbMeshes.tail) {
           pet.limbMeshes.tail.rotation.z = Math.sin(animTime * 0.01) * 0.25;
+        }
+        if (pet.limbMeshes && pet.limbMeshes.wings) {
+          const isFlying = pObj.canFly && (pObj.ground === false || mv > 0.1);
+          const wingFreq = isFlying ? 0.018 : (mv > 0.15 ? 0.012 : 0.0035);
+          const wingAmp = isFlying ? 0.72 : (mv > 0.15 ? 0.45 : 0.16);
+          const flap = Math.sin(animTime * wingFreq) * wingAmp;
+          pet.limbMeshes.wings.forEach((w, i) => {
+            w.rotation.z = (i === 0 ? -1 : 1) * flap;
+          });
         }
       } else {
         // Mazlíček je věrný společník a ochránce!
@@ -2657,6 +3727,18 @@
         if (pet.limbMeshes && pet.limbMeshes.tail) {
           pet.limbMeshes.tail.rotation.z = Math.sin(animTime * 0.008) * 0.22;
         }
+        if (pet.limbMeshes && pet.limbMeshes.wings) {
+          const wingFreq = moveSpd > 0.2 ? 0.014 : 0.0035;
+          const wingAmp = moveSpd > 0.2 ? 0.50 : 0.15;
+          const flap = Math.sin(animTime * wingFreq) * wingAmp;
+          pet.limbMeshes.wings.forEach((w, i) => {
+            w.rotation.z = (i === 0 ? -1 : 1) * flap;
+          });
+        }
+      }
+
+      if (pet.limbMeshes && pet.limbMeshes.jaw) {
+        pet.limbMeshes.jaw.rotation.x = attackJawOpen;
       }
 
       if (pet.group) {

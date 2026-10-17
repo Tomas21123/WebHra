@@ -59,12 +59,87 @@ const P = {
     maxHp: 100,
     maxStamina: 100,
     attackPower: 10,
+    defense: 0,
     critChance: 0.05,
     moveSpeed: 6.0
   }
 };
 if (typeof window !== 'undefined') {
   window.P = P;
+}
+
+function investSkillPoint(statKey) {
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : P;
+  if (!pObj) return false;
+  if (typeof pObj.skillPoints !== 'number' || pObj.skillPoints < 1) {
+    if (typeof toast === 'function') toast('Nemáš žádné volné dovednostní body!');
+    return false;
+  }
+  if (!pObj.baseStats) {
+    pObj.baseStats = { maxHp: 100, maxStamina: 100, attackPower: 10, defense: 0, critChance: 0.05, moveSpeed: 6.0 };
+  }
+  if (typeof pObj.baseStats.defense !== 'number') pObj.baseStats.defense = 0;
+
+  switch (statKey) {
+    case 'hp':
+    case 'maxHp':
+      pObj.baseStats.maxHp = (pObj.baseStats.maxHp || 100) + 15;
+      break;
+    case 'stamina':
+    case 'maxStamina':
+      pObj.baseStats.maxStamina = (pObj.baseStats.maxStamina || 100) + 10;
+      break;
+    case 'attack':
+    case 'damage':
+    case 'attackPower':
+      pObj.baseStats.attackPower = (pObj.baseStats.attackPower || 10) + 3;
+      break;
+    case 'defense':
+    case 'armor':
+      pObj.baseStats.defense = Math.min(0.40, parseFloat(((pObj.baseStats.defense || 0) + 0.03).toFixed(3)));
+      break;
+    case 'crit':
+    case 'critChance':
+      pObj.baseStats.critChance = Math.min(0.50, parseFloat(((pObj.baseStats.critChance || 0.05) + 0.015).toFixed(4)));
+      break;
+    case 'speed':
+    case 'moveSpeed':
+      pObj.baseStats.moveSpeed = parseFloat(((pObj.baseStats.moveSpeed || 6.0) + 0.15).toFixed(2));
+      break;
+    default:
+      return false;
+  }
+
+  pObj.skillPoints -= 1;
+
+  // Okamžitý přepočet reálných hodnot ve hře
+  const bonusHp = (typeof window !== 'undefined' && typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
+  pObj.maxHp = pObj.baseStats.maxHp + bonusHp;
+  pObj.maxStamina = pObj.baseStats.maxStamina;
+
+  if (typeof G !== 'undefined') {
+    G.hp = Math.min(pObj.maxHp, G.hp + 15);
+    G.st = Math.min(pObj.maxStamina, G.st + 10);
+    pObj.hp = G.hp;
+    pObj.stamina = G.st;
+  }
+
+  if (typeof ui === 'function') ui();
+  if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+  if (typeof window !== 'undefined' && typeof window.updateEquipmentUI === 'function') window.updateEquipmentUI();
+
+  // Uložení stavu
+  if (typeof window !== 'undefined' && window.GameStorage && typeof window.GameStorage.savePlayerRPGState === 'function') {
+    window.GameStorage.savePlayerRPGState();
+  }
+
+  if (typeof toast === 'function') {
+    toast(`✨ Bod přiřazen! Zbývá volných bodů: ${pObj.skillPoints}`);
+  }
+  return true;
+}
+if (typeof window !== 'undefined') {
+  window.investSkillPoint = investSkillPoint;
 }
 
 function calculateXpNext(level) {
@@ -147,8 +222,9 @@ function checkPlayerLevelUp() {
     pObj.xpNext = calculateXpNext(pObj.level);
   }
   if (!pObj.baseStats) {
-    pObj.baseStats = { maxHp: 100, maxStamina: 100, attackPower: 10, critChance: 0.05, moveSpeed: 6.0 };
+    pObj.baseStats = { maxHp: 100, maxStamina: 100, attackPower: 10, defense: 0, critChance: 0.05, moveSpeed: 6.0 };
   }
+  if (typeof pObj.baseStats.defense !== 'number') pObj.baseStats.defense = 0;
 
   const growth = Object.assign({
     maxHp: 10,
@@ -357,9 +433,9 @@ function checkPvPHit(whichHand = 'dominant', opts = null) {
   if (window.EntityManager && Array.isArray(window.EntityManager.creatures)) {
     for (const creature of window.EntityManager.creatures) {
       if (!creature || creature.state === 'Dead' || creature.hp <= 0) continue;
-      const targetX = creature.x;
-      const targetY = creature.y + (creature.height || 1.0) * 0.5;
-      const targetZ = creature.z;
+      const targetX = (creature.group && typeof creature.group.position.x === 'number') ? creature.group.position.x : creature.x;
+      const targetY = ((creature.group && typeof creature.group.position.y === 'number') ? creature.group.position.y : (creature.renderY !== undefined ? creature.renderY : creature.y)) + (creature.height || 1.0) * 0.5;
+      const targetZ = (creature.group && typeof creature.group.position.z === 'number') ? creature.group.position.z : creature.z;
 
       const dx = targetX - eyeX;
       const dy = targetY - eyeY;
@@ -421,6 +497,18 @@ function checkPvPHit(whichHand = 'dominant', opts = null) {
       if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.onPlayerAttacked === 'function') {
         window.PetManager.onPlayerAttacked(cand.target);
       }
+      // CombatJuice: Jiskry, Hitstop a Otřes kamery
+      if (typeof CombatJuice !== 'undefined') {
+        if (typeof CombatJuice.spawnHitSparks === 'function') {
+          CombatJuice.spawnHitSparks(cand.target.x, cand.target.y + (cand.target.height || 1.0) * 0.5, cand.target.z, atkInfo.isCrit);
+        }
+        if (typeof CombatJuice.triggerHitstop === 'function') {
+          CombatJuice.triggerHitstop(atkInfo.isCrit ? 0.08 : (isHeavy ? 0.06 : 0.035));
+        }
+        if (typeof CombatJuice.triggerCameraShake === 'function') {
+          CombatJuice.triggerCameraShake(atkInfo.isCrit ? 0.22 : (isHeavy ? 0.14 : 0.06), atkInfo.isCrit ? 0.24 : 0.16);
+        }
+      }
       if (typeof toast === 'function') {
         const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
         const heavyLabel = isHeavy ? '⚡ Těžký zásah' : 'Zásah';
@@ -429,6 +517,17 @@ function checkPvPHit(whichHand = 'dominant', opts = null) {
     } else if (cand.type === 'player') {
       if (window.networkManager && typeof window.networkManager.sendPlayerHit === 'function') {
         window.networkManager.sendPlayerHit(cand.id, atkInfo.damage, knockback, atkInfo.isCrit, atkInfo.weaponName);
+      }
+      if (typeof CombatJuice !== 'undefined') {
+        if (typeof CombatJuice.spawnHitSparks === 'function') {
+          CombatJuice.spawnHitSparks(cand.dx + eyeX, cand.dy + eyeY, cand.dz + eyeZ, atkInfo.isCrit);
+        }
+        if (typeof CombatJuice.triggerHitstop === 'function') {
+          CombatJuice.triggerHitstop(atkInfo.isCrit ? 0.07 : 0.035);
+        }
+        if (typeof CombatJuice.triggerCameraShake === 'function') {
+          CombatJuice.triggerCameraShake(atkInfo.isCrit ? 0.18 : 0.08, 0.18);
+        }
       }
       if (typeof toast === 'function') {
         const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
@@ -456,7 +555,14 @@ function getHandItem(whichHand) {
 }
 
 function handleHandAction(whichHand, opts = null) {
-  if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || isRolling || attacking) return false;
+  if ((typeof escOpen !== 'undefined' && escOpen) || (typeof charOpen !== 'undefined' && charOpen) || (typeof invOpen !== 'undefined' && invOpen) || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || (typeof isRolling !== 'undefined' && isRolling) || (typeof attacking !== 'undefined' && attacking)) return false;
+
+  // Pokud hráč sedí a jede na drakovi, místo útoku zbraněmi drak chrlí oheň nebo mráz
+  if (typeof P !== 'undefined' && P && P.isRiding && (P.canFly || (P.ridingPet && P.ridingPet.isDragon) || (typeof window !== 'undefined' && window.PetManager && window.PetManager.activePet && window.PetManager.activePet.isDragon))) {
+    if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.triggerMountDragonBreath === 'function') {
+      return window.PetManager.triggerMountDragonBreath();
+    }
+  }
 
   const item = getHandItem(whichHand);
 
@@ -755,8 +861,15 @@ if (typeof window !== 'undefined') {
 }
 
 function triggerHandAttack(whichHand, opts = null) {
-  // Pokud již probíhá animace útoku (attacking === true), nelze ji přerušit ani spustit jinou!
-  if (escOpen || charOpen || invOpen || isRolling || attacking) return false;
+  if ((typeof escOpen !== 'undefined' && escOpen) || (typeof charOpen !== 'undefined' && charOpen) || (typeof invOpen !== 'undefined' && invOpen) || (typeof isRolling !== 'undefined' && isRolling) || (typeof attacking !== 'undefined' && attacking)) return false;
+
+  // Pokud hráč sedí a jede na drakovi, místo útoku zbraněmi drak chrlí oheň nebo mráz
+  if (typeof P !== 'undefined' && P && P.isRiding && (P.canFly || (P.ridingPet && P.ridingPet.isDragon) || (typeof window !== 'undefined' && window.PetManager && window.PetManager.activePet && window.PetManager.activePet.isDragon))) {
+    if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.triggerMountDragonBreath === 'function') {
+      return window.PetManager.triggerMountDragonBreath();
+    }
+  }
+
   const item = getHandItem(whichHand);
   const itId = item ? item.id : null;
   const isSkill = !!(opts && opts.isSkill);
@@ -838,6 +951,20 @@ function triggerHandAttack(whichHand, opts = null) {
       attackDuration = 0.30; playAttackSound('bow');
     } else {
       attackDuration = 0.26; playAttackSound('slash');
+    }
+  }
+
+  // Spuštění dynamické světelné stopy zbraně (Weapon Slash Trail)
+  if (typeof CombatJuice !== 'undefined' && typeof CombatJuice.spawnWeaponTrail === 'function') {
+    if (itId !== 'bow') {
+      const isAxeOrCleave = itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer';
+      CombatJuice.spawnWeaponTrail({
+        radius: isHeavy ? (isAxeOrCleave ? 2.2 : 1.9) : (isAxeOrCleave ? 1.7 : 1.4),
+        isHeavy,
+        isCrit: !!(typeof isPlayerCritReady === 'function' && isPlayerCritReady()),
+        color: (itId === 'staff_fire') ? 0xf97316 : ((itId === 'staff_frost') ? 0x38bdf8 : (isHeavy ? 0xfbbf24 : 0x7dd3fc)),
+        swingSign: attackCombo === 0 ? 1 : -1
+      });
     }
   }
 
@@ -1197,6 +1324,18 @@ function physics(dt) {
         }
       }
     }
+  } else if (P.isRiding && P.canFly) {
+    // Volný 3D let na wyverně (Dragon Flight): Mezerník stoupání, Shift klesání, vznášení
+    if (keys.Space) {
+      P.vy = 8.5;
+      if (typeof playDragonWingFlap === 'function' && Math.random() < 0.12) {
+        playDragonWingFlap();
+      }
+    } else if (keys.ShiftLeft || keys.ShiftRight) {
+      P.vy = -7.5;
+    } else {
+      P.vy = Math.sin(Date.now() * 0.003) * 0.35;
+    }
   } else {
     P.vy -= 26 * dt;
     if (keys.Space && P.ground && !isRolling) {
@@ -1270,7 +1409,7 @@ function physics(dt) {
     P.y -= P.vy * dt;
     if (P.vy < 0) {
       P.ground = true;
-      if (P.vy < -18 && !inW) hurt((-P.vy - 18) * 5);
+      if (P.vy < -18 && !inW && !(P.isRiding && P.canFly)) hurt((-P.vy - 18) * 5);
     }
     P.vy = 0;
   }

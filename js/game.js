@@ -170,6 +170,12 @@ addEventListener('keydown', e => {
     if (e.code === 'Escape') { closeEmotes(); e.preventDefault(); return; }
   }
   if (e.code === 'KeyE' && !escOpen && !charOpen && !invOpen && !e.repeat) {
+    if (window.EntityManager && typeof window.EntityManager.tryLootClosestCorpse === 'function') {
+      if (window.EntityManager.tryLootClosestCorpse(P.x, P.y, P.z)) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (window.PetManager && typeof window.PetManager.interactClosestPet === 'function') {
       if (window.PetManager.interactClosestPet(P.x, P.y, P.z)) {
         e.preventDefault();
@@ -412,12 +418,19 @@ function loop(now) {
     return;
   }
 
+  // CombatJuice: aktualizace hitstopu, otřesů, stop a efektů
+  let effectiveDt = dt;
+  if (typeof CombatJuice !== 'undefined' && typeof CombatJuice.update === 'function') {
+    effectiveDt = CombatJuice.update(dt);
+  }
+
   pump(6);
 
   if (!escOpen && !charOpen) {
-    for (let i = 0; i < 3; i++) physics(dt / 3);
-    G.rg += dt;
-    if (G.rg > 4) G.hp = Math.min(100, G.hp + 3 * dt);
+    for (let i = 0; i < 3; i++) physics(effectiveDt / 3);
+    G.rg += effectiveDt;
+    const currentMaxHp = (typeof P !== 'undefined' && P && typeof P.maxHp === 'number') ? P.maxHp : 100;
+    if (G.rg > 4) G.hp = Math.min(currentMaxHp, G.hp + 3 * effectiveDt);
     ui();
     if (typeof updateActionBarCooldowns === 'function') updateActionBarCooldowns();
   }
@@ -552,7 +565,10 @@ function loop(now) {
     P._smoothCamDist += (dd - P._smoothCamDist) * Math.min(1, dt * 10);
   }
   const effectiveDist = P._smoothCamDist;
-  cam.position.set(hx + dir[0] * effectiveDist, hy + dir[1] * effectiveDist, hz + dir[2] * effectiveDist);
+  const shakeX = (typeof CombatJuice !== 'undefined') ? CombatJuice.shakeOffsetX : 0;
+  const shakeY = (typeof CombatJuice !== 'undefined') ? CombatJuice.shakeOffsetY : 0;
+  const shakeZ = (typeof CombatJuice !== 'undefined') ? CombatJuice.shakeOffsetZ : 0;
+  cam.position.set(hx + dir[0] * effectiveDist + shakeX, hy + dir[1] * effectiveDist + shakeY, hz + dir[2] * effectiveDist + shakeZ);
   cam.lookAt(cam.position.x - dir[0], cam.position.y - dir[1], cam.position.z - dir[2]);
   model.visible = effectiveDist > 0.8;
   dome.position.copy(cam.position);

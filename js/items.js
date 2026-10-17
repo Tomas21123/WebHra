@@ -788,6 +788,459 @@ const INV = [
     baseDamage: 12,
     desc: 'Bleskurychlá lesní veverka s huňatým ocasem. Neuvěřitelně mrštný jezdecký mazlíček s hyperaktivním útokem.',
     statList: ['🐾 Druh: Lesní zvíře', '🏇 Rychlost jízdy: 10.4 m/s', '⚡ Mrštný skok: 12.2', '⚔️ Lesní kousnutí: 12 DMG', '🌰 Ochočeno pomocí: Dubový žalud']
+  },
+
+  // --- Dračí Suroviny & Vejce (Ice and Fire Wyverns) ---
+  {
+    id: 'dragon_scales_fire',
+    name: 'Ohnivé dračí šupiny',
+    cat: 'loot',
+    subcat: 'material',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Neuvěřitelně tvrdé rudé šupiny ze zabité ohnivé wyverny. Sálají teplem a odolávají žáru.',
+    statList: ['🐉 Dračí surovina', '🔥 Odolnost proti ohni', '🛡️ Výroba dračí zbroje']
+  },
+  {
+    id: 'dragon_scales_ice',
+    name: 'Ledové dračí šupiny',
+    cat: 'loot',
+    subcat: 'material',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Ledově modré křišťálové šupiny z ledové wyverny. Jsou mrazivě chladné a tvrdé jako diamant.',
+    statList: ['🐉 Dračí surovina', '❄️ Odolnost proti mrazu', '🛡️ Výroba dračí zbroje']
+  },
+  {
+    id: 'dragon_bone',
+    name: 'Prastará dračí kost',
+    cat: 'loot',
+    subcat: 'material',
+    count: 0,
+    rarity: 'rare',
+    desc: 'Masivní kost ze zabité wyverny. Pevnější než nejlepší kalená ocel.',
+    statList: ['🦴 Dračí kost', '⚔️ Základ pro dračí zbraně']
+  },
+  {
+    id: 'dragon_blood_fire',
+    name: 'Krev ohnivého draka',
+    cat: 'loot',
+    subcat: 'material',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Vroucí dračí krev pulzující elementárním ohněm. Používá se k mocné alchymii a zaklínačským rituálům.',
+    statList: ['🩸 Dračí krev', '🔥 Magická esence ohně']
+  },
+  {
+    id: 'dragon_blood_ice',
+    name: 'Krev ledového draka',
+    cat: 'loot',
+    subcat: 'material',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Hustá mrazivá tekutina, která okamžitě zmrazí vzduch kolem sebe.',
+    statList: ['🩸 Dračí krev', '❄️ Magická esence mrazu']
+  },
+  // --- Dračí Vejce (Ice and Fire Wyverns - Tier 1 až 5) ---
+  {
+    id: 'egg_dragon_fire',
+    name: 'Vejce ohnivého draka',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 3,
+    hatchesInto: 'pet_wyvern_fire_t3',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Vzácné ohnivé dračí vejce získané z mrtvoly draka (30% šance). Klikni na "Vylíhnout vejce" a získej vlastní ohnivou wyvernu!',
+    statList: ['🥚 Dračí vejce (Ohnivé)', '✨ 30% vzácný drop z wyverny', '🐾 Kliknutím v inventáři vylíhneš létajícího mazlíčka!']
+  },
+  {
+    id: 'egg_dragon_fire_t1',
+    name: 'Ohnivé dračí vejce (Tier 1)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 1,
+    hatchesInto: 'pet_wyvern_fire_t1',
+    count: 0,
+    rarity: 'rare',
+    desc: 'Menší horké dračí vejce z mladé ohnivé wyverny. Vylíhne se z něj hbité ohnivé mládě!',
+    statList: ['🥚 Dračí vejce: Tier 1 (Mládě)', '🔥 Element: Oheň', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 1']
+  },
+  {
+    id: 'egg_dragon_fire_t2',
+    name: 'Ohnivé dračí vejce (Tier 2)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 2,
+    hatchesInto: 'pet_wyvern_fire_t2',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Pevné žhnoucí dračí vejce. Vylíhne se z něj mladá, silná ohnivá wyverna.',
+    statList: ['🥚 Dračí vejce: Tier 2 (Mladý drak)', '🔥 Element: Oheň', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 2']
+  },
+  {
+    id: 'egg_dragon_fire_t3',
+    name: 'Ohnivé dračí vejce (Tier 3)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 3,
+    hatchesInto: 'pet_wyvern_fire_t3',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Mohutné planoucí dračí vejce z dospělé wyverny. Vylíhne se z něj dospělý drak s drtivým dechem!',
+    statList: ['🥚 Dračí vejce: Tier 3 (Dospělý drak)', '🔥 Element: Oheň', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 3']
+  },
+  {
+    id: 'egg_dragon_fire_t4',
+    name: 'Ohnivé dračí vejce (Tier 4)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 4,
+    hatchesInto: 'pet_wyvern_fire_t4',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Monumentální sálající vejce z horského dračího vládce. Vylíhne se z něj obří vznešená wyverna!',
+    statList: ['🥚 Dračí vejce: Tier 4 (Vznešený drak)', '🔥 Element: Oheň', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 4']
+  },
+  {
+    id: 'egg_dragon_fire_t5',
+    name: 'Ohnivé dračí vejce (Tier 5)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'fire',
+    tier: 5,
+    hatchesInto: 'pet_wyvern_fire_t5',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Legendární kolosální vejce prastarého ničitelského draka. Vylíhne se z něj gigantický vrcholný titán!',
+    statList: ['🥚 Dračí vejce: Tier 5 (Prastarý titán)', '🔥 Element: Oheň', '👑 Maximální velikost, HP i síla plamenného dechu!']
+  },
+
+  {
+    id: 'egg_dragon_ice',
+    name: 'Vejce ledového draka',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 3,
+    hatchesInto: 'pet_wyvern_ice_t3',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Křišťálové ledové vejce vyzařující mrazivou auru (30% šance). Klikni na "Vylíhnout vejce" a získej vlastní ledovou wyvernu!',
+    statList: ['🥚 Dračí vejce (Ledové)', '✨ 30% vzácný drop z wyverny', '🐾 Kliknutím v inventáři vylíhneš létajícího mazlíčka!']
+  },
+  {
+    id: 'egg_dragon_ice_t1',
+    name: 'Ledové dračí vejce (Tier 1)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 1,
+    hatchesInto: 'pet_wyvern_ice_t1',
+    count: 0,
+    rarity: 'rare',
+    desc: 'Chladné křišťálové dračí vejce. Vylíhne se z něj mrštné ledové mládě.',
+    statList: ['🥚 Dračí vejce: Tier 1 (Mládě)', '❄️ Element: Led & Mráz', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 1']
+  },
+  {
+    id: 'egg_dragon_ice_t2',
+    name: 'Ledové dračí vejce (Tier 2)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 2,
+    hatchesInto: 'pet_wyvern_ice_t2',
+    count: 0,
+    rarity: 'epic',
+    desc: 'Zářivě modré ledové vejce pokryté jinatkou. Vylíhne se z něj mladá mrazivá wyverna.',
+    statList: ['🥚 Dračí vejce: Tier 2 (Mladý drak)', '❄️ Element: Led & Mráz', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 2']
+  },
+  {
+    id: 'egg_dragon_ice_t3',
+    name: 'Ledové dračí vejce (Tier 3)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 3,
+    hatchesInto: 'pet_wyvern_ice_t3',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Masivní mrazivé vejce dospělého ledového draka. Vylíhne se z něj dospělá wyverna s blizzardovým dechem!',
+    statList: ['🥚 Dračí vejce: Tier 3 (Dospělý drak)', '❄️ Element: Led & Mráz', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 3']
+  },
+  {
+    id: 'egg_dragon_ice_t4',
+    name: 'Ledové dračí vejce (Tier 4)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 4,
+    hatchesInto: 'pet_wyvern_ice_t4',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Impozantní křišťálové vejce z ledovcového vládce štítů. Vylíhne se z něj obří vznešená wyverna.',
+    statList: ['🥚 Dračí vejce: Tier 4 (Vznešený drak)', '❄️ Element: Led & Mráz', '🐾 Kliknutím v inventáři vylíhneš mazlíčka Tier 4']
+  },
+  {
+    id: 'egg_dragon_ice_t5',
+    name: 'Ledové dračí vejce (Tier 5)',
+    cat: 'loot',
+    subcat: 'material',
+    isDragonEgg: true,
+    dragonType: 'ice',
+    tier: 5,
+    hatchesInto: 'pet_wyvern_ice_t5',
+    count: 0,
+    rarity: 'legendary',
+    desc: 'Mytické kolosální vejce prastarého arktického draka. Vylíhne se z něj gigantický mrazivý titán!',
+    statList: ['🥚 Dračí vejce: Tier 5 (Prastarý titán)', '❄️ Element: Led & Mráz', '👑 Maximální velikost, HP i mrazivá sněhová bouře!']
+  },
+
+  // --- Létající Mazlíčci Wyverny (Tier 1 až 5) ---
+  {
+    id: 'pet_wyvern_fire',
+    name: 'Ohnivá wyverna',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 3,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 15.5,
+    jumpBoost: 15.0,
+    baseDamage: 95,
+    canFly: true,
+    desc: 'Majestátní létající wyverna s ohnivým dechem. V sedle můžeš létat (Mezerník = stoupání, Shift = klesání). Kliknutím chrlí oheň! [R] Přivolat/Schovat · [E] Nasednout.',
+    statList: ['🐉 Druh: Ohnivá wyverna', '✈️ Létající mount (Mezerník / Shift)', '🏇 Rychlost letu: 15.5 m/s', '🔥 Útok v sedle: Obří ohnivý dech & 95 DMG', '⌨️ Klávesa [R] Schovat · [E] Nasednout']
+  },
+  {
+    id: 'pet_wyvern_fire_t1',
+    name: 'Ohnivá wyverna (Tier 1 - Mládě)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 1,
+    count: 0,
+    rarity: 'rare',
+    rideSpeed: 12.0,
+    jumpBoost: 11.5,
+    baseDamage: 35,
+    canFly: true,
+    desc: 'Rychlé a dravé ohnivé mládě. Létá a plive rychlé ohnivé plameny.',
+    statList: ['🐉 Druh: Ohnivá wyverna (Tier 1)', '✈️ Létající mount', '🏇 Rychlost: 12.0 m/s', '🔥 Plamenný dech: 35 DMG']
+  },
+  {
+    id: 'pet_wyvern_fire_t2',
+    name: 'Ohnivá wyverna (Tier 2 - Mladá)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 2,
+    count: 0,
+    rarity: 'epic',
+    rideSpeed: 13.5,
+    jumpBoost: 13.0,
+    baseDamage: 60,
+    canFly: true,
+    desc: 'Mladá silná ohnivá wyverna s širokým rozpětím křídel a žhavým ohněm.',
+    statList: ['🐉 Druh: Ohnivá wyverna (Tier 2)', '✈️ Létající mount', '🏇 Rychlost: 13.5 m/s', '🔥 Plamenný dech: 60 DMG']
+  },
+  {
+    id: 'pet_wyvern_fire_t3',
+    name: 'Ohnivá wyverna (Tier 3 - Dospělá)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 3,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 15.5,
+    jumpBoost: 15.0,
+    baseDamage: 95,
+    canFly: true,
+    desc: 'Dospělá mohutná wyverna. Chrlí ničivý kuželovitý proud ohně spálí celé skupiny nepřátel!',
+    statList: ['🐉 Druh: Ohnivá wyverna (Tier 3)', '✈️ Létající mount', '🏇 Rychlost: 15.5 m/s', '🔥 Plamenný dech: 95 DMG']
+  },
+  {
+    id: 'pet_wyvern_fire_t4',
+    name: 'Ohnivá wyverna (Tier 4 - Vznešená)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 4,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 17.5,
+    jumpBoost: 17.0,
+    baseDamage: 140,
+    canFly: true,
+    desc: 'Obrovská vznešená wyverna s kolosálními křídly a pekelným dechem.',
+    statList: ['🐉 Druh: Ohnivá wyverna (Tier 4)', '✈️ Létající mount', '🏇 Rychlost: 17.5 m/s', '🔥 Plamenný dech: 140 DMG']
+  },
+  {
+    id: 'pet_wyvern_fire_t5',
+    name: 'Ohnivá wyverna (Tier 5 - Prastará)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'fire',
+    slot: 'pet',
+    petType: 'WyvernFire',
+    tier: 5,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 20.0,
+    jumpBoost: 20.0,
+    baseDamage: 220,
+    canFly: true,
+    desc: 'Gigantický prastarý drak apokalypsy! Monumentální kolos, jehož plamenný příval spálí cokoliv v dohledu na popel.',
+    statList: ['🐉 Druh: Prastará wyverna (Tier 5 Apex)', '👑 Kolosální velikost', '🏇 Rychlost letu: 20.0 m/s', '🔥 Kataklyzmatický oheň: 220 DMG']
+  },
+
+  {
+    id: 'pet_wyvern_ice',
+    name: 'Ledová wyverna',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 3,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 15.0,
+    jumpBoost: 14.8,
+    baseDamage: 90,
+    canFly: true,
+    desc: 'Ledová wyverna se sněžnými křídly a mrazivým dechem. V sedle můžeš létat po celém světě. Kliknutím chrlí led! [R] Přivolat/Schovat · [E] Nasednout.',
+    statList: ['🐉 Druh: Ledová wyverna', '✈️ Létající mount (Mezerník / Shift)', '🏇 Rychlost letu: 15.0 m/s', '❄️ Útok v sedle: Mrazivý dech & 90 DMG', '⌨️ Klávesa [R] Schovat · [E] Nasednout']
+  },
+  {
+    id: 'pet_wyvern_ice_t1',
+    name: 'Ledová wyverna (Tier 1 - Mládě)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 1,
+    count: 0,
+    rarity: 'rare',
+    rideSpeed: 11.5,
+    jumpBoost: 11.0,
+    baseDamage: 32,
+    canFly: true,
+    desc: 'Mrštné polární mládě. Plive ostré rampouchové střely a mrazivý dech.',
+    statList: ['🐉 Druh: Ledová wyverna (Tier 1)', '✈️ Létající mount', '🏇 Rychlost: 11.5 m/s', '❄️ Mrazivý dech: 32 DMG']
+  },
+  {
+    id: 'pet_wyvern_ice_t2',
+    name: 'Ledová wyverna (Tier 2 - Mladá)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 2,
+    count: 0,
+    rarity: 'epic',
+    rideSpeed: 13.0,
+    jumpBoost: 12.5,
+    baseDamage: 55,
+    canFly: true,
+    desc: 'Mladá ledová wyverna s křišťálovými šupinami a sněhovým vírem.',
+    statList: ['🐉 Druh: Ledová wyverna (Tier 2)', '✈️ Létající mount', '🏇 Rychlost: 13.0 m/s', '❄️ Mrazivý dech: 55 DMG']
+  },
+  {
+    id: 'pet_wyvern_ice_t3',
+    name: 'Ledová wyverna (Tier 3 - Dospělá)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 3,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 15.0,
+    jumpBoost: 14.8,
+    baseDamage: 90,
+    canFly: true,
+    desc: 'Dospělá ledová wyverna. Chrlí silný blizzardový kužel mrazu, který zmrazí a zraní všechny nepřátele!',
+    statList: ['🐉 Druh: Ledová wyverna (Tier 3)', '✈️ Létající mount', '🏇 Rychlost: 15.0 m/s', '❄️ Mrazivý dech: 90 DMG']
+  },
+  {
+    id: 'pet_wyvern_ice_t4',
+    name: 'Ledová wyverna (Tier 4 - Vznešená)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 4,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 17.0,
+    jumpBoost: 16.5,
+    baseDamage: 135,
+    canFly: true,
+    desc: 'Obrovská arktická wyverna se zářícíma azurovýma očima a drtivou ledovou bouří.',
+    statList: ['🐉 Druh: Ledová wyverna (Tier 4)', '✈️ Létající mount', '🏇 Rychlost: 17.0 m/s', '❄️ Mrazivý dech: 135 DMG']
+  },
+  {
+    id: 'pet_wyvern_ice_t5',
+    name: 'Ledová wyverna (Tier 5 - Prastará)',
+    cat: 'pets',
+    subcat: 'dragon',
+    isDragon: true,
+    dragonType: 'ice',
+    slot: 'pet',
+    petType: 'WyvernIce',
+    tier: 5,
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 19.5,
+    jumpBoost: 19.5,
+    baseDamage: 215,
+    canFly: true,
+    desc: 'Monumentální prastarý ledový drak z dob ledových. Zastavuje srdce nepřítele absolutní nulou.',
+    statList: ['🐉 Druh: Prastará wyverna (Tier 5 Apex)', '👑 Kolosální velikost', '🏇 Rychlost letu: 19.5 m/s', '❄️ Absolutní mráz: 215 DMG']
   }
 ];
 
@@ -1297,15 +1750,148 @@ function icon(id) {
       px(5, 8, '#0f172a'); px(8, 8, '#0f172a');
       bx2(5, 10, 4, 3, '#ffedd5');
       break;
+
+    // --- DRAČÍ SUROVINY, VEJCE & WYVERNY ---
+    case 'dragon_scales_fire':
+      bx2(4, 4, 8, 8, '#dc2626');
+      bx2(5, 3, 6, 10, '#b91c1c');
+      bx2(6, 5, 4, 6, '#f97316');
+      px(8, 7, '#fef08a');
+      break;
+
+    case 'dragon_scales_ice':
+      bx2(4, 4, 8, 8, '#0284c7');
+      bx2(5, 3, 6, 10, '#0369a1');
+      bx2(6, 5, 4, 6, '#38bdf8');
+      px(8, 7, '#e0f2fe');
+      break;
+
+    case 'dragon_bone':
+      bx2(3, 4, 10, 8, '#e2e8f0');
+      bx2(2, 3, 3, 4, '#cbd5e1');
+      bx2(11, 9, 3, 4, '#cbd5e1');
+      bx2(5, 6, 6, 4, '#f8fafc');
+      break;
+
+    case 'dragon_blood_fire':
+      bx2(5, 2, 6, 3, '#78350f');
+      bx2(4, 5, 8, 9, '#dc2626');
+      bx2(5, 7, 6, 6, '#f97316');
+      px(7, 9, '#fef08a');
+      break;
+
+    case 'dragon_blood_ice':
+      bx2(5, 2, 6, 3, '#0f172a');
+      bx2(4, 5, 8, 9, '#0284c7');
+      bx2(5, 7, 6, 6, '#38bdf8');
+      px(7, 9, '#ffffff');
+      break;
+
+    default:
+      if (id.startsWith('egg_dragon_fire')) {
+        const tier = id.match(/_t([1-5])/)?.[1] || '3';
+        bx2(5, 3, 6, 10, '#dc2626');
+        bx2(4, 5, 8, 6, '#b91c1c');
+        bx2(6, 2, 4, 12, '#ea580c');
+        px(6, 6, '#fbbf24'); px(7, 7, '#fef08a'); px(8, 6, '#fbbf24');
+        px(7, 8, '#f59e0b'); px(8, 9, '#fbbf24');
+        // Tier tečky na spodku vejce
+        const tNum = parseInt(tier, 10);
+        for (let ti = 0; ti < tNum; ti++) {
+          px(6 + (ti % 3) * 2, 12 + Math.floor(ti / 3) * 2, '#fde047');
+        }
+      } else if (id.startsWith('egg_dragon_ice')) {
+        const tier = id.match(/_t([1-5])/)?.[1] || '3';
+        bx2(5, 3, 6, 10, '#0284c7');
+        bx2(4, 5, 8, 6, '#0369a1');
+        bx2(6, 2, 4, 12, '#38bdf8');
+        px(6, 6, '#e0f2fe'); px(7, 7, '#ffffff'); px(8, 6, '#e0f2fe');
+        px(7, 8, '#bae6fd'); px(8, 9, '#ffffff');
+        const tNum = parseInt(tier, 10);
+        for (let ti = 0; ti < tNum; ti++) {
+          px(6 + (ti % 3) * 2, 12 + Math.floor(ti / 3) * 2, '#ffffff');
+        }
+      } else if (id.startsWith('pet_wyvern_fire')) {
+        bx2(4, 5, 8, 7, '#b91c1c');
+        bx2(2, 3, 4, 5, '#ea580c');
+        bx2(10, 3, 4, 5, '#ea580c');
+        bx2(6, 7, 4, 5, '#f97316');
+        px(3, 2, '#7f1d1d'); px(12, 2, '#7f1d1d');
+        px(6, 7, '#fef08a'); px(9, 7, '#fef08a');
+        px(7, 10, '#450a0a'); px(8, 10, '#450a0a');
+      } else if (id.startsWith('pet_wyvern_ice')) {
+        bx2(4, 5, 8, 7, '#0369a1');
+        bx2(2, 3, 4, 5, '#0284c7');
+        bx2(10, 3, 4, 5, '#0284c7');
+        bx2(6, 7, 4, 5, '#38bdf8');
+        px(3, 2, '#0c4a6e'); px(12, 2, '#0c4a6e');
+        px(6, 7, '#e0f2fe'); px(9, 7, '#e0f2fe');
+        px(7, 10, '#082f49'); px(8, 10, '#082f49');
+      }
+      break;
   }
   return c.toDataURL();
 }
 
 for (const it of INV) it.icon = icon(it.id);
 
+// Funkce pro vylíhnutí dračího vejce
+function hatchDragonEgg(eggId) {
+  if (typeof INV === 'undefined') return false;
+  const egg = INV.find(it => it.id === eggId);
+  if (!egg || !egg.count || egg.count <= 0) {
+    if (typeof toast === 'function') toast('Nemáš žádné dračí vejce k vylíhnutí!');
+    return false;
+  }
+
+  let targetPetId = egg.hatchesInto;
+  if (!targetPetId) {
+    const isIce = eggId.includes('ice');
+    const tier = egg.tier || (eggId.match(/_t([1-5])/)?.[1]) || 3;
+    targetPetId = `pet_wyvern_${isIce ? 'ice' : 'fire'}_t${tier}`;
+  }
+
+  let pet = INV.find(it => it.id === targetPetId);
+  if (!pet) {
+    targetPetId = eggId.includes('ice') ? 'pet_wyvern_ice' : 'pet_wyvern_fire';
+    pet = INV.find(it => it.id === targetPetId);
+  }
+  if (!pet) return false;
+
+  // Odečíst 1 vejce
+  egg.count -= 1;
+
+  // Přidat / odemknout wyvernu daného tieru
+  pet.count = (pet.count || 0) + 1;
+
+  // Spustit slavnostní zvuk vylíhnutí
+  if (typeof playDragonHatch === 'function') {
+    playDragonHatch();
+  }
+
+  // Oznámení pro hráče
+  if (typeof toast === 'function') {
+    toast(`🥚✨ Vejce puklo! Vylíhl se z něj majestátní tvor: ${pet.name}! Nyní ho můžeš osedlat v záložce Mazlíčci.`);
+  }
+
+  // Překreslit inventář
+  if (typeof renderInv === 'function') renderInv();
+  if (typeof renderHB === 'function') renderHB();
+  if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+
+  // Uložit stav do lokálního úložiště
+  if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.saveSingleplayerWorld === 'function') {
+    try { window.networkManager.saveSingleplayerWorld(); } catch (e) {}
+  }
+
+  return targetPetId;
+}
+
 if (typeof window !== 'undefined') {
   window.INV = INV;
   window.RARITY_INFO = RARITY_INFO;
   window.W3 = W3;
   window.W3_OFF = W3_OFF;
+  window.hatchDragonEgg = hatchDragonEgg;
 }
+

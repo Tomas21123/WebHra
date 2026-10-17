@@ -590,13 +590,37 @@ function updateMinimap(dt, now) {
   const biomeEl = $('mmBiome');
   if (biomeEl) {
     let bName = '🌲 Horský les & louky';
-    if (P.y / S <= SEA) bName = '🌊 Moře & oceán';
-    else if (curH <= SEA + 2) bName = '🏖️ Písečná pláž';
-    else if (curBio === 1) bName = '🏜️ Vyprahlá poušť';
-    else if (curBio === 2 || curH >= 120) bName = '🏔️ Sněžný štít';
-    else if (curBio === 3) bName = '🌴 Džungle & prales';
-    else if (curH >= 80) bName = '⛰️ Skalnaté hory';
+    let bKey = 'forest';
+    if (P.y / S <= SEA) { bName = '🌊 Moře & oceán'; bKey = 'ocean'; }
+    else if (curH <= SEA + 2) { bName = '🏖️ Písečná pláž'; bKey = 'beach'; }
+    else if (curBio === 1) { bName = '🏜️ Vyprahlá poušť'; bKey = 'desert'; }
+    else if (curBio === 2 || curH >= 120) { bName = '🏔️ Sněžný štít'; bKey = 'snow'; }
+    else if (curBio === 3) { bName = '🌴 Džungle & prales'; bKey = 'jungle'; }
+    else if (curH >= 80) { bName = '⛰️ Skalnaté hory'; bKey = 'mountains'; }
     biomeEl.textContent = bName;
+
+    // Průzkumná mechanika: Objevení nového biomu přináší průzkumné XP
+    if (typeof window !== 'undefined' && bKey !== 'ocean') {
+      if (!window._discoveredBiomes) {
+        window._discoveredBiomes = new Set();
+        try {
+          const saved = localStorage.getItem('voxel_discovered_biomes');
+          if (saved) JSON.parse(saved).forEach(k => window._discoveredBiomes.add(k));
+        } catch (e) {}
+      }
+      if (!window._discoveredBiomes.has(bKey)) {
+        window._discoveredBiomes.add(bKey);
+        try {
+          localStorage.setItem('voxel_discovered_biomes', JSON.stringify(Array.from(window._discoveredBiomes)));
+        } catch (e) {}
+        if (typeof showDiscoveryToast === 'function') {
+          showDiscoveryToast(`Nový biom: ${bName}`, 75);
+        }
+        if (typeof window.addPlayerXP === 'function') {
+          window.addPlayerXP(75, 'biome_exploration');
+        }
+      }
+    }
   }
 
   // Počítadlo prozkoumaného území
@@ -733,7 +757,9 @@ function getPoiDisplayMeta(poi) {
     ruins:    { icon: '🏛️', typeLabel: 'Kamenné ruiny' },
     camp:     { icon: '⛺', typeLabel: 'Opuštěný tábor' },
     landmark: { icon: '🗼', typeLabel: 'Strážní věž' },
-    chest:    { icon: '🧰', typeLabel: 'Truhla s pokladem' }
+    chest:    { icon: '🧰', typeLabel: 'Truhla s pokladem' },
+    dragonnestfire: { icon: '🔥🐉', typeLabel: 'Hnízdo ohnivého draka' },
+    dragonnestice:  { icon: '❄️🐉', typeLabel: 'Hnízdo ledového draka' }
   }[normType] || { icon: '🏛️', typeLabel: 'Významná stavba' };
 
   const bx = (typeof poi.x === 'number') ? poi.x : (poi.bx || 0);

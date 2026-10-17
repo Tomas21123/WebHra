@@ -146,6 +146,8 @@ class NetworkManager {
             }
 
             if (savedInv && Array.isArray(savedInv) && typeof INV !== 'undefined') {
+              // Resetovat položky, které nejsou v uloženém inventáři, aby nezůstávaly defaultní counts
+              INV.forEach(it => { it.count = 0; if (it.upgradeLevel) it.upgradeLevel = 0; });
               savedInv.forEach(savedIt => {
                 const target = INV.find(it => it.id === savedIt.id);
                 if (target) {
@@ -155,10 +157,16 @@ class NetworkManager {
                   if (typeof updateItemStatList === 'function') updateItemStatList(target);
                 }
               });
+            } else if (typeof INV !== 'undefined' && Array.isArray(INV)) {
+              INV.forEach(it => { it.count = 0; if (it.upgradeLevel) it.upgradeLevel = 0; });
             }
 
             if (savedEquippedSlots && typeof EQUIPPED_SLOTS !== 'undefined') {
+              for (const k in EQUIPPED_SLOTS) EQUIPPED_SLOTS[k] = null;
               Object.assign(EQUIPPED_SLOTS, savedEquippedSlots);
+              if (typeof syncEQArray === 'function') syncEQArray();
+            } else if (typeof EQUIPPED_SLOTS !== 'undefined') {
+              for (const k in EQUIPPED_SLOTS) EQUIPPED_SLOTS[k] = null;
               if (typeof syncEQArray === 'function') syncEQArray();
             }
 
@@ -213,6 +221,25 @@ class NetworkManager {
               }
               if (typeof renderInv === 'function') renderInv();
               if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+            } else {
+              // Nový svět bez uloženého stavu – začínáme s čistým / prázdným inventářem!
+              if (typeof INV !== 'undefined' && Array.isArray(INV)) {
+                INV.forEach(it => { it.count = 0; if (it.upgradeLevel) it.upgradeLevel = 0; });
+              }
+              if (typeof EQUIPPED_SLOTS !== 'undefined') {
+                for (const k in EQUIPPED_SLOTS) EQUIPPED_SLOTS[k] = null;
+              }
+              if (typeof HB !== 'undefined' && Array.isArray(HB)) {
+                HB.fill(null);
+              }
+              if (typeof heldId !== 'undefined') heldId = null;
+              if (typeof hbSel !== 'undefined') hbSel = -1;
+              if (typeof syncEQArray === 'function') syncEQArray();
+              if (typeof renderHB === 'function') renderHB();
+              if (typeof renderInv === 'function') renderInv();
+              if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
+              if (typeof applyHeld === 'function') applyHeld();
+              if (typeof updatePlayerAppearance === 'function') updatePlayerAppearance();
             }
           }
         }, 500);

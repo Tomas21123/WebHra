@@ -69,6 +69,7 @@ const SUBCATS = {
   ],
   pets: [
     { id: 'all', name: 'Všichni mazlíčci' },
+    { id: 'dragon', name: '🐉 Wyverny & Draci' },
     { id: 'dog', name: '🐕 Psi' },
     { id: 'feline', name: '🐈 Kočky' },
     { id: 'farm', name: '🐄 Hospodářská zvířata' },
@@ -469,6 +470,10 @@ function getPlayerArmorReduction() {
       const it = INV.find(x => x.id === id);
       if (it && it.defense) totalDef += it.defense;
     }
+  }
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : (typeof P !== 'undefined' ? P : null);
+  if (pObj && pObj.baseStats && typeof pObj.baseStats.defense === 'number') {
+    totalDef += pObj.baseStats.defense;
   }
   return Math.min(0.85, totalDef); // Max 85% absorpce poškození
 }
@@ -1357,6 +1362,68 @@ function updateEquipmentUI() {
   const blockEl = $('statSumBlock');
   if (blockEl) blockEl.textContent = shield ? Math.round(shield.blockPower * 100) + '%' : '0%';
 
+  // Aktualizace panelu RPG Statistik a Dovednostních bodů
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : (typeof P !== 'undefined' ? P : null);
+  const skillPts = (pObj && typeof pObj.skillPoints === 'number') ? pObj.skillPoints : 0;
+  const ptsValEl = $('rpgPointsVal');
+  const ptsBadgeEl = $('rpgSkillPointsBadge');
+  if (ptsValEl) ptsValEl.textContent = skillPts;
+  if (ptsBadgeEl) ptsBadgeEl.classList.toggle('has-points', skillPts > 0);
+
+  // Hodnoty RPG atributů
+  const baseHp = (pObj && pObj.baseStats && pObj.baseStats.maxHp) ? pObj.baseStats.maxHp : 100;
+  const baseSt = (pObj && pObj.baseStats && pObj.baseStats.maxStamina) ? pObj.baseStats.maxStamina : 100;
+  const baseAtk = (pObj && pObj.baseStats && pObj.baseStats.attackPower) ? pObj.baseStats.attackPower : 10;
+  const baseDef = (pObj && pObj.baseStats && typeof pObj.baseStats.defense === 'number') ? pObj.baseStats.defense : 0;
+  const baseCrit = (pObj && pObj.baseStats && typeof pObj.baseStats.critChance === 'number') ? pObj.baseStats.critChance : 0.05;
+  const baseSpd = (pObj && pObj.baseStats && typeof pObj.baseStats.moveSpeed === 'number') ? pObj.baseStats.moveSpeed : 6.0;
+
+  const valHpEl = $('rpgValHp');
+  if (valHpEl) valHpEl.textContent = (pObj && pObj.maxHp) ? pObj.maxHp : (baseHp + bonusHp);
+
+  const valStEl = $('rpgValStamina');
+  if (valStEl) valStEl.textContent = (pObj && pObj.maxStamina) ? pObj.maxStamina : baseSt;
+
+  const valDmgEl = $('rpgValDamage');
+  if (valDmgEl) valDmgEl.textContent = atkInfo.damage + ' HP';
+
+  const valDefEl = $('rpgValDefense');
+  if (valDefEl) valDefEl.textContent = Math.round(armorRed * 100) + '%';
+
+  const valCritEl = $('rpgValCrit');
+  if (valCritEl) valCritEl.textContent = Math.round(atkInfo.critChance * 100) + '%';
+
+  const valSpdEl = $('rpgValSpeed');
+  if (valSpdEl) {
+    const spdPct = Math.round((baseSpd / 6.0) * 100 + bonusSpd * 100);
+    valSpdEl.textContent = spdPct + '%';
+  }
+
+  // Tlačítka pro přidání bodu (+)
+  const statButtons = [
+    { id: 'rpgAddHp', stat: 'hp' },
+    { id: 'rpgAddStamina', stat: 'stamina' },
+    { id: 'rpgAddDamage', stat: 'damage' },
+    { id: 'rpgAddDefense', stat: 'defense' },
+    { id: 'rpgAddCrit', stat: 'crit' },
+    { id: 'rpgAddSpeed', stat: 'speed' }
+  ];
+
+  statButtons.forEach(b => {
+    const btnEl = $(b.id);
+    if (btnEl) {
+      btnEl.disabled = (skillPts <= 0);
+      btnEl.onclick = (e) => {
+        e.stopPropagation();
+        if (typeof window !== 'undefined' && typeof window.investSkillPoint === 'function') {
+          window.investSkillPoint(b.stat);
+        } else if (typeof investSkillPoint === 'function') {
+          investSkillPoint(b.stat);
+        }
+      };
+    }
+  });
+
   const nickEl = $('invCharNickBadge');
   if (nickEl && typeof getPlayerNickname === 'function') {
     nickEl.textContent = getPlayerNickname();
@@ -1909,10 +1976,10 @@ function createItemDrawer(it) {
     const summonBtn = document.createElement('button');
     summonBtn.className = 'drawer-btn hand-btn';
     summonBtn.innerHTML = `
-      <span class="btn-hand-icon">🏇</span>
+      <span class="btn-hand-icon">🐾</span>
       <span class="btn-hand-text">
-        Přivolat a jezdit [R]
-        <small class="btn-hand-role">Spawne mazlíčka vedle tebe</small>
+        Přivolat mazlíčka [R]
+        <small class="btn-hand-role">Spawne mazlíčka vedle tebe ([E] pro nasednutí)</small>
       </span>
     `;
     summonBtn.onclick = (e) => {
@@ -1921,13 +1988,24 @@ function createItemDrawer(it) {
       if (invOpen) toggleInv();
       if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.summonPet === 'function') {
         window.PetManager.summonPet(it.id);
-        window.PetManager.mountPet();
       }
     };
 
     btnRow.appendChild(eqPetBtn);
     btnRow.appendChild(summonBtn);
     actionsContainer.appendChild(btnRow);
+
+  } else if (it.isDragonEgg || it.id.startsWith('egg_dragon_')) {
+    const hatchBtn = document.createElement('button');
+    hatchBtn.className = 'drawer-btn primary';
+    hatchBtn.innerHTML = '🥚 Vylíhnout dračí vejce';
+    hatchBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof window.hatchDragonEgg === 'function') {
+        window.hatchDragonEgg(it.id);
+      }
+    };
+    actionsContainer.appendChild(hatchBtn);
 
   } else if (it.subcat === 'taming') {
     const tameBtn = document.createElement('button');
@@ -2533,7 +2611,8 @@ function invKey(e) {
 }
 
 // Inicializace listenerů
-window.addEventListener('DOMContentLoaded', () => {
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('DOMContentLoaded', () => {
   const invx = $('invx');
   if (invx) invx.onclick = toggleInv;
 
@@ -2604,7 +2683,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   syncEQArray();
-});
+  });
+}
 
 // Zajištění startovní synchronizace
 syncEQArray();

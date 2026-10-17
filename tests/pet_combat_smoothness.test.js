@@ -65,3 +65,4 @@ assert(pet.targetEnemy === enemy, 'Pet should target nearby enemy');
 console.log('✔ Dismounted pet targets enemy');
 
 console.log('\nAll Pet Combat & Riding Smoothness tests passed successfully!');
+process.exit(0);

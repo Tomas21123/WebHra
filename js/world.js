@@ -1,34 +1,43 @@
 // ---------- Generování terénu a světa ----------
 function height(x, z) {
-  const wx = x + (fbm(x / 180 + 300, z / 180, 2) - 0.5) * 140;
-  const wz = z + (fbm(x / 180, z / 180 + 300, 2) - 0.5) * 140;
-  const c = fbm(wx / 440, wz / 440, 4);
-  const m = sm(0.52, 0.8, fbm(wx / 600 + 500, wz / 600, 3));
-  const d = fbm(x / 36, z / 36, 2);
-  const r = Math.abs(fbm(wx / 400 + 800, wz / 400 + 800, 3) - 0.5);
-  const o = sm(0.4, 0.28, fbm(wx / 700 + 3000, wz / 700, 3));
-  const s = (28 + c * 40 + m * 68) / 12, f = Math.floor(s);
-  let h = (28 + c * 40 + m * 68) * 0.35 + (f + sm(0.25, 0.75, s - f)) * 12 * 0.65 + d * 4;
-  h += (1 - Math.abs(2 * vn(x / 50 + 7, z / 90) - 1)) * 8 * sm(0.55, 0.64, temp(x, z)) * sm(0.52, 0.4, hum(x, z));
-  h += (SEA - 4 - h) * sm(0.034, 0.012, r) * (1 - m);
-  h -= o * 38;
+  // Rozsáhlé kontinentální zemské desky a 10× větší rozlohy biomů
+  const wx = x + (fbm(x / 1200 + 300, z / 1200, 2) - 0.5) * 280;
+  const wz = z + (fbm(x / 1200, z / 1200 + 300, 2) - 0.5) * 280;
+  const c = fbm(wx / 2200, wz / 2200, 4);
+  const m = sm(0.52, 0.8, fbm(wx / 3500 + 500, wz / 3500, 3));
+  const d = fbm(x / 120, z / 120, 2);
+  const r = Math.abs(fbm(wx / 2400 + 800, wz / 2400 + 800, 3) - 0.5);
+  // Omezení oceánů/vodních ploch: práh posunut, aby dominovala pevnina a oceány byly vzácnější
+  const o = sm(0.24, 0.12, fbm(wx / 4500 + 3000, wz / 4500, 3));
+  const s = (36 + c * 38 + m * 64) / 12, f = Math.floor(s);
+  let h = (36 + c * 38 + m * 64) * 0.35 + (f + sm(0.25, 0.75, s - f)) * 12 * 0.65 + d * 4;
+  h += (1 - Math.abs(2 * vn(x / 250 + 7, z / 350) - 1)) * 8 * sm(0.55, 0.64, temp(x, z)) * sm(0.52, 0.4, hum(x, z));
+  // Plynulé zanoření do vody jen v řídkých depresích (výrazně zúžený vliv)
+  h += (SEA - 4 - h) * sm(0.016, 0.004, r) * (1 - m);
+  h -= o * 22;
 
   // Neomezené vysokohorské štíty a hřebeny
-  const ridge1 = 1 - Math.abs(fbm(wx / 240 + 700, wz / 240 + 700, 3) * 2 - 1);
-  const ridge2 = 1 - Math.abs(fbm(wx / 95 + 350, wz / 95 + 350, 3) * 2 - 1);
-  const alpine = sm(0.48, 0.84, fbm(wx / 850 + 1500, wz / 850 + 1500, 3));
+  const ridge1 = 1 - Math.abs(fbm(wx / 1400 + 700, wz / 1400 + 700, 3) * 2 - 1);
+  const ridge2 = 1 - Math.abs(fbm(wx / 480 + 350, wz / 480 + 350, 3) * 2 - 1);
+  const alpine = sm(0.48, 0.84, fbm(wx / 4200 + 1500, wz / 4200 + 1500, 3));
   h += m * (ridge1 * 65 + Math.pow(ridge2, 2.2) * 60 + alpine * 100);
 
   return Math.max(2, Math.floor(h));
 }
 
-const temp = (x, z) => fbm(x / 600 + 2000, z / 600 + 2000, 2);
-const hum = (x, z) => fbm(x / 560 + 4000, z / 560, 2);
+const temp = (x, z) => fbm(x / 6000 + 2000, z / 6000 + 2000, 2);
+const hum = (x, z) => fbm(x / 5600 + 4000, z / 5600, 2);
 const biome = (x, z, h) => {
-  const t = temp(x, z) - Math.max(0, h - SEA - 8) * 0.0055 + (vn(x / 7, z / 7) - 0.5) * 0.05;
-  const u = hum(x, z) + (vn(x / 9 + 5, z / 9) - 0.5) * 0.05;
+  const t = temp(x, z) - Math.max(0, h - SEA - 8) * 0.0055 + (vn(x / 70, z / 70) - 0.5) * 0.03;
+  const u = hum(x, z) + (vn(x / 90 + 5, z / 90) - 0.5) * 0.03;
   return t < 0.38 ? 2 : t > 0.6 ? (u > 0.5 ? 3 : 1) : 0;
 };
+if (typeof window !== 'undefined') {
+  window.height = height;
+  window.biome = biome;
+  window.temp = temp;
+  window.hum = hum;
+}
 
 // ---------- Chunks & Bloky ----------
 const chunks = new Map();
@@ -835,7 +844,9 @@ function pump(budget) {
     Ruins: 'Tajemné zříceniny',
     Camp: 'Tábor nestvůr',
     Chest: 'Tajemná pokladnice',
-    Landmark: 'Strážní maják'
+    Landmark: 'Strážní maják',
+    DragonNestFire: 'Hnízdo ohnivého draka',
+    DragonNestIce: 'Hnízdo ledového draka'
   };
 
   const POIManager = {
@@ -899,8 +910,7 @@ function pump(budget) {
       // Deterministický výběr typu POI
       const typeHash = Math.abs(Math.sin(cellX * 12.9898 + cellZ * 78.233) * 43758.5453) % 1;
       const typeIndex = Math.floor(typeHash * POI_TYPES.length);
-      const type = POI_TYPES[typeIndex];
-      const displayName = DISPLAY_NAMES[type] || type;
+      let type = POI_TYPES[typeIndex];
 
       // Deterministické prohledávání suché země (y >= SEA + 3)
       const offsets = [
@@ -937,6 +947,14 @@ function pump(budget) {
       if (bestBY < sea + 3) {
         bestBY = sea + 3;
       }
+
+      // Horská dračí hnízda (Wyverny v horách):
+      // Pokud je lokalita na vyvýšeném horském štítu (bestBY >= 60), usadí se zde drak/wyverna
+      if (bestBY >= 60) {
+        const isIce = (typeof temp === 'function' ? temp(bestBX, bestBZ) < 0.44 : (cellX + cellZ) % 2 === 0);
+        type = isIce ? 'DragonNestIce' : 'DragonNestFire';
+      }
+      const displayName = DISPLAY_NAMES[type] || type;
 
       const id = `poi_${cellX}_${cellZ}`;
       const isOpened = this.openedChests.has(id);
@@ -1036,7 +1054,7 @@ function pump(budget) {
       };
 
       // Rovné, čisté kamenné předdvoří před jižním vchodem budovy (pro 100% bezpečnou teleportaci bez zaseknutí)
-      const entranceStartZ = (type === 'Camp' || type === 'Ruins') ? 8 : (type === 'Shrine' ? 7 : 6);
+      const entranceStartZ = (type === 'Camp' || type === 'Ruins' || type === 'DragonNestFire' || type === 'DragonNestIce') ? 8 : (type === 'Shrine' ? 7 : 6);
       for (let dx = -2; dx <= 2; dx++) {
         for (let dz = entranceStartZ; dz <= entranceStartZ + 3; dz++) {
           prepareColumn(bx + dx, bz + dz, by, 18, 23);
@@ -1344,6 +1362,56 @@ function pump(budget) {
           }
         }
       }
+
+      // -----------------------------------------------------------------------
+      // 6. DRAČÍ HNÍZDO (DragonNestFire / DragonNestIce) - Horský kráter / hnízdo wyverny
+      // -----------------------------------------------------------------------
+      else if (type === 'DragonNestFire' || type === 'DragonNestIce') {
+        const isIce = (type === 'DragonNestIce');
+        const rimBlock = isIce ? 8 : 36;       // Sníh/led nebo temný obsidián
+        const floorBlock = isIce ? 33 : 23;     // Ledový kámen nebo zvětralá skála
+        const centerBlock = isIce ? 35 : 11;    // Ledový krystal nebo žhavý oheň
+
+        for (let dx = -7; dx <= 7; dx++) {
+          for (let dz = -7; dz <= 7; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > 49) continue;
+
+            const dist = Math.sqrt(distSq);
+
+            // Vyrovnání a pevný základ hnízda
+            if (!prepareColumn(wx, wz, by, 16, floorBlock)) continue;
+
+            // Zvýšený sopečný / ledový okraj hnízda (dist mezi 5.0 a 7.0)
+            if (dist >= 5.0 && dist <= 7.0) {
+              const rimHeight = ((Math.abs(dx * 7 + dz * 13) % 3) + 1);
+              for (let ry = 1; ry <= rimHeight; ry++) {
+                put(wx, by + ry, wz, rimBlock);
+              }
+              if ((dx + dz) % 3 === 0) {
+                put(wx, by + rimHeight + 1, wz, isIce ? 35 : 36);
+              }
+            } else if (dist < 5.0) {
+              // Vnitřní miska dračího hnízda
+              put(wx, by + 1, wz, floorBlock);
+
+              // Oheň nebo mrazivé krystaly po obvodu hnízda
+              if (dist >= 3.2 && dist <= 4.2 && ((dx * 3 + dz * 5) % 4 === 0)) {
+                put(wx, by + 2, wz, isIce ? 35 : 11);
+              }
+
+              // Středová plošina pro truhlu se zlatem a dračím pokladem
+              if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
+                put(wx, by + 1, wz, 36);
+                if (dx === 0 && dz === 0) {
+                  put(wx, by + 2, wz, centerBlock);
+                }
+              }
+            }
+          }
+        }
+      }
     },
 
     isDiscovered: function (poiOrId) {
@@ -1480,7 +1548,7 @@ function pump(budget) {
       const pbz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
 
       // Střed připraveného vstupního předdvoří na jižní straně (+Z)
-      const entranceOffsetBlocks = (poi.type === 'Camp' || poi.type === 'Ruins') ? 9 : (poi.type === 'Shrine' ? 8 : 7);
+      const entranceOffsetBlocks = (poi.type === 'Camp' || poi.type === 'Ruins' || poi.type === 'DragonNestFire' || poi.type === 'DragonNestIce') ? 9 : (poi.type === 'Shrine' ? 8 : 7);
       const prefBX = pbx;
       const prefBZ = pbz + entranceOffsetBlocks;
 
@@ -1710,6 +1778,18 @@ function pump(budget) {
         poi.baseLightIntensity = 2.2;
 
         this._buildChestGroup(grp, poi, 0, 0, -0.6);
+
+      } else if (poi.type === 'DragonNestFire' || poi.type === 'DragonNestIce') {
+        const isIce = (poi.type === 'DragonNestIce');
+        // Voxelová dračí truhla s pokladem uprostřed hnízda
+        this._buildChestGroup(grp, poi, 0, 0, 0);
+
+        // Zářivé světlo hnízda (žhavé plameny nebo polární mráz)
+        const nestLight = new THREE.PointLight(isIce ? 0x38bdf8 : 0xef4444, 2.2, 28);
+        nestLight.position.set(0, 1.4, 0);
+        grp.add(nestLight);
+        poi.fireLight = nestLight;
+        poi.baseLightIntensity = 2.2;
       }
 
       poi.group = grp;
@@ -1798,14 +1878,21 @@ function pump(budget) {
               const em = (typeof window !== 'undefined' && window.EntityManager) || (typeof EntityManager !== 'undefined' ? EntityManager : null);
               if (!poi.guardiansSpawned && em && typeof em.spawnCreature === 'function') {
                 poi.guardiansSpawned = true;
+                const calcLvl = (base) => (typeof em.computeScaledLevel === 'function') ? em.computeScaledLevel(poi.wx, poi.wz, base) : (base || 1);
                 if (poi.type === 'Camp') {
-                  em.spawnCreature('Goblin', poi.wx + 2.5, poi.wy + 1.0, poi.wz + 4.5, 1);
-                  em.spawnCreature('Goblin', poi.wx - 2.0, poi.wy + 1.0, poi.wz + 4.5, 1);
+                  em.spawnCreature('Goblin', poi.wx + 2.5, poi.wy + 1.0, poi.wz + 4.5, calcLvl(1));
+                  em.spawnCreature('Goblin', poi.wx - 2.0, poi.wy + 1.0, poi.wz + 4.5, calcLvl(1));
                 } else if (poi.type === 'Ruins') {
-                  em.spawnCreature('Skeleton', poi.wx + 1.8, poi.wy + 1.0, poi.wz + 4.0, 1);
-                  em.spawnCreature('Skeleton', poi.wx - 1.5, poi.wy + 1.0, poi.wz + 4.0, 2);
+                  em.spawnCreature('Skeleton', poi.wx + 1.8, poi.wy + 1.0, poi.wz + 4.0, calcLvl(1));
+                  em.spawnCreature('Skeleton', poi.wx - 1.5, poi.wy + 1.0, poi.wz + 4.0, calcLvl(2));
                 } else if (poi.type === 'Landmark') {
-                  em.spawnCreature('Wolf', poi.wx + 3.5, poi.wy + 1.0, poi.wz + 4.0, 1);
+                  em.spawnCreature('Wolf', poi.wx + 3.5, poi.wy + 1.0, poi.wz + 4.0, calcLvl(1));
+                } else if (poi.type === 'DragonNestFire') {
+                  const dragonTier = Math.min(5, Math.max(2, Math.floor(Math.random() * 3) + 2)); // Tier 2-4
+                  em.spawnCreature('WyvernFire', poi.wx, poi.wy + 1.5, poi.wz, calcLvl(5), dragonTier);
+                } else if (poi.type === 'DragonNestIce') {
+                  const dragonTier = Math.min(5, Math.max(2, Math.floor(Math.random() * 3) + 2)); // Tier 2-4
+                  em.spawnCreature('WyvernIce', poi.wx, poi.wy + 1.5, poi.wz, calcLvl(5), dragonTier);
                 }
               }
             }

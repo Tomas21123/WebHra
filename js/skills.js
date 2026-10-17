@@ -1242,6 +1242,12 @@ const ActionBarManager = {
 
   executeWeaponSkill(skill, slotIndex) {
     if (!skill) return false;
+    // Během jízdy na drakovi drak chrlí oheň/mráz místo skillů zbraně
+    if (typeof P !== 'undefined' && P && P.isRiding && (P.canFly || (P.ridingPet && P.ridingPet.isDragon) || (typeof window !== 'undefined' && window.PetManager && window.PetManager.activePet && window.PetManager.activePet.isDragon))) {
+      if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.triggerMountDragonBreath === 'function') {
+        return window.PetManager.triggerMountDragonBreath();
+      }
+    }
     // Během aktivní animace útoku nelze spustit jiný skill ani přerušit současný cast
     if (typeof attacking !== 'undefined' && attacking) return false;
 
@@ -1369,6 +1375,21 @@ const ActionBarManager = {
     const maxTargets = skill.maxTargets || 1;
     const is360AoE = (skill.effectType === 'aoe_melee' || skill.effectType === 'aoe_magic') && maxTargets >= 3;
 
+    // Vizuální telegrafování a rázová vlna schopnosti (Combat Juice Shockwave)
+    if (typeof CombatJuice !== 'undefined') {
+      const swColor = (skill.weaponSubcat === 'staff' || skill.effectType === 'aoe_magic') ? 0xa855f7 : (skill.weaponSubcat === 'axe' ? 0xf97316 : 0x38bdf8);
+      if (typeof CombatJuice.spawnSkillTelegraph === 'function') {
+        CombatJuice.spawnSkillTelegraph(pObj.x, pObj.renderY ?? pObj.y, pObj.z, swColor, 0.35);
+      }
+      if (typeof CombatJuice.spawnShockwave === 'function') {
+        CombatJuice.spawnShockwave(pObj.x, pObj.renderY ?? pObj.y, pObj.z, {
+          color: swColor,
+          maxRadius: is360AoE ? 4.2 : 2.6,
+          isCrit
+        });
+      }
+    }
+
     if (typeof ProjectileManager !== 'undefined' && typeof ProjectileManager.detonateEffect === 'function') {
       const vfxType = skill.effectType === 'aoe_magic' ? 'fireball' : 'frost';
       ProjectileManager.detonateEffect(pObj.x, (pObj.renderY ?? pObj.y) + 1.0, pObj.z, vfxType);
@@ -1403,6 +1424,21 @@ const ActionBarManager = {
         const kb = { x: (item.dx / kLen) * 1.6, z: (item.dz / kLen) * 1.6 };
         item.c.takeDamage(finalDmg, kb, isCrit, 'player');
         hitCount++;
+
+        if (typeof CombatJuice !== 'undefined') {
+          if (typeof CombatJuice.spawnHitSparks === 'function') {
+            CombatJuice.spawnHitSparks(item.c.x, item.c.y + 0.8, item.c.z, isCrit);
+          }
+        }
+      }
+    }
+
+    if (hitCount > 0 && typeof CombatJuice !== 'undefined') {
+      if (typeof CombatJuice.triggerHitstop === 'function') {
+        CombatJuice.triggerHitstop(isCrit ? 0.09 : 0.05);
+      }
+      if (typeof CombatJuice.triggerCameraShake === 'function') {
+        CombatJuice.triggerCameraShake(isCrit ? 0.25 : 0.16, 0.22);
       }
     }
 

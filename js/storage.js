@@ -332,6 +332,7 @@ const GameStorage = {
             maxHp: (p.baseStats && p.baseStats.maxHp) || 100,
             maxStamina: (p.baseStats && p.baseStats.maxStamina) || 100,
             attackPower: (p.baseStats && p.baseStats.attackPower) || 10,
+            defense: (p.baseStats && p.baseStats.defense) || 0,
             critChance: (p.baseStats && p.baseStats.critChance) || 0.05,
             moveSpeed: (p.baseStats && p.baseStats.moveSpeed) || 6.0
           },
@@ -376,6 +377,7 @@ const GameStorage = {
               maxHp: Number(data.baseStats?.maxHp) || Number(data.maxHp) || 100,
               maxStamina: Number(data.baseStats?.maxStamina) || Number(data.maxStamina) || 100,
               attackPower: Number(data.baseStats?.attackPower) || 10,
+              defense: Number(data.baseStats?.defense) || 0,
               critChance: Number(data.baseStats?.critChance) || 0.05,
               moveSpeed: Number(data.baseStats?.moveSpeed) || 6.0
             },
