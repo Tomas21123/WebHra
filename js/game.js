@@ -119,6 +119,23 @@ try { tryEnableFullscreen(); } catch (e) { }
 
 // Klávesové vstupy
 addEventListener('keydown', e => {
+  // Odchycení klávesy při mapování akční lišty v menu Ovládání
+  if (typeof KeybindManager !== 'undefined' && KeybindManager && KeybindManager.listeningTarget) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.code === 'Escape') {
+      KeybindManager.listeningTarget = null;
+      if (typeof renderKeybindsConfigUI === 'function') renderKeybindsConfigUI();
+      return;
+    }
+    const { slotIndex, bindType } = KeybindManager.listeningTarget;
+    KeybindManager.listeningTarget = null;
+    KeybindManager.setBind(slotIndex, bindType, e.code);
+    if (typeof renderKeybindsConfigUI === 'function') renderKeybindsConfigUI();
+    if (typeof renderHB === 'function') renderHB();
+    return;
+  }
+
   if (typeof chatOpen !== 'undefined' && chatOpen) {
     if (e.code === 'Escape') {
       if (typeof closeChat === 'function') closeChat();
@@ -152,13 +169,33 @@ addEventListener('keydown', e => {
     if (e.code === 'Digit4' || e.code === 'Numpad4') { playEmote('sit'); e.preventDefault(); return; }
     if (e.code === 'Escape') { closeEmotes(); e.preventDefault(); return; }
   }
-  if (e.code === 'KeyE' && !escOpen && !charOpen && !invOpen) {
+  if (e.code === 'KeyE' && !escOpen && !charOpen && !invOpen && !e.repeat) {
+    if (window.PetManager && typeof window.PetManager.interactClosestPet === 'function') {
+      if (window.PetManager.interactClosestPet(P.x, P.y, P.z)) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (window.EntityManager && typeof window.EntityManager.tryTameClosest === 'function') {
+      if (window.EntityManager.tryTameClosest(P.x, P.y, P.z)) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (window.POIManager && typeof window.POIManager.interactClosest === 'function') {
       const interacted = window.POIManager.interactClosest(P.x, P.y, P.z);
       if (interacted) {
         e.preventDefault();
         return;
       }
+    }
+  }
+
+  if (e.code === 'KeyR' && !escOpen && !charOpen && !invOpen && !e.repeat) {
+    if (window.PetManager && typeof window.PetManager.handleKeyR === 'function') {
+      window.PetManager.handleKeyR();
+      e.preventDefault();
+      return;
     }
   }
 
@@ -197,6 +234,7 @@ addEventListener('keydown', e => {
       document.getElementById('modalInGameSettings').hidden = true;
       openEscMenu();
     } else if (document.getElementById('modalInGameControls') && !document.getElementById('modalInGameControls').hidden) {
+      if (typeof KeybindManager !== 'undefined' && KeybindManager) KeybindManager.listeningTarget = null;
       document.getElementById('modalInGameControls').hidden = true;
       openEscMenu();
     } else if (document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden) {
@@ -233,7 +271,12 @@ addEventListener('keydown', e => {
   if (e.code === 'BracketLeft') { RD = Math.max(3, RD - 1); setFog(); lastC = ''; }
   if (e.code === 'Space') e.preventDefault();
 });
-addEventListener('keyup', e => keys[e.code] = 0);
+addEventListener('keyup', e => {
+  keys[e.code] = 0;
+  if (typeof ActionBarManager !== 'undefined' && ActionBarManager) {
+    ActionBarManager.releaseByInputCode(e.code);
+  }
+});
 
 // Aplikace vzhledu a výbavy
 attachWeaponsToHand(hand, offhand);
@@ -346,13 +389,23 @@ function loop(now) {
         load.style.opacity = 0;
         setTimeout(() => load.remove(), 600);
       }
-      // Ambientní divočina při startu hry
+      // Ambientní divočina a zvířata při startu hry
       const em = (typeof window !== 'undefined' && window.EntityManager) || (typeof EntityManager !== 'undefined' ? EntityManager : null);
       if (em && typeof em.spawnCreature === 'function' && em.creatures && em.creatures.length === 0) {
         const s = (typeof S !== 'undefined') ? S : 0.5;
-        const spawnY = (typeof height === 'function') ? height(Math.floor((P.x + 12) / s), Math.floor((P.z + 12) / s)) * s : P.y;
-        em.spawnCreature('Wolf', P.x + 12, spawnY, P.z + 12, 1);
-        em.spawnCreature('Wolf', P.x - 14, spawnY, P.z + 10, 1);
+        const spawnAt = (type, ox, oz) => {
+          const sy = (typeof height === 'function') ? (height(Math.floor((P.x + ox) / s), Math.floor((P.z + oz) / s)) + 1) * s : P.y;
+          em.spawnCreature(type, P.x + ox, sy, P.z + oz, 1);
+        };
+        spawnAt('Wolf', 16, 16);
+        spawnAt('Wolf', -18, 14);
+        spawnAt('DogShepherd', 6, -5);
+        spawnAt('DogHusky', -7, -6);
+        spawnAt('Cat', 4, -7);
+        spawnAt('Cow', 11, -10);
+        spawnAt('Sheep', -11, -9);
+        spawnAt('Goat', 9, 8);
+        spawnAt('Squirrel', -5, 6);
       }
     }
     renderer.render(scene, cam);
@@ -366,6 +419,7 @@ function loop(now) {
     G.rg += dt;
     if (G.rg > 4) G.hp = Math.min(100, G.hp + 3 * dt);
     ui();
+    if (typeof updateActionBarCooldowns === 'function') updateActionBarCooldowns();
   }
 
   // --- Synchronizovaná Animace Postavy ---
@@ -390,8 +444,9 @@ function loop(now) {
     P.renderY = P.y;
   }
 
-  // Pozice modelu
-  model.position.set(P.x, P.renderY, P.z);
+  // Pozice modelu (při jízdě na mazlíčkovi zvýšená o výšku hřbetu)
+  const mountOffset = (P.isRiding && P.mountHeight) ? P.mountHeight : 0;
+  model.position.set(P.x, P.renderY + mountOffset, P.z);
 
   // Přirozené pootočení těla k pohledu kamery, pokud hráč stojí na místě a otočí hlavu příliš daleko
   const camLookAngle = Math.atan2(-Math.sin(yaw), -Math.cos(yaw));
@@ -441,11 +496,13 @@ function loop(now) {
   anim.lookPitch = pitch;
   anim.heldId = heldId;
   anim.attacking = attacking;
+  anim.attackType = (typeof attackType !== 'undefined') ? attackType : 'light';
   anim.attackTime = attackTime;
   anim.attackDuration = attackDuration;
   anim.attackCombo = attackCombo;
   anim.isRolling = isRolling;
   anim.rollTimer = rollTimer;
+  anim.isRiding = !!P.isRiding;
   if (typeof currentEmote !== 'undefined' && currentEmote !== null) {
     emoteTimer += dt;
   } else {
@@ -462,6 +519,10 @@ function loop(now) {
       hand.position.set(0, -8 * VX, 0);
       arms[0].rotation.set(0, 0, -0.12);
       arms[1].rotation.set(0, 0, 0.12);
+      if (playerRig && playerRig.body) {
+        playerRig.body.rotation.y = 0;
+        playerRig.body.position.z = 0;
+      }
     }
   }
 
@@ -472,7 +533,7 @@ function loop(now) {
   // Kamera
   const cp = Math.cos(pitch);
   const dir = [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
-  const targetHeadY = (P.isSwimming) ? 0.85 : 1.55;
+  const targetHeadY = (P.isSwimming) ? 0.85 : (1.55 + mountOffset * 0.65);
   const hx = P.x, hy = (P.renderY ?? P.y) + targetHeadY, hz = P.z;
   let dd = dist;
   for (let t = 0.3; t <= dist; t += 0.25) {
@@ -502,6 +563,11 @@ function loop(now) {
   // Aktualizace PvE entit & nestvůr (Milestone 2 - F6)
   if (window.EntityManager && typeof window.EntityManager.update === 'function') {
     window.EntityManager.update(dt);
+  }
+
+  // Aktualizace přivolaného mazlíčka a jízdy (PetManager)
+  if (window.PetManager && typeof window.PetManager.update === 'function') {
+    window.PetManager.update(dt, now);
   }
 
   // Aktualizace procedurálních POI struktur a interakcí (Milestone 2 - F4)

@@ -287,6 +287,59 @@ const atlas = (() => {
     return null;
   });
 
+  // --- Architektonické bloky pro voxelové budovy (33–37) ---
+
+  // 33: Opracované kamenné cihly (pro svatyně, věže a zříceniny)
+  tile(33, (x, y) => {
+    const row = (y >> 2);
+    const mortarY = (y % 8 === 0 || y % 8 === 4);
+    const offset = (row % 2 === 0) ? 0 : 4;
+    const mortarX = ((x + offset) % 8 === 0);
+    if (mortarY || mortarX) {
+      return [j(110, 10), j(122, 10), j(138, 10)];
+    }
+    const bevel = (y % 4 === 1 || (x + offset) % 8 === 1) ? 1.07 : 0.96;
+    return [j(168, 14) * bevel, j(182, 14) * bevel, j(202, 14) * bevel];
+  });
+
+  // 34: Dřevěná prkna (pro tábory, podlahy, lešení věží a bedny)
+  tile(34, (x, y) => {
+    const seamY = (y % 4 === 0);
+    const seamX = ((x + (y >> 2) * 5) % 16 === 0);
+    if (seamY || seamX) {
+      return [j(92, 8), j(62, 8), j(34, 6)];
+    }
+    const grain = Math.sin(x * 0.7 + (y >> 2) * 1.9) * 8;
+    return [j(158 + grain, 10), j(112 + grain * 0.7, 8), j(64 + grain * 0.4, 6)];
+  });
+
+  // 35: Zářivý runový krystal (azurový magický blok pro svatyně a lucerny)
+  tile(35, (x, y) => {
+    const cx = Math.abs(x - 7.5), cy = Math.abs(y - 7.5);
+    const facet = cx + cy;
+    if (facet < 3.2) return [224, 252, 255];
+    if (facet < 6.5) return [j(95, 16), j(228, 14), 255];
+    if (x === 0 || x === 15 || y === 0 || y === 15) return [24, 148, 210];
+    return [j(56, 14), j(196, 16), j(248, 10)];
+  });
+
+  // 36: Tmavý oltářní čedič se zlatým/runovým lemováním
+  tile(36, (x, y) => {
+    const border = (x === 1 || x === 14 || y === 1 || y === 14);
+    const rune = (Math.abs(x - 7.5) <= 2.5 && Math.abs(y - 7.5) <= 2.5 && ((x + y) % 2 === 0));
+    if (border || rune) {
+      return [j(245, 12), j(190, 14), j(42, 10)];
+    }
+    return [j(52, 10), j(64, 10), j(82, 12)];
+  });
+
+  // 37: Plátno stanu / Terakotová krytina (pro stany a střechy táborů)
+  tile(37, (x, y) => {
+    const stripe = ((x + y) % 8 === 0);
+    if (stripe) return [j(145, 10), j(62, 8), j(24, 6)];
+    return [j(196, 14), j(92, 12), j(36, 10)];
+  });
+
   const t = new THREE.CanvasTexture(c);
   t.magFilter = t.minFilter = THREE.NearestFilter;
   t.generateMipmaps = false;
@@ -326,5 +379,11 @@ const TILES = {
   29: [29, 29, 29], // Modrá chrpa
   30: [30, 30, 30], // Bílá kopretina
   31: [31, 31, 31], // Fialové allium
-  32: [32, 32, 32]  // Lesní kapradí
+  32: [32, 32, 32], // Lesní kapradí
+  // Architektonické bloky budov:
+  33: [33, 33, 33], // Opracované kamenné cihly
+  34: [34, 34, 34], // Dřevěná prkna
+  35: [35, 35, 35], // Zářivý runový krystal
+  36: [36, 36, 36], // Zlatem zdobený oltářní kámen
+  37: [37, 37, 37]  // Plátno stanu / Terakota
 };

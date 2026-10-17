@@ -43,7 +43,7 @@
   <div id="hud"></div>
   <div id="help">WASD – pohyb · Shift – sprint · 2× Shift – kotrmelec · Mezerník – skok / plavání<br>Myš – kamera ·
     Kolečko – zoom · [ ] –
-    dohled<br>ESC – menu & úprava postavy · I – inventář · M – 3D mapa · V – emoty · T – chat & příkazy · 1–9 – lišta
+    dohled<br>ESC – menu & nastavení ovládání · I – inventář & dovednosti · M – 3D mapa · V – emoty · T – chat · 1–5 / LMB / RMB – akční lišta
   </div>
   <div id="bars">
     <div class="b xp-row" title="Úroveň postavy a zkušenosti (XP)" style="display:flex;align-items:center;gap:6px;">
@@ -173,6 +173,14 @@
               <span class="cat-ico">💎</span>
               <span class="cat-txt">Ostatní</span>
             </button>
+            <button class="inv-cat-btn" data-c="pets">
+              <span class="cat-ico">🐾</span>
+              <span class="cat-txt">Mazlíčci</span>
+            </button>
+            <button class="inv-cat-btn" data-c="skills">
+              <span class="cat-ico">✨</span>
+              <span class="cat-txt">Dovednosti</span>
+            </button>
           </div>
           <div class="inv-search-box">
             <input type="text" id="invSearchInput" placeholder="🔍 Hledat...">
@@ -191,12 +199,13 @@
           </div>
         </div>
 
-        <!-- PRAVÁ ČÁST: 4) Volba (Vybavení / Crafting) + 5) Vybavení nebo Crafting -->
+        <!-- PRAVÁ ČÁST: 4) Volba (Vybavení / Crafting / Dovednosti) + 5) Obsah -->
         <div class="inv-right-col">
-          <!-- 4) Přepínač Vybavení / Crafting -->
+          <!-- 4) Přepínač Vybavení / Crafting / Dovednosti -->
           <div class="inv-sec-4">
             <button id="tabEquipBtn" class="inv-mode-tab active" data-mode="equip">🛡️ Vybavení</button>
             <button id="tabCraftBtn" class="inv-mode-tab" data-mode="craft">⚒️ Crafting</button>
+            <button id="tabSkillsBtn" class="inv-mode-tab" data-mode="skills">✨ Dovednosti</button>
           </div>
 
           <!-- 5) Obsah sekce 5 -->
@@ -299,6 +308,20 @@
                 </div>
               </div>
 
+              <!-- Slot pro ochočeného Mazlíčka (přivolání a jízda klávesou R) -->
+              <div class="inv-pet-strip" style="margin-top:8px;">
+                <div class="gear-slot pet-slot" data-slot="pet" title="Ochočený mazlíček (Přivolání a jízda klávesou [R])" style="width:100%;min-height:46px;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="slot-placeholder" style="font-size:18px;">🐾</span>
+                    <div class="slot-hand-info">
+                      <span class="slot-name-tag">Jezdecký mazlíček</span>
+                      <span class="role-pill" style="background:rgba(34,197,94,0.2);color:#4ade80;border-color:rgba(34,197,94,0.4);">Klávesa [R]</span>
+                    </div>
+                  </div>
+                  <div class="slot-fill" id="slot_pet"></div>
+                </div>
+              </div>
+
               <!-- Souhrn aktuálních bonusů -->
               <div class="inv-bonus-summary">
                 <div class="bonus-header">⚡ SOUHRN BONUSŮ POSTAVY</div>
@@ -327,6 +350,16 @@
               <div class="craft-workbench-body">
                 <div class="craft-recipes-pane" id="craftRecipesList"></div>
                 <div class="craft-info-pane" id="craftDetailPanel"></div>
+              </div>
+            </div>
+
+            <!-- REŽIM C: DOVEDNOSTI (SKILLS) -->
+            <div id="invSkillsContainer" class="inv-skills-container" hidden>
+              <div class="skills-cat-tabs" id="skillsCatTabs">
+                <!-- Dynamicky generováno v JS dle kategorií zbraní -->
+              </div>
+              <div id="skillsCatalogList" class="skills-catalog-list">
+                <!-- Přehled všech odemčených skillů rozdělených podle kategorií zbraní -->
               </div>
             </div>
           </div>
@@ -360,99 +393,60 @@
     </div>
   </div>
 
-  <!-- Modal: Ovládání hry v herním menu -->
+  <!-- Modal: Ovládání hry a Mapování Akční Lišty (Keybinds) -->
   <div id="modalInGameControls" class="overlay" hidden style="z-index:99999999;">
     <div class="panel"
-      style="max-width:540px;width:min(540px, 94vw);padding:24px 28px;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      style="max-width:640px;width:min(640px, 95vw);padding:22px 26px;background:rgba(15,23,42,0.97);border:1px solid rgba(56,189,248,0.28);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,0.85);">
       <div
-        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
+        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);">
         <span
           style="font-family:'Pixelify Sans',sans-serif;font-size:22px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:8px;">🎮
-          Ovládání hry</span>
+          Ovládání hry & Akční lišta</span>
         <button id="closeInGameControls" class="close-btn"
           style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;width:32px;height:32px;">✕</button>
       </div>
-      <div
-        style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;max-height:60vh;overflow-y:auto;padding-right:4px;">
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Pohyb postavy</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">W
-            A S D</strong>
+
+      <div style="max-height:66vh;overflow-y:auto;padding-right:6px;display:flex;flex-direction:column;gap:14px;">
+        <!-- Interaktivní Mapování Akční Lišty (5 slotů, Primary & Secondary bind) -->
+        <div class="keybinds-config-section">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <div style="font-size:13px;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:0.6px;">⚡ Akční lišta – Mapování slotů (1–5)</div>
+              <div style="font-size:11.5px;color:#94a3b8;">Klikni na vazbu a stiskni klávesu nebo tlačítko myši (LMB / RMB / MMB).</div>
+            </div>
+            <button id="resetKeybindsBtn" class="preview-mini-btn" style="padding:5px 10px;font-size:11px;font-weight:700;color:#38bdf8;border-color:rgba(56,189,248,0.35);">🔄 Výchozí vazby</button>
+          </div>
+          <div id="actionBarKeybindsTable" class="keybinds-table">
+            <!-- Dynamicky generováno v JS (Sloty 1–5, Primary & Secondary bind) -->
+          </div>
         </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Sprint / Běh</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Shift</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kotrmelec (Roll)</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">2×
-            Shift</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Skok / Plavání</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Mezerník</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kamera & Pohled</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Myš</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Zoom kamery</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Kolečko</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Útok zbraní / pěstmi</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Levé
-            myšítko</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Krytí štítem / Lektvar</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Pravé
-            myšítko</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Inventář</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">I</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">3D Minimapa</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">M</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Kolo gest (Emotes)</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">V</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Chat & Příkazy</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">T
-            nebo /</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Rychlá lišta (Hotbar)</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">1
-            – 9</strong>
-        </div>
-        <div
-          style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
-          <span style="color:#cbd5e1;">Menu & Pauza</span><strong
-            style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">ESC</strong>
+
+        <!-- Základní ovládání postavy -->
+        <div style="font-size:12px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;">🏃 Pohyb a rozhraní</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12.5px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">Pohyb postavy</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">W A S D</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">Sprint / Kotrmelec</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Shift / 2× Shift</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">Skok / Plavání</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">Mezerník</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">Inventář & Dovednosti</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">I</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">3D Mapa / Emoty</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">M / V</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(2,6,23,0.55);padding:7px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);">
+            <span style="color:#cbd5e1;">Chat / Menu</span><strong style="color:#38bdf8;background:rgba(56,189,248,0.15);padding:2px 8px;border-radius:6px;font-family:monospace;">T / ESC</strong>
+          </div>
         </div>
       </div>
-      <div style="margin-top:16px;text-align:center;">
-        <button onclick="$('modalInGameControls').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary"
+
+      <div style="margin-top:14px;text-align:center;">
+        <button onclick="if(window.KeybindManager) KeybindManager.listeningTarget=null; $('modalInGameControls').hidden = true; $('escMenu').hidden = false;" class="esc-btn primary"
           style="padding:8px 24px;display:inline-block;width:auto;">◀ Zpět do menu pauzy</button>
       </div>
     </div>
@@ -701,6 +695,28 @@
         <div id="mmExplored" class="mm-explored-badge">🗺️ Objeveno: 0</div>
         <div id="mmCoords" class="mm-coords">X: 0 · Y: 0 · Z: 0</div>
       </div>
+
+      <!-- Plovoucí popisek při najetí na znak budovy na mapě -->
+      <div id="mmPoiTooltip" class="mm-poi-tooltip" hidden></div>
+
+      <!-- Potvrzovací dialog pro teleportaci k objevené budově -->
+      <div id="mmTeleportModal" class="mm-tp-modal-backdrop" hidden>
+        <div class="mm-tp-modal-card">
+          <div class="mm-tp-head">
+            <span id="mmTpIcon" class="mm-tp-icon">🏛️</span>
+            <div>
+              <div class="mm-tp-label">Objevená budova</div>
+              <div id="mmTpTitle" class="mm-tp-title">Prastará svatyně</div>
+            </div>
+          </div>
+          <div id="mmTpMeta" class="mm-tp-meta">Souřadnice: X: 0 · Z: 0</div>
+          <div class="mm-tp-question">Chceš se k této budově okamžitě teleportovat?</div>
+          <div class="mm-tp-actions">
+            <button id="mmTpCancelBtn" class="btn-sec">Zrušit</button>
+            <button id="mmTpConfirmBtn" class="btn-main">✨ Ano, teleportovat</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="minimap-footer">
       <div class="mm-controls">
@@ -711,8 +727,7 @@
         <button id="mmZoomIn" title="Přiblížit">+</button>
         <button id="mmZoomOut" title="Oddálit">−</button>
       </div>
-      <div class="mm-hint">Táhni myší pro rotaci · Pravé tlačítko / Shift pro posun · Kolečko myši pro zoom · [M] nebo
-        [ESC] pro zavření</div>
+      <div class="mm-hint">Klikni na znak objevené budovy pro teleportaci · Táhni myší pro rotaci · Pravé tlačítko / Shift pro posun · Kolečko pro zoom</div>
     </div>
   </div>
 
@@ -804,8 +819,9 @@
   <script src="../js/textures.js?v=20"></script>
   <script src="../js/world.js?v=20"></script>
   <script src="../js/voxelBuilder.js?v=20"></script>
-  <script src="../js/items.js?v=20"></script>
-  <script src="../js/character.js?v=20"></script>
+  <script src="../js/items.js?v=21"></script>
+  <script src="../js/skills.js?v=21"></script>
+  <script src="../js/character.js?v=21"></script>
   <script src="../js/entities.js?v=20"></script>
   <script src="../js/inventory.js?v=20"></script>
   <script src="../js/customizer.js?v=20"></script>

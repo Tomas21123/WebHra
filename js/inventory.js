@@ -11,21 +11,24 @@ const EQUIPPED_SLOTS = {
   hand_l: null,
   hand_r: 'sword',
   ring_l: null,
-  ring_r: null
+  ring_r: null,
+  pet: null
 };
 
 const EQ = [];
-const HB = [null];
-const MAXHB = 9;
+const HB = [null, null, null, null, null];
+const MAXHB = 5;
 
 let hbSel = 0;
 let heldId = 'sword';
 let invOpen = false;
 let mainCat = 'all';
 let subCat = 'all';
-let currentMode = 'equip'; // 'equip' | 'craft'
+let currentMode = 'equip'; // 'equip' | 'craft' | 'skills'
 let searchQuery = '';
 let selectedCraftRecipeId = 'craft_shield_wood';
+let activeSkillCatFilter = 'all';
+let activeWeaponSkillSlotPicker = null; // { weaponId, slotIndex }
 
 // Definice podkategorií pro sekci 2
 const SUBCATS = {
@@ -36,16 +39,20 @@ const SUBCATS = {
     { id: 'armor', name: 'Brnění' },
     { id: 'shield', name: 'Štíty' },
     { id: 'ring', name: 'Prsteny' },
+    { id: 'pets', name: '🐾 Mazlíčci' },
+    { id: 'taming', name: '🦴 Ochočení' },
     { id: 'material', name: 'Suroviny' }
   ],
   weapon: [
     { id: 'all', name: 'Vše' },
-    { id: 'sword', name: 'Meče' },
-    { id: 'spear', name: 'Kopí' },
-    { id: 'bow', name: 'Luky' },
-    { id: 'staff', name: 'Čarovné hole' },
-    { id: 'shield', name: 'Štíty' },
-    { id: 'other', name: 'Ostatní' }
+    { id: 'sword', name: '⚔️ Meče' },
+    { id: 'axe', name: '🪓 Sekery' },
+    { id: 'spear', name: '🔱 Kopí' },
+    { id: 'staff', name: '🪄 Čarovné hole' },
+    { id: 'bow', name: '🏹 Luky' },
+    { id: 'dagger', name: '🗡️ Dýky' },
+    { id: 'blunt', name: '🔨 Kladiva a palcáty' },
+    { id: 'shield', name: '🛡️ Štíty' }
   ],
   armor: [
     { id: 'all', name: 'Vše' },
@@ -55,9 +62,27 @@ const SUBCATS = {
   ],
   other: [
     { id: 'all', name: 'Vše' },
+    { id: 'taming', name: '🦴 Ochočení zvířat' },
     { id: 'ring', name: 'Prsteny' },
     { id: 'material', name: 'Suroviny' },
     { id: 'consumable', name: 'Spotřební' }
+  ],
+  pets: [
+    { id: 'all', name: 'Všichni mazlíčci' },
+    { id: 'dog', name: '🐕 Psi' },
+    { id: 'feline', name: '🐈 Kočky' },
+    { id: 'farm', name: '🐄 Hospodářská zvířata' },
+    { id: 'wild', name: '🐿️ Lesní zvířata' }
+  ],
+  skills: [
+    { id: 'all', name: 'Všechny kategorie' },
+    { id: 'sword', name: '⚔️ Meče' },
+    { id: 'axe', name: '🪓 Sekery' },
+    { id: 'spear', name: '🔱 Kopí' },
+    { id: 'staff', name: '🪄 Čarovné hole' },
+    { id: 'bow', name: '🏹 Luky' },
+    { id: 'dagger', name: '🗡️ Dýky' },
+    { id: 'blunt', name: '🔨 Kladiva a palcáty' }
   ]
 };
 
@@ -421,6 +446,7 @@ function equipToSlot(id, slotKey) {
     toast(`Vybaveno: ${it.name}`);
   }
 
+  if (typeof resetAttackState === 'function') resetAttackState();
   syncEQArray();
   updatePlayerAppearance();
   applyHeld();
@@ -523,15 +549,26 @@ function useConsumableItem(it) {
   }
 
   const pObj = (typeof window !== 'undefined' && window.P) ? window.P : (typeof P !== 'undefined' ? P : null);
-  const bonusHp = (typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
-  const levelBonusHp = (pObj && pObj.baseStats && typeof pObj.baseStats.maxHp === 'number') ? (pObj.baseStats.maxHp - 100) : 0;
-  const maxHp = 100 + bonusHp + levelBonusHp;
-  const maxSt = (pObj && pObj.maxStamina) ? pObj.maxStamina : 100;
+  const maxHp = (pObj && typeof pObj.maxHp === 'number') ? pObj.maxHp : 100;
+  const maxSt = (pObj && typeof pObj.maxStamina === 'number') ? pObj.maxStamina : 100;
 
   let consumed = false;
 
-  // 1. Léčení HP (potion_health, potion_hp)
-  if (it.healHp || it.id === 'potion_health' || it.id === 'potion_hp') {
+  // 1. Jablko (HP + plná výdrž)
+  if (it.id === 'apple') {
+    if (typeof G !== 'undefined') {
+      G.hp = Math.min(maxHp, G.hp + 25);
+      G.st = maxSt;
+    }
+    if (pObj) {
+      pObj.hp = Math.min(maxHp, (pObj.hp || 100) + 25);
+      pObj.stamina = maxSt;
+    }
+    if (typeof toast === 'function') toast('🍎 Snědl jsi jablko (+25 HP, plná výdrž)!');
+    consumed = true;
+  }
+  // 2. Léčení HP (potion_health, potion_hp)
+  else if (it.healHp || it.id === 'potion_health' || it.id === 'potion_hp') {
     const healAmt = it.healHp || (it.id === 'potion_health' ? 50 : 40);
     const curHp = (typeof G !== 'undefined' ? G.hp : (pObj ? pObj.hp : 100));
     if (curHp < maxHp) {
@@ -544,7 +581,7 @@ function useConsumableItem(it) {
       return false;
     }
   }
-  // 2. Obnova Staminy (potion_stamina)
+  // 3. Obnova Staminy (potion_stamina)
   else if (it.restoreStamina || it.id === 'potion_stamina') {
     const stAmt = it.restoreStamina || 50;
     const curSt = (typeof G !== 'undefined' ? G.st : (pObj ? pObj.stamina : 100));
@@ -558,29 +595,16 @@ function useConsumableItem(it) {
       return false;
     }
   }
-  // 3. Elixír Síly (+25% poškození na 30s)
+  // 4. Elixír Síly (+25% poškození na 30s)
   else if (it.buffStrength || it.id === 'potion_strength') {
     applyPlayerBuff('strength', 0.25, (it.buffDuration || 30) * 1000);
     if (typeof toast === 'function') toast('⚔️ Vypit elixír síly (+25% poškození na 30s)!');
     consumed = true;
   }
-  // 4. Lektvar Hbitosti (+30% rychlost na 30s)
+  // 5. Lektvar Hbitosti (+30% rychlost na 30s)
   else if (it.buffSpeed || it.id === 'potion_speed') {
     applyPlayerBuff('speed', 0.30, (it.buffDuration || 30) * 1000);
     if (typeof toast === 'function') toast('💨 Vypit lektvar hbitosti (+30% rychlost na 30s)!');
-    consumed = true;
-  }
-  // 5. Jablko
-  else if (it.id === 'apple') {
-    if (typeof G !== 'undefined') {
-      G.hp = Math.min(maxHp, G.hp + 25);
-      G.st = maxSt;
-    }
-    if (pObj) {
-      pObj.hp = Math.min(maxHp, (pObj.hp || 100) + 25);
-      pObj.stamina = maxSt;
-    }
-    if (typeof toast === 'function') toast('🍎 Snědl jsi jablko (+25 HP, plná výdrž)!');
     consumed = true;
   }
 
@@ -863,12 +887,70 @@ window.getPlayerBonusDefense = function() {
   return parseFloat(totalDef.toFixed(2));
 };
 
-// ---------- Lišta (Hotbar) ----------
+// ---------- Akční Lišta (Action Bar – Fixních 5 Slotů) ----------
 function renderHB() {
   const el = $('hb');
   if (!el) return;
   el.innerHTML = '';
-  for (let i = 0; i < HB.length; i++) {
+
+  if (typeof ActionBarManager !== 'undefined' && typeof ActionBarManager.getSlotDefinitions === 'function') {
+    const slotDefs = ActionBarManager.getSlotDefinitions();
+    for (let i = 0; i < 5; i++) {
+      const def = slotDefs[i];
+      const d = document.createElement('div');
+      const isSelected = (i === hbSel);
+      const isSkill = (def.kind === 'skill');
+      const isEmptySkill = (def.kind === 'empty_skill');
+      const cdId = def.actionId || (isSkill && def.skill ? def.skill.id : null);
+      const remCd = (cdId && typeof PlayerSkillsData !== 'undefined')
+        ? PlayerSkillsData.getRemainingCooldown(cdId)
+        : 0;
+
+      d.className = 'hs action-slot'
+        + (isSelected ? ' sel' : '')
+        + ` slot-kind-${def.kind}`
+        + (remCd > 0 ? ' on-cooldown' : '');
+      d.dataset.slotIndex = String(i);
+      d.title = `${def.title} [${def.bindLabel}]\n${def.desc || ''}`;
+
+      const bindHtml = `<u class="ab-bind-tag">${def.bindLabel}</u>`;
+      const iconHtml = def.icon
+        ? `<img src="${def.icon}" alt="${def.title}">`
+        : `<span class="ab-empty-plus" title="Přiřadit dovednost v inventáři">+</span>`;
+      const nameHtml = `<span class="ab-slot-name">${def.title}</span>`;
+      const stHtml = (isSkill && def.skill && def.skill.staminaCost)
+        ? `<span class="ab-st-badge">${def.skill.staminaCost} ST</span>`
+        : '';
+      const cdHtml = `<div class="ab-cd-overlay" ${remCd > 0 ? '' : 'hidden'}><span class="ab-cd-text">${remCd > 0 ? remCd.toFixed(1) + 's' : ''}</span></div>`;
+
+      d.innerHTML = `${bindHtml}${iconHtml}${stHtml}${nameHtml}${cdHtml}`;
+
+      d.onclick = (e) => {
+        e.stopPropagation();
+        if (isEmptySkill) {
+          const domWeapon = ActionBarManager.getDominantWeapon();
+          if (domWeapon) {
+            if (!invOpen) toggleInv();
+            mainCat = 'weapon';
+            subCat = 'all';
+            expandedItemId = domWeapon.id;
+            activeWeaponSkillSlotPicker = { weaponId: domWeapon.id, slotIndex: def.weaponSkillIndex };
+            renderInv();
+          } else {
+            ActionBarManager.triggerSlot(i);
+          }
+        } else {
+          ActionBarManager.triggerSlot(i);
+        }
+      };
+
+      el.appendChild(d);
+    }
+    return;
+  }
+
+  // Fallback pokud není načten ActionBarManager
+  for (let i = 0; i < 5; i++) {
     const d = document.createElement('div');
     d.className = 'hs' + (i === hbSel ? ' sel' : '');
     const it = INV.find(x => x.id === HB[i]);
@@ -878,12 +960,41 @@ function renderHB() {
   }
 }
 
+function updateActionBarCooldowns() {
+  const el = $('hb');
+  if (!el || typeof ActionBarManager === 'undefined' || typeof PlayerSkillsData === 'undefined') return;
+  const defs = ActionBarManager.getSlotDefinitions();
+  const children = el.children;
+  for (let i = 0; i < defs.length && i < children.length; i++) {
+    const def = defs[i];
+    const slotEl = children[i];
+    if (!slotEl || !slotEl.querySelector) continue;
+    const cdOverlay = slotEl.querySelector('.ab-cd-overlay');
+    const cdText = slotEl.querySelector('.ab-cd-text');
+    const cdId = def.actionId || (def.kind === 'skill' && def.skill ? def.skill.id : null);
+    if (cdId) {
+      const rem = PlayerSkillsData.getRemainingCooldown(cdId);
+      if (rem > 0) {
+        slotEl.classList.add('on-cooldown');
+        if (cdOverlay) cdOverlay.hidden = false;
+        if (cdText) cdText.textContent = rem.toFixed(1) + 's';
+      } else {
+        slotEl.classList.remove('on-cooldown');
+        if (cdOverlay) cdOverlay.hidden = true;
+      }
+    } else if (cdOverlay) {
+      cdOverlay.hidden = true;
+    }
+  }
+}
+window.updateActionBarCooldowns = updateActionBarCooldowns;
+
 function selSlot(i) {
-  if (i < 0 || i >= HB.length) return;
-  if (hbSel === i && heldId) {
+  if (i < 0 || i >= Math.max(HB.length, MAXHB)) return;
+  if (hbSel === i && (heldId || HB[i])) {
     hbSel = -1; heldId = null;
   } else {
-    hbSel = i; heldId = HB[i] || null;
+    hbSel = i; heldId = HB[i] || getEquippedMainHandId() || null;
   }
   applyHeld();
   renderHB();
@@ -945,8 +1056,12 @@ function equip(id) {
   } else if (it.subcat === 'cape') {
     EQUIPPED_SLOTS.cloth_head = id;
     toast('Obléknut plášť: ' + it.name);
+  } else if (it.cat === 'pets' || it.slot === 'pet') {
+    EQUIPPED_SLOTS.pet = id;
+    toast(`🐾 Mazlíček připraven ve slotu: ${it.name} (Stiskni [R] pro přivolání a jízdu)`);
   }
 
+  if (typeof resetAttackState === 'function') resetAttackState();
   syncEQArray();
   updatePlayerAppearance();
   applyHeld();
@@ -966,12 +1081,17 @@ function unequipSlot(slotKey) {
   const it = INV.find(x => x.id === id);
   EQUIPPED_SLOTS[slotKey] = null;
 
+  if (slotKey === 'pet' && typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.despawnPet === 'function') {
+    window.PetManager.despawnPet(true);
+  }
+
   if (it && it.cat === 'weapon') {
     const i = HB.indexOf(id);
     if (i >= 0) HB[i] = null;
     if (heldId === id) { heldId = null; hbSel = -1; }
   }
 
+  if (typeof resetAttackState === 'function') resetAttackState();
   syncEQArray();
   updatePlayerAppearance();
   applyHeld();
@@ -1056,19 +1176,24 @@ function renderGridItemsUI() {
 
   const q = (searchQuery || '').trim().toLowerCase();
 
+  if (mainCat === 'skills') {
+    renderSkillsGridInMiddleCol(g, q);
+    return;
+  }
+
   const filtered = INV.filter(it => {
+    // Mazlíčci, kteří ještě nebyli ochočeni (count <= 0), se nezobrazují
+    if (it.cat === 'pets' && (it.count || 0) <= 0) return false;
+
     // 1. Filtr kategorie
     if (mainCat === 'weapon' && it.cat !== 'weapon') return false;
     if (mainCat === 'armor' && it.cat !== 'armor') return false;
     if (mainCat === 'other' && it.cat !== 'loot') return false;
+    if (mainCat === 'pets' && it.cat !== 'pets') return false;
 
     // 2. Filtr podkategorie
     if (subCat !== 'all') {
-      if (mainCat === 'weapon') {
-        if (it.subcat !== subCat) return false;
-      } else if (mainCat === 'armor') {
-        if (it.subcat !== subCat) return false;
-      } else if (mainCat === 'other') {
+      if (mainCat === 'weapon' || mainCat === 'armor' || mainCat === 'other' || mainCat === 'pets') {
         if (it.subcat !== subCat) return false;
       } else {
         // pro 'all'
@@ -1093,7 +1218,11 @@ function renderGridItemsUI() {
   });
 
   if (!filtered.length) {
-    g.innerHTML = '<div class="inv-empty-state"><span style="font-size:32px;">📦</span><p>Žádné předměty nenalezeny.</p></div>';
+    if (mainCat === 'pets' || subCat === 'pets') {
+      g.innerHTML = `<div class="inv-empty-state"><span style="font-size:32px;">🐾</span><p>Zatím nemáš žádného ochočeného mazlíčka.<br><small style="color:#94a3b8;display:block;margin-top:6px;">Najdi zvíře v přírodě (nebo napiš např. <code>/spawn pes</code>, <code>/spawn kocka</code>, <code>/spawn krava</code>, <code>/spawn ovce</code>, <code>/spawn kozel</code>, <code>/spawn veverka</code>) a stiskni u něj <b>[E]</b> s jeho oblíbenou potravou!</small></p></div>`;
+    } else {
+      g.innerHTML = '<div class="inv-empty-state"><span style="font-size:32px;">📦</span><p>Žádné předměty nenalezeny.</p></div>';
+    }
     return;
   }
 
@@ -1167,7 +1296,7 @@ function updateEquipmentUI() {
   // Procházení všech slotů
   for (const slotKey in EQUIPPED_SLOTS) {
     const el = $('slot_' + slotKey);
-    const parentSlot = el ? el.closest('.gear-slot') : null;
+    const parentSlot = (el && typeof el.closest === 'function') ? el.closest('.gear-slot') : null;
     if (!el || !parentSlot) continue;
 
     const itemId = EQUIPPED_SLOTS[slotKey];
@@ -1241,6 +1370,9 @@ function handleEmptySlotClick(slotKey) {
   } else if (slotKey.startsWith('ring_')) {
     mainCat = 'other';
     subCat = 'ring';
+  } else if (slotKey === 'pet') {
+    mainCat = 'pets';
+    subCat = 'all';
   }
   renderInv();
 }
@@ -1613,6 +1745,8 @@ function createItemDrawer(it) {
   let typeName = 'Předmět';
   if (it.subcat === 'shield') typeName = '🛡️ Obranný štít';
   else if (it.cat === 'weapon') typeName = '⚔️ Zbraň';
+  else if (it.cat === 'pets') typeName = '🐾 Ochočený mazlíček';
+  else if (it.subcat === 'taming') typeName = '🦴 Pamlsek pro ochočení';
   else if (it.subcat === 'ring') typeName = '💍 Magický prsten';
   else if (it.subcat === 'armor') typeName = '🪖 Plátová zbroj';
   else if (it.subcat === 'cloth') typeName = '👕 Lehký oděv';
@@ -1675,7 +1809,7 @@ function createItemDrawer(it) {
       <span class="btn-hand-icon">✋</span>
       <span class="btn-hand-text">
         ${inLeft ? '✕ Sundat z levé' : 'Nasadit do levé'}
-        <small class="btn-hand-role">${isLeftDom ? 'Dominantní · LMB' : 'Sekundární · RMB'}</small>
+        <small class="btn-hand-role">${isLeftDom ? 'Dominantní · Akční lišta' : 'Vedlejší ruka (Off-hand)'}</small>
       </span>
     `;
     leftBtn.onclick = (e) => {
@@ -1691,7 +1825,7 @@ function createItemDrawer(it) {
       <span class="btn-hand-icon">🗡️</span>
       <span class="btn-hand-text">
         ${inRight ? '✕ Sundat z pravé' : 'Nasadit do pravé'}
-        <small class="btn-hand-role">${!isLeftDom ? 'Dominantní · LMB' : 'Sekundární · RMB'}</small>
+        <small class="btn-hand-role">${!isLeftDom ? 'Dominantní · Akční lišta' : 'Vedlejší ruka (Off-hand)'}</small>
       </span>
     `;
     rightBtn.onclick = (e) => {
@@ -1746,6 +1880,65 @@ function createItemDrawer(it) {
     btnRow.appendChild(rightRingBtn);
     actionsContainer.appendChild(btnRow);
 
+  } else if (it.cat === 'pets' || it.slot === 'pet') {
+    const isEquippedPet = (EQUIPPED_SLOTS.pet === it.id);
+    const btnRow = document.createElement('div');
+    btnRow.className = 'drawer-actions-row';
+
+    const eqPetBtn = document.createElement('button');
+    eqPetBtn.className = 'drawer-btn hand-btn' + (isEquippedPet ? ' equipped-active' : '');
+    eqPetBtn.innerHTML = `
+      <span class="btn-hand-icon">🐾</span>
+      <span class="btn-hand-text">
+        ${isEquippedPet ? '✕ Sundat ze slotu' : 'Dát do slotu mazlíčka'}
+        <small class="btn-hand-role">Přivolání klávesou [R]</small>
+      </span>
+    `;
+    eqPetBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (isEquippedPet) unequipSlot('pet');
+      else equipToSlot(it.id, 'pet');
+    };
+
+    const summonBtn = document.createElement('button');
+    summonBtn.className = 'drawer-btn hand-btn';
+    summonBtn.innerHTML = `
+      <span class="btn-hand-icon">🏇</span>
+      <span class="btn-hand-text">
+        Přivolat a jezdit [R]
+        <small class="btn-hand-role">Spawne mazlíčka vedle tebe</small>
+      </span>
+    `;
+    summonBtn.onclick = (e) => {
+      e.stopPropagation();
+      equipToSlot(it.id, 'pet');
+      if (invOpen) toggleInv();
+      if (typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.summonPet === 'function') {
+        window.PetManager.summonPet(it.id);
+        window.PetManager.mountPet();
+      }
+    };
+
+    btnRow.appendChild(eqPetBtn);
+    btnRow.appendChild(summonBtn);
+    actionsContainer.appendChild(btnRow);
+
+  } else if (it.subcat === 'taming') {
+    const tameBtn = document.createElement('button');
+    tameBtn.className = 'drawer-btn primary';
+    tameBtn.innerHTML = '🐾 Ochočit zvíře poblíž [E]';
+    tameBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof window !== 'undefined' && window.EntityManager && typeof window.EntityManager.tryTameClosest === 'function') {
+        const pObj = window.P || (typeof P !== 'undefined' ? P : { x: 0, y: 50, z: 0 });
+        const ok = window.EntityManager.tryTameClosest(pObj.x, pObj.y, pObj.z, 5.5, it.id);
+        if (!ok && typeof toast === 'function') {
+          toast(`🐾 V blízkosti není žádné zvíře pro: ${it.name} (${it.tamesTarget || 'zvíře'})!`);
+        }
+      }
+    };
+    actionsContainer.appendChild(tameBtn);
+
   } else if (it.cat === 'armor' || it.subcat === 'cloth' || it.subcat === 'cape') {
     const isEquipped = EQ.includes(it.id);
     const eqBtn = document.createElement('button');
@@ -1780,6 +1973,12 @@ function createItemDrawer(it) {
   }
 
   drawer.appendChild(actionsContainer);
+
+  // ---------- 3 Sloty na Dovednosti Zbraně (Weapon Skill Slots -> Akční lišta 3–5) ----------
+  if (it.cat === 'weapon' && it.subcat !== 'shield' && typeof PlayerSkillsData !== 'undefined') {
+    const skillBox = createWeaponSkillSlotsBox(it);
+    drawer.appendChild(skillBox);
+  }
 
   // Modul pro vylepšování zbraní a brnění (+0 až +5)
   if (it.cat === 'weapon' || it.cat === 'armor' || it.subcat === 'shield') {
@@ -1829,29 +2028,458 @@ function createItemDrawer(it) {
   return drawer;
 }
 
+// ---------- Vykreslení 3 Slotů Dovedností na Zbrani a Výběru Dovedností ----------
+function createWeaponSkillSlotsBox(weaponItem) {
+  const wrap = document.createElement('div');
+  wrap.className = 'weapon-skills-box';
+
+  const subMeta = (typeof WEAPON_SUBCAT_META !== 'undefined' && WEAPON_SUBCAT_META[weaponItem.subcat])
+    ? WEAPON_SUBCAT_META[weaponItem.subcat]
+    : { name: weaponItem.subcat || 'Zbraň', icon: '⚔️', color: '#38bdf8' };
+
+  const slots = PlayerSkillsData.getWeaponSkillSlots(weaponItem.id);
+  const isPickerOpenForThisWeapon = activeWeaponSkillSlotPicker && activeWeaponSkillSlotPicker.weaponId === weaponItem.id;
+  const activeSlotIdx = isPickerOpenForThisWeapon ? activeWeaponSkillSlotPicker.slotIndex : -1;
+
+  const header = document.createElement('div');
+  header.className = 'wsb-header';
+  header.innerHTML = `
+    <span class="wsb-title">✨ Dovednosti zbraně (Sloty 3–5 na akční liště)</span>
+    <span class="wsb-cat-pill" style="color:${subMeta.color};border-color:${subMeta.color}44;">${subMeta.icon} ${subMeta.name}</span>
+  `;
+  wrap.appendChild(header);
+
+  const slotsRow = document.createElement('div');
+  slotsRow.className = 'wsb-slots-row';
+
+  for (let idx = 0; idx < 3; idx++) {
+    const skillId = slots[idx];
+    const skill = skillId ? PlayerSkillsData.getSkillById(skillId) : null;
+    const isSlotEditing = (activeSlotIdx === idx);
+    const abSlotNum = idx + 3; // Sloty 3, 4, 5 na akční liště
+    const bindBadge = (typeof KeybindManager !== 'undefined')
+      ? KeybindManager.formatSlotBindsBadge(idx + 2)
+      : String(abSlotNum);
+
+    const slotBtn = document.createElement('div');
+    slotBtn.className = 'wsb-slot-card'
+      + (skill ? ' filled' : ' empty')
+      + (isSlotEditing ? ' active-editing' : '');
+    slotBtn.dataset.skillSlot = String(idx);
+
+    if (skill) {
+      slotBtn.innerHTML = `
+        <div class="wsb-slot-top">
+          <span class="wsb-slot-badge">Lišta #${abSlotNum} [${bindBadge}]</span>
+        </div>
+        <img src="${skill.icon}" alt="${skill.name}" class="wsb-slot-ico">
+        <div class="wsb-slot-name">${skill.name}</div>
+        <div class="wsb-slot-meta">⚡${skill.staminaCost} · ⏱️${skill.cooldown}s</div>
+      `;
+    } else {
+      slotBtn.innerHTML = `
+        <div class="wsb-slot-top">
+          <span class="wsb-slot-badge">Lišta #${abSlotNum} [${bindBadge}]</span>
+        </div>
+        <div class="wsb-slot-plus">+</div>
+        <div class="wsb-slot-name">Prázdný slot ${idx + 1}</div>
+        <div class="wsb-slot-meta">Klikni pro výběr</div>
+      `;
+    }
+
+    slotBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (isPickerOpenForThisWeapon && activeSlotIdx === idx) {
+        activeWeaponSkillSlotPicker = null;
+      } else {
+        activeWeaponSkillSlotPicker = { weaponId: weaponItem.id, slotIndex: idx };
+      }
+      renderGridItemsUI();
+    };
+
+    slotsRow.appendChild(slotBtn);
+  }
+
+  wrap.appendChild(slotsRow);
+
+  // Pokud uživatel klikl na některý ze 3 slotů, zobrazíme filtrovaný výběr dovedností dané podkategorie zbraně
+  if (isPickerOpenForThisWeapon && activeSlotIdx >= 0 && activeSlotIdx <= 2) {
+    const picker = document.createElement('div');
+    picker.className = 'wsb-picker-panel';
+
+    const availableSkills = PlayerSkillsData.getUnlockedSkillsForSubcat(weaponItem.subcat);
+    const currentSkillId = slots[activeSlotIdx];
+
+    const pickerHead = document.createElement('div');
+    pickerHead.className = 'wsb-picker-head';
+    pickerHead.innerHTML = `
+      <span>${subMeta.icon} Výběr dovednosti (${subMeta.name}) → <b>Slot ${activeSlotIdx + 1} (Akční lišta #${activeSlotIdx + 3})</b></span>
+      <button class="wsb-picker-close" title="Zavřít výběr">✕</button>
+    `;
+    pickerHead.querySelector('.wsb-picker-close').onclick = (e) => {
+      e.stopPropagation();
+      activeWeaponSkillSlotPicker = null;
+      renderGridItemsUI();
+    };
+    picker.appendChild(pickerHead);
+
+    const listEl = document.createElement('div');
+    listEl.className = 'wsb-picker-list';
+
+    if (currentSkillId) {
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'wsb-clear-slot-btn';
+      clearBtn.innerHTML = '✕ Odebrat dovednost z tohoto slotu';
+      clearBtn.onclick = (e) => {
+        e.stopPropagation();
+        PlayerSkillsData.setWeaponSkillSlot(weaponItem.id, activeSlotIdx, null);
+        activeWeaponSkillSlotPicker = null;
+        if (typeof toast === 'function') toast(`Dovednost odebrána ze slotu ${activeSlotIdx + 1}.`);
+        renderGridItemsUI();
+        if (currentMode === 'skills') renderSkillsCatalogUI();
+      };
+      listEl.appendChild(clearBtn);
+    }
+
+    availableSkills.forEach(sk => {
+      const isEquippedHere = (currentSkillId === sk.id);
+      const otherSlotIdx = slots.findIndex((id, i) => id === sk.id && i !== activeSlotIdx);
+      const itemRow = document.createElement('div');
+      itemRow.className = 'wsb-picker-item' + (isEquippedHere ? ' selected' : '');
+      itemRow.innerHTML = `
+        <img src="${sk.icon}" alt="${sk.name}" class="wsb-picker-ico">
+        <div class="wsb-picker-info">
+          <div class="wsb-picker-name">
+            ${sk.name}
+            ${isEquippedHere ? '<span class="wsb-tag-eq">✓ V tomto slotu</span>' : ''}
+            ${otherSlotIdx >= 0 ? `<span class="wsb-tag-other">Ve slotu ${otherSlotIdx + 1}</span>` : ''}
+          </div>
+          <div class="wsb-picker-desc">${sk.desc}</div>
+          <div class="wsb-picker-stats">⚡ Výdrž: ${sk.staminaCost} ST · ⏱️ Cooldown: ${sk.cooldown}s</div>
+        </div>
+      `;
+      itemRow.onclick = (e) => {
+        e.stopPropagation();
+        PlayerSkillsData.setWeaponSkillSlot(weaponItem.id, activeSlotIdx, sk.id);
+        activeWeaponSkillSlotPicker = null;
+        if (typeof toast === 'function') {
+          toast(`✨ Dovednost „${sk.name}“ navázána na ${weaponItem.name} (Akční lišta #${activeSlotIdx + 3})`);
+        }
+        renderGridItemsUI();
+        if (currentMode === 'skills') renderSkillsCatalogUI();
+      };
+      listEl.appendChild(itemRow);
+    });
+
+    picker.appendChild(listEl);
+    wrap.appendChild(picker);
+  }
+
+  return wrap;
+}
+
+// ---------- Vykreslení Dovedností ve Středním Sloupci (při volbě kategorie Dovednosti vlevo) ----------
+function renderSkillsGridInMiddleCol(container, query) {
+  if (typeof PlayerSkillsData === 'undefined') return;
+  const grouped = PlayerSkillsData.getAllUnlockedSkillsGrouped();
+  const domWeapon = (typeof ActionBarManager !== 'undefined') ? ActionBarManager.getDominantWeapon() : null;
+  const domSlots = domWeapon ? PlayerSkillsData.getWeaponSkillSlots(domWeapon.id) : [null, null, null];
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'middle-skills-overview';
+
+  let totalFound = 0;
+  for (const subKey in grouped) {
+    if (subCat !== 'all' && subCat !== subKey) continue;
+    const meta = (typeof WEAPON_SUBCAT_META !== 'undefined' && WEAPON_SUBCAT_META[subKey])
+      ? WEAPON_SUBCAT_META[subKey]
+      : { name: subKey, icon: '⚔️', color: '#38bdf8' };
+
+    const skills = grouped[subKey].filter(sk => {
+      if (!query) return true;
+      return sk.name.toLowerCase().includes(query) || (sk.desc || '').toLowerCase().includes(query);
+    });
+
+    if (!skills.length) continue;
+    totalFound += skills.length;
+
+    const sec = document.createElement('div');
+    sec.className = 'skills-cat-group';
+    sec.innerHTML = `
+      <div class="skills-cat-group-header" style="border-left-color:${meta.color};">
+        <span>${meta.icon} ${meta.name}</span>
+        <span class="skills-count-pill">${skills.length} odemčeno</span>
+      </div>
+    `;
+
+    const list = document.createElement('div');
+    list.className = 'skills-cards-grid';
+
+    skills.forEach(sk => {
+      const card = createSkillCatalogCard(sk, meta, domWeapon, domSlots);
+      list.appendChild(card);
+    });
+
+    sec.appendChild(list);
+    wrapper.appendChild(sec);
+  }
+
+  if (totalFound === 0) {
+    container.innerHTML = '<div class="inv-empty-state"><span style="font-size:32px;">✨</span><p>Žádné dovednosti neodpovídají filtru.</p></div>';
+    return;
+  }
+
+  container.appendChild(wrapper);
+}
+
+// ---------- Sekce 5 (Režim C): Přehled Všech Odemčených Dovedností podle Kategorií Zbraní ----------
+function renderSkillsCatalogUI() {
+  const tabsEl = $('skillsCatTabs');
+  const listEl = $('skillsCatalogList');
+  if (!tabsEl || !listEl || typeof PlayerSkillsData === 'undefined') return;
+
+  tabsEl.innerHTML = '';
+  listEl.innerHTML = '';
+
+  const filterOptions = [
+    { id: 'all', name: 'Všechny zbraně' },
+    ...Object.values(typeof WEAPON_SUBCAT_META !== 'undefined' ? WEAPON_SUBCAT_META : {}).map(m => ({
+      id: m.id,
+      name: `${m.icon} ${m.name}`
+    }))
+  ];
+
+  filterOptions.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'craft-tab-btn' + (activeSkillCatFilter === opt.id ? ' active' : '');
+    b.textContent = opt.name;
+    b.onclick = () => {
+      activeSkillCatFilter = opt.id;
+      renderSkillsCatalogUI();
+    };
+    tabsEl.appendChild(b);
+  });
+
+  const grouped = PlayerSkillsData.getAllUnlockedSkillsGrouped();
+  const domWeapon = (typeof ActionBarManager !== 'undefined') ? ActionBarManager.getDominantWeapon() : null;
+  const domSlots = domWeapon ? PlayerSkillsData.getWeaponSkillSlots(domWeapon.id) : [null, null, null];
+
+  for (const subKey in grouped) {
+    if (activeSkillCatFilter !== 'all' && activeSkillCatFilter !== subKey) continue;
+    const skills = grouped[subKey];
+    if (!skills || !skills.length) continue;
+
+    const meta = (typeof WEAPON_SUBCAT_META !== 'undefined' && WEAPON_SUBCAT_META[subKey])
+      ? WEAPON_SUBCAT_META[subKey]
+      : { name: subKey, icon: '⚔️', color: '#38bdf8' };
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'skills-cat-group';
+    groupEl.innerHTML = `
+      <div class="skills-cat-group-header" style="border-left-color:${meta.color};">
+        <span>${meta.icon} ${meta.name}</span>
+        <span class="skills-count-pill">${skills.length} dovedností</span>
+      </div>
+    `;
+
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'skills-cards-grid';
+
+    skills.forEach(sk => {
+      cardsWrap.appendChild(createSkillCatalogCard(sk, meta, domWeapon, domSlots));
+    });
+
+    groupEl.appendChild(cardsWrap);
+    listEl.appendChild(groupEl);
+  }
+}
+window.renderSkillsCatalogUI = renderSkillsCatalogUI;
+
+function createSkillCatalogCard(sk, meta, domWeapon, domSlots) {
+  const card = document.createElement('div');
+  const canAssignToDom = domWeapon && domWeapon.subcat === sk.weaponSubcat;
+  const equippedIdx = canAssignToDom ? domSlots.indexOf(sk.id) : -1;
+
+  card.className = 'skill-catalog-card' + (equippedIdx >= 0 ? ' equipped-on-weapon' : '');
+
+  let assignButtonsHtml = '';
+  if (canAssignToDom) {
+    assignButtonsHtml = `
+      <div class="sk-card-assign-row">
+        <span class="sk-assign-label">Nasadit na ${domWeapon.name}:</span>
+        <div class="sk-assign-btns">
+          ${[0, 1, 2].map(idx => `
+            <button class="sk-slot-assign-btn ${equippedIdx === idx ? 'active' : ''}" data-slot="${idx}" title="Přiřadit do slotu ${idx + 1} (Akční lišta #${idx + 3})">
+              Slot ${idx + 1} (#${idx + 3})
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  card.innerHTML = `
+    <div class="sk-card-top">
+      <img src="${sk.icon}" alt="${sk.name}" class="sk-card-ico">
+      <div class="sk-card-head-info">
+        <div class="sk-card-title-row">
+          <span class="sk-card-name">${sk.name}</span>
+          <span class="sk-card-cat-badge" style="color:${meta.color};border-color:${meta.color}55;">${meta.icon} ${meta.name}</span>
+        </div>
+        <div class="sk-card-metrics">
+          <span>⚡ ${sk.staminaCost} ST</span>
+          <span>⏱️ ${sk.cooldown}s CD</span>
+          ${sk.damageMult ? `<span>⚔️ ${Math.round(sk.damageMult * 100)}% DMG</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="sk-card-desc">${sk.desc}</div>
+    ${assignButtonsHtml}
+  `;
+
+  if (canAssignToDom) {
+    card.querySelectorAll('.sk-slot-assign-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const sIdx = parseInt(btn.dataset.slot, 10);
+        if (equippedIdx === sIdx) {
+          PlayerSkillsData.setWeaponSkillSlot(domWeapon.id, sIdx, null);
+          if (typeof toast === 'function') toast(`Dovednost ${sk.name} odebrána ze slotu ${sIdx + 1}.`);
+        } else {
+          PlayerSkillsData.setWeaponSkillSlot(domWeapon.id, sIdx, sk.id);
+          if (typeof toast === 'function') toast(`✨ ${sk.name} přiřazena do slotu ${sIdx + 1} (Akční lišta #${sIdx + 3})!`);
+        }
+        renderSkillsCatalogUI();
+        renderGridItemsUI();
+      };
+    });
+  }
+
+  return card;
+}
+
+// ---------- Interaktivní Konfigurace Keybindů pro 5 Slotů Akční Lišty ----------
+function renderKeybindsConfigUI() {
+  const tableEl = $('actionBarKeybindsTable');
+  if (!tableEl || typeof KeybindManager === 'undefined') return;
+  tableEl.innerHTML = '';
+
+  const slotDefs = (typeof ActionBarManager !== 'undefined')
+    ? ActionBarManager.getSlotDefinitions()
+    : [];
+
+  const roleLabels = [
+    'Slot 1 – Rychlý útok (LMB)',
+    'Slot 2 – Těžký útok s pohybem (RMB)',
+    'Slot 3 – Dovednost zbraně 1',
+    'Slot 4 – Dovednost zbraně 2',
+    'Slot 5 – Dovednost zbraně 3'
+  ];
+
+  for (let i = 0; i < 5; i++) {
+    const binds = KeybindManager.getSlotBinds(i);
+    const def = slotDefs[i];
+    const isListeningPrim = KeybindManager.listeningTarget
+      && KeybindManager.listeningTarget.slotIndex === i
+      && KeybindManager.listeningTarget.bindType === 'primary';
+    const isListeningSec = KeybindManager.listeningTarget
+      && KeybindManager.listeningTarget.slotIndex === i
+      && KeybindManager.listeningTarget.bindType === 'secondary';
+
+    const row = document.createElement('div');
+    row.className = 'keybind-slot-row';
+    row.innerHTML = `
+      <div class="kb-slot-info">
+        <span class="kb-slot-num">#${i + 1}</span>
+        <div>
+          <div class="kb-slot-title">${roleLabels[i]}</div>
+          <div class="kb-slot-sub">${def ? def.title : ''}</div>
+        </div>
+      </div>
+      <div class="kb-binds-pair">
+        <div class="kb-bind-group">
+          <span class="kb-bind-lbl">Primární:</span>
+          <button class="kb-bind-btn ${isListeningPrim ? 'listening' : ''}" data-slot="${i}" data-type="primary">
+            ${isListeningPrim ? 'Stiskni klávesu / myš…' : KeybindManager.formatBindCode(binds.primary)}
+          </button>
+          ${binds.primary ? `<button class="kb-clear-btn" data-slot="${i}" data-type="primary" title="Zrušit primární vazbu">✕</button>` : ''}
+        </div>
+        <div class="kb-bind-group">
+          <span class="kb-bind-lbl">Sekundární:</span>
+          <button class="kb-bind-btn ${isListeningSec ? 'listening' : ''}" data-slot="${i}" data-type="secondary">
+            ${isListeningSec ? 'Stiskni klávesu / myš…' : KeybindManager.formatBindCode(binds.secondary)}
+          </button>
+          ${binds.secondary ? `<button class="kb-clear-btn" data-slot="${i}" data-type="secondary" title="Zrušit sekundární vazbu">✕</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    row.querySelectorAll('.kb-bind-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const sIdx = parseInt(btn.dataset.slot, 10);
+        const bType = btn.dataset.type;
+        KeybindManager.listeningTarget = { slotIndex: sIdx, bindType: bType };
+        renderKeybindsConfigUI();
+      };
+      // Podpora namapování tlačítka myši (LMB / RMB / MMB) přímo v režimu naslouchání
+      btn.onmousedown = (e) => {
+        if (KeybindManager.listeningTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          const { slotIndex, bindType } = KeybindManager.listeningTarget;
+          KeybindManager.listeningTarget = null;
+          KeybindManager.setBind(slotIndex, bindType, 'Mouse' + e.button);
+        }
+      };
+      btn.oncontextmenu = (e) => e.preventDefault();
+    });
+
+    row.querySelectorAll('.kb-clear-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const sIdx = parseInt(btn.dataset.slot, 10);
+        const bType = btn.dataset.type;
+        KeybindManager.listeningTarget = null;
+        KeybindManager.setBind(sIdx, bType, null);
+      };
+    });
+
+    tableEl.appendChild(row);
+  }
+}
+window.renderKeybindsConfigUI = renderKeybindsConfigUI;
+
 function openPop(it) {
   expandedItemId = it.id;
   renderGridItemsUI();
 }
 
-// ---------- Přepínání Režimů (Sekce 4) ----------
+// ---------- Přepínání Režimů (Sekce 4: Vybavení / Crafting / Dovednosti) ----------
 function switchMode(mode) {
   currentMode = mode;
   const tabEquip = $('tabEquipBtn');
   const tabCraft = $('tabCraftBtn');
+  const tabSkills = $('tabSkillsBtn');
   const viewEquip = $('invEquipContainer');
   const viewCraft = $('invCraftContainer');
+  const viewSkills = $('invSkillsContainer');
 
   if (tabEquip) tabEquip.classList.toggle('active', mode === 'equip');
   if (tabCraft) tabCraft.classList.toggle('active', mode === 'craft');
+  if (tabSkills) tabSkills.classList.toggle('active', mode === 'skills');
+
   if (viewEquip) viewEquip.hidden = (mode !== 'equip');
   if (viewCraft) viewCraft.hidden = (mode !== 'craft');
+  if (viewSkills) viewSkills.hidden = (mode !== 'skills');
 
   if (mode === 'equip') {
     updateEquipmentUI();
     updateInventoryPreview();
-  } else {
+  } else if (mode === 'craft') {
     renderCraftingUI();
+  } else if (mode === 'skills') {
+    renderSkillsCatalogUI();
   }
 }
 
@@ -1860,6 +2488,7 @@ function toggleInv() {
   invOpen = !invOpen;
   $('inv').hidden = !invOpen;
   expandedItemId = null;
+  activeWeaponSkillSlotPicker = null;
 
   if (invOpen) {
     if (typeof escOpen !== 'undefined' && escOpen && typeof closeEscMenu === 'function') closeEscMenu();
@@ -1870,6 +2499,7 @@ function toggleInv() {
     syncEQArray();
     renderInv();
     updateEquipmentUI();
+    if (currentMode === 'skills') renderSkillsCatalogUI();
     initInventory3D();
     updateInventoryPreview();
     startInvCharLoop();
@@ -1878,7 +2508,21 @@ function toggleInv() {
 
 function invKey(e) {
   if (e.code === 'KeyI') { toggleInv(); return true; }
-  if (e.code.startsWith('Digit')) { selSlot(+e.code.slice(5) - 1); return true; }
+  if (!invOpen && !(typeof escOpen !== 'undefined' && escOpen) && !(typeof charOpen !== 'undefined' && charOpen)) {
+    if (typeof KeybindManager !== 'undefined' && typeof ActionBarManager !== 'undefined') {
+      const slotIdx = KeybindManager.findSlotByInput(e.code);
+      if (slotIdx >= 0) {
+        if (!e.repeat) ActionBarManager.triggerSlot(slotIdx);
+        return true;
+      }
+    } else if (e.code.startsWith('Digit')) {
+      const idx = +e.code.slice(5) - 1;
+      if (idx >= 0 && idx < 5) {
+        selSlot(idx);
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -1893,6 +2537,10 @@ window.addEventListener('DOMContentLoaded', () => {
       mainCat = btn.dataset.c;
       subCat = 'all';
       expandedItemId = null;
+      activeWeaponSkillSlotPicker = null;
+      if (mainCat === 'skills') {
+        switchMode('skills');
+      }
       renderInv();
     };
   });
@@ -1906,11 +2554,25 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Přepínač sekce 4
+  // Přepínač sekce 4 (Vybavení / Crafting / Dovednosti)
   const tabEquip = $('tabEquipBtn');
   if (tabEquip) tabEquip.onclick = () => switchMode('equip');
   const tabCraft = $('tabCraftBtn');
   if (tabCraft) tabCraft.onclick = () => switchMode('craft');
+  const tabSkills = $('tabSkillsBtn');
+  if (tabSkills) tabSkills.onclick = () => switchMode('skills');
+
+  // Tlačítko obnovení výchozích vazeb v Ovládání hry
+  const resetKbBtn = $('resetKeybindsBtn');
+  if (resetKbBtn && typeof KeybindManager !== 'undefined') {
+    resetKbBtn.onclick = () => {
+      KeybindManager.listeningTarget = null;
+      KeybindManager.resetToDefaults();
+      if (typeof toast === 'function') toast('Obnoveno výchozí nastavení ovládání akční lišty.');
+    };
+  }
+
+  renderKeybindsConfigUI();
 
   // Záložky craftingu
   document.querySelectorAll('.craft-tab-btn').forEach(btn => {
@@ -1928,6 +2590,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!e.target.closest('.tile') && !e.target.closest('.item-inline-drawer') && !e.target.closest('.gear-slot')) {
         if (expandedItemId) {
           expandedItemId = null;
+          activeWeaponSkillSlotPicker = null;
           renderGridItemsUI();
         }
       }

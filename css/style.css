@@ -2624,5 +2624,753 @@ canvas {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
+/* =============================================================================
+   AKČNÍ LIŠTA (5 SLOTŮ), ZBRAŇOVÉ DOVEDNOSTI (SKILLS) A KEYBINDS
+   ============================================================================= */
 
+#hb {
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(9, 14, 24, 0.72);
+  border: 1.5px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
 
+.hs.action-slot {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(160deg, rgba(22, 32, 48, 0.92), rgba(12, 18, 30, 0.96));
+  border: 2px solid rgba(148, 163, 184, 0.28);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hs.action-slot:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.65);
+}
+
+.hs.action-slot.slot-primary {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.hs.action-slot.slot-secondary {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.hs.action-slot.slot-skill {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.14);
+}
+
+.hs.action-slot.slot-empty {
+  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.2);
+  opacity: 0.75;
+}
+
+.hs.action-slot.sel {
+  border-color: #ffd86b;
+  box-shadow: 0 0 14px rgba(255, 216, 107, 0.65);
+}
+
+.hs.action-slot img {
+  width: 34px;
+  height: 34px;
+  margin-top: 4px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.ab-bind-tag {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  font-size: 9.5px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: #cbd5e1;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.ab-slot-name {
+  font-size: 9px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #e2e8f0;
+  max-width: 58px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+.ab-st-badge {
+  position: absolute;
+  top: 14px;
+  right: 3px;
+  font-size: 8.5px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 0 3px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.ab-empty-plus {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.35);
+  margin-top: 4px;
+  pointer-events: none;
+}
+
+.ab-cd-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.78);
+  color: #38bdf8;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Weapon Skill Slots v detailu zbraně (Item Drawer) */
+.weapon-skills-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wsb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.wsb-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #e9d5ff;
+  letter-spacing: 0.3px;
+}
+
+.wsb-subcat {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.wsb-slots-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.wsb-slot-card {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1.5px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  padding: 7px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.wsb-slot-card.filled {
+  border-style: solid;
+  border-color: rgba(168, 85, 247, 0.55);
+  background: linear-gradient(145deg, rgba(46, 16, 101, 0.45), rgba(15, 23, 42, 0.9));
+}
+
+.wsb-slot-card:hover,
+.wsb-slot-card.selecting {
+  border-style: solid;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
+.wsb-slot-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.wsb-slot-ico {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+.wsb-slot-plus {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.wsb-slot-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wsb-slot-meta {
+  font-size: 9.5px;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.wsb-picker-panel {
+  margin-top: 4px;
+  padding: 8px;
+  background: rgba(2, 6, 23, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wsb-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7dd3fc;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wsb-picker-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wsb-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.wsb-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.wsb-picker-item:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.wsb-picker-item.active {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.22);
+}
+
+.wsb-picker-item.clear-item {
+  color: #fca5a5;
+  font-size: 11.5px;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.wsb-pi-ico {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.wsb-pi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wsb-pi-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.wsb-pi-stats {
+  font-size: 10px;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.wsb-pi-desc {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* Sekce Dovednosti (Skills) v Inventáři */
+.inv-skills-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 4px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.skills-header-banner {
+  background: linear-gradient(135deg, rgba(46, 16, 101, 0.55), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.shb-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #e9d5ff;
+  margin-bottom: 3px;
+}
+
+.shb-sub {
+  font-size: 11.5px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.skills-cat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.skills-cat-pill {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.skills-cat-pill.active,
+.skills-cat-pill:hover {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: #c084fc;
+  color: #fff;
+}
+
+.skills-cat-group {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 5px;
+}
+
+.scg-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.scg-base-info {
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.scg-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-catalog-card {
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-catalog-card.equipped-on-active {
+  border-color: rgba(168, 85, 247, 0.65);
+  background: rgba(88, 28, 135, 0.22);
+}
+
+.scc-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scc-ico {
+  width: 30px;
+  height: 30px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.scc-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.scc-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.scc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.scc-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.scc-tag.cd {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+}
+
+.scc-tag.st {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+}
+
+.scc-tag.dmg {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.scc-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.scc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.scc-act-label {
+  font-size: 10px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.scc-slot-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.sk-slot-assign-btn {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.sk-slot-assign-btn:hover,
+.sk-slot-assign-btn.active {
+  background: #a855f7;
+  border-color: #c084fc;
+  color: #fff;
+}
+
+/* Tabulka Keybindů v Ovládání hry (#modalInGameControls) */
+.keybinds-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.keybinds-header-row,
+.keybind-slot-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.keybinds-header-row {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  padding: 0 6px 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.keybind-slot-row {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  padding: 6px 8px;
+}
+
+.kb-slot-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kb-slot-num {
+  font-size: 12px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.kb-slot-desc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.kb-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kb-bind-btn {
+  flex: 1;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  text-align: center;
+}
+
+.kb-bind-btn:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.kb-bind-btn.listening {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: #fbbf24;
+  color: #fef08a;
+  animation: pulseBind 1s infinite alternate;
+}
+
+@keyframes pulseBind {
+  from { box-shadow: 0 0 4px rgba(251, 191, 36, 0.3); }
+  to { box-shadow: 0 0 12px rgba(251, 191, 36, 0.75); }
+}
+
+.kb-clear-btn {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+/* ---------- 3D Mapa: Tooltip & Teleport Modal k objeveným budovám ---------- */
+.mm-poi-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 40;
+  background: rgba(11, 18, 32, 0.94);
+  border: 1.5px solid #38bdf8;
+  border-radius: 8px;
+  padding: 6px 11px;
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 14px rgba(56, 189, 248, 0.35);
+  transform: translate(-50%, -125%);
+  white-space: nowrap;
+}
+
+.mm-poi-tooltip .mm-tt-sub {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #7dd3fc;
+  margin-top: 2px;
+}
+
+.mm-tp-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(6, 10, 19, 0.72);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: popIn 0.16s ease-out;
+}
+
+.mm-tp-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.mm-tp-modal-card {
+  width: min(380px, 90vw);
+  background: linear-gradient(165deg, #162235 0%, #0d1524 100%);
+  border: 2px solid #38bdf8;
+  border-radius: 14px;
+  padding: 18px 20px;
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 28px rgba(56, 189, 248, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mm-tp-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.mm-tp-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.mm-tp-title {
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffd86b;
+  line-height: 1.15;
+}
+
+.mm-tp-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.mm-tp-question {
+  font-size: 14px;
+  color: #e2e8f0;
+  line-height: 1.4;
+  text-align: center;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.mm-tp-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 10px;
+}

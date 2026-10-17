@@ -288,11 +288,13 @@ if (escControlsBtn) {
   escControlsBtn.onclick = () => {
     $('escMenu').hidden = true;
     $('modalInGameControls').hidden = false;
+    if (typeof renderKeybindsConfigUI === 'function') renderKeybindsConfigUI();
   };
 }
 const closeInGameControlsBtn = $('closeInGameControls');
 if (closeInGameControlsBtn) {
   closeInGameControlsBtn.onclick = () => {
+    if (typeof KeybindManager !== 'undefined' && KeybindManager) KeybindManager.listeningTarget = null;
     $('modalInGameControls').hidden = true;
     $('escMenu').hidden = false;
   };
@@ -340,6 +342,7 @@ if (settingHandRight) {
     }
     if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
     if (typeof updateInventoryPreview === 'function') updateInventoryPreview();
+    if (typeof renderHB === 'function') renderHB();
     updateInGameSettingsUI();
     if (typeof toast === 'function') toast('Dominantní ruka: Pravá');
   };
@@ -355,6 +358,7 @@ if (settingHandLeft) {
     }
     if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
     if (typeof updateInventoryPreview === 'function') updateInventoryPreview();
+    if (typeof renderHB === 'function') renderHB();
     updateInGameSettingsUI();
     if (typeof toast === 'function') toast('Dominantní ruka: Levá');
   };

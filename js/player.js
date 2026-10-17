@@ -289,7 +289,7 @@ let rollDirX = 0, rollDirZ = 0;
 let lastShiftTapTime = 0;
 
 function triggerRoll() {
-  if (isRolling || P.inWater || !P.ground || G.st < 5) return;
+  if (isRolling || attacking || P.inWater || !P.ground || G.st < 5) return;
   if (typeof cancelEmote === 'function') cancelEmote();
 
   isRolling = true;
@@ -321,14 +321,24 @@ function triggerRoll() {
   if (typeof playRollSound === 'function') playRollSound();
 }
 
-function checkPvPHit(whichHand = 'dominant') {
-  const reach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach(whichHand) : 2.4;
-  const atkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage(whichHand) : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
+function checkPvPHit(whichHand = 'dominant', opts = null) {
+  const isHeavy = !!(opts && opts.attackType === 'heavy');
+  const reachBonus = (opts && typeof opts.reachBonus === 'number') ? opts.reachBonus : (isHeavy ? 0.45 : 0);
+  const dmgMult = (opts && typeof opts.damageMult === 'number') ? opts.damageMult : (isHeavy ? 1.50 : 1.0);
+  const kbExtra = (opts && typeof opts.knockbackMult === 'number') ? opts.knockbackMult : (isHeavy ? 1.65 : 1.0);
+
+  const baseReach = (typeof getPlayerAttackReach === 'function') ? getPlayerAttackReach(whichHand) : 2.4;
+  const reach = baseReach + reachBonus;
+  const rawAtkInfo = (typeof getPlayerAttackDamage === 'function') ? getPlayerAttackDamage(whichHand) : { damage: 12, isCrit: false, weaponName: 'Zbraň' };
+  const atkInfo = {
+    ...rawAtkInfo,
+    damage: Math.max(1, Math.round(rawAtkInfo.damage * dmgMult))
+  };
 
   const weaponId = (whichHand === 'secondary')
     ? (typeof getEquippedOffHandId === 'function' ? getEquippedOffHandId() : null)
     : ((typeof getEquippedMainHandId === 'function' ? getEquippedMainHandId() : null) || (typeof heldId !== 'undefined' ? heldId : null));
-  const isCleave = (weaponId === 'greatsword' || weaponId === 'battleaxe');
+  const isCleave = isHeavy || (weaponId === 'greatsword' || weaponId === 'battleaxe');
   const maxTargets = isCleave ? 3 : 1;
 
   // Směr pohledu hráče
@@ -400,7 +410,7 @@ function checkPvPHit(whichHand = 'dominant') {
 
   for (const cand of targetsToHit) {
     const kLen = Math.hypot(cand.dx, cand.dz) || 1;
-    const kbMult = (atkInfo.isCrit ? 1.5 : 1.0) * (weaponId === 'mace' || weaponId === 'hammer' ? 1.35 : 1.0);
+    const kbMult = (atkInfo.isCrit ? 1.5 : 1.0) * (weaponId === 'mace' || weaponId === 'hammer' ? 1.35 : 1.0) * kbExtra;
     const knockback = {
       x: (cand.dx / kLen) * kbMult,
       z: (cand.dz / kLen) * kbMult
@@ -410,7 +420,8 @@ function checkPvPHit(whichHand = 'dominant') {
       cand.target.takeDamage(atkInfo.damage, knockback, atkInfo.isCrit, 'player');
       if (typeof toast === 'function') {
         const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
-        toast(`Zásah do ${cand.target.name || 'nestvůry'}: -${atkInfo.damage} HP${critText}`);
+        const heavyLabel = isHeavy ? '⚡ Těžký zásah' : 'Zásah';
+        toast(`${heavyLabel} do ${cand.target.name || 'nestvůry'}: -${atkInfo.damage} HP${critText}`);
       }
     } else if (cand.type === 'player') {
       if (window.networkManager && typeof window.networkManager.sendPlayerHit === 'function') {
@@ -418,7 +429,8 @@ function checkPvPHit(whichHand = 'dominant') {
       }
       if (typeof toast === 'function') {
         const critText = atkInfo.isCrit ? ' 💥 KRITICKÝ ZÁSAH!' : '';
-        toast(`Zásah do hráče ${cand.p.nickname || 'Přítel'}: -${atkInfo.damage} HP${critText}`);
+        const heavyLabel = isHeavy ? '⚡ Těžký zásah' : 'Zásah';
+        toast(`${heavyLabel} do hráče ${cand.p.nickname || 'Přítel'}: -${atkInfo.damage} HP${critText}`);
       }
     }
   }
@@ -426,8 +438,11 @@ function checkPvPHit(whichHand = 'dominant') {
 
 
 let activeAttackHand = 'dominant'; // 'dominant' nebo 'secondary'
+let attackType = 'light'; // 'light' (LMB rychlý) nebo 'heavy' (RMB pomalejší s pohybem těla)
 window.activeAttackHand = activeAttackHand;
+window.attackType = attackType;
 window.getActiveAttackHand = () => activeAttackHand;
+window.getAttackType = () => attackType;
 
 function getHandItem(whichHand) {
   if (whichHand === 'secondary') {
@@ -437,8 +452,8 @@ function getHandItem(whichHand) {
   }
 }
 
-function handleHandAction(whichHand) {
-  if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || isRolling) return;
+function handleHandAction(whichHand, opts = null) {
+  if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || isRolling || attacking) return false;
 
   const item = getHandItem(whichHand);
 
@@ -447,24 +462,25 @@ function handleHandAction(whichHand) {
     isPlayerBlocking = true;
     blockingHand = whichHand;
     P.isBlocking = true;
-    return;
+    return true;
   }
 
   // 2. Pokud je v této ruce spotřební lektvar nebo jídlo
   if (item && (item.subcat === 'consumable' || item.healHp || item.restoreStamina || item.buffStrength || item.buffSpeed || item.id === 'potion_hp' || item.id === 'apple' || (item.id && item.id.startsWith('potion_')))) {
     if (typeof window !== 'undefined' && typeof window.useConsumableItem === 'function') {
-      window.useConsumableItem(item);
+      return window.useConsumableItem(item);
     } else if (G.hp < (P.maxHp || 100)) {
       G.hp = Math.min(P.maxHp || 100, G.hp + (item.healHp || 40));
       if (typeof ui === 'function') ui();
       if (typeof playAttackSound === 'function') playAttackSound('punch');
       if (typeof toast === 'function') toast(`🧪 Vypit ${item.name || 'léčivý lektvar'} (+${item.healHp || 40} HP)`);
+      return true;
     }
-    return;
+    return false;
   }
 
   // 3. Útok danou rukou (dominantní nebo sekundární)
-  triggerHandAttack(whichHand);
+  return triggerHandAttack(whichHand, opts);
 }
 
 function handleHandRelease(whichHand) {
@@ -554,10 +570,18 @@ const ProjectileManager = {
     return proj;
   },
 
-  spawnFromPlayer(weaponId, whichHand = 'dominant') {
-    const atkInfo = (typeof getPlayerAttackDamage === 'function')
+  spawnFromPlayer(weaponId, whichHand = 'dominant', opts = null) {
+    const isHeavy = !!(opts && opts.attackType === 'heavy');
+    const dmgMult = (opts && typeof opts.damageMult === 'number') ? opts.damageMult : (isHeavy ? 1.50 : 1.0);
+    const spdMult = (opts && typeof opts.speedMult === 'number') ? opts.speedMult : (isHeavy ? 1.25 : 1.0);
+
+    const rawAtk = (typeof getPlayerAttackDamage === 'function')
       ? getPlayerAttackDamage(whichHand)
       : { damage: 30, isCrit: false, weaponName: 'Projektil' };
+    const atkInfo = {
+      ...rawAtk,
+      damage: Math.max(1, Math.round(rawAtk.damage * dmgMult))
+    };
 
     const cp = Math.cos(pitch);
     const dirX = -Math.sin(yaw) * cp;
@@ -565,7 +589,7 @@ const ProjectileManager = {
     const dirZ = -Math.cos(yaw) * cp;
 
     const type = weaponId === 'staff_fire' ? 'fireball' : (weaponId === 'staff_frost' ? 'frost' : 'arrow');
-    const speed = type === 'arrow' ? 42.0 : (type === 'frost' ? 36.0 : 32.0);
+    const speed = (type === 'arrow' ? 42.0 : (type === 'frost' ? 36.0 : 32.0)) * spdMult;
     const startX = P.x + dirX * 0.65;
     const startY = (P.renderY ?? P.y) + 1.42 + dirY * 0.45;
     const startZ = P.z + dirZ * 0.65;
@@ -581,7 +605,8 @@ const ProjectileManager = {
       vz: dirZ * speed,
       damage: atkInfo.damage,
       isCrit: atkInfo.isCrit,
-      weaponName: atkInfo.weaponName
+      weaponName: atkInfo.weaponName,
+      splashRadius: type === 'fireball' ? (isHeavy ? 4.4 : 3.2) : 0
     });
 
     if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.sendProjectileSpawn === 'function') {
@@ -718,45 +743,117 @@ if (typeof window !== 'undefined') {
   window.ProjectileManager = ProjectileManager;
 }
 
-function triggerHandAttack(whichHand) {
-  if (escOpen || charOpen || invOpen || isRolling) return;
+function resetAttackState() {
+  attacking = false;
+  attackTime = 0;
+}
+if (typeof window !== 'undefined') {
+  window.resetAttackState = resetAttackState;
+}
+
+function triggerHandAttack(whichHand, opts = null) {
+  // Pokud již probíhá animace útoku (attacking === true), nelze ji přerušit ani spustit jinou!
+  if (escOpen || charOpen || invOpen || isRolling || attacking) return false;
   const item = getHandItem(whichHand);
   const itId = item ? item.id : null;
+  const isSkill = !!(opts && opts.isSkill);
+  const isHeavy = !!(opts && opts.attackType === 'heavy');
 
   activeAttackHand = whichHand;
   window.activeAttackHand = whichHand;
+  attackType = isHeavy ? 'heavy' : 'light';
+  window.attackType = attackType;
   attacking = true;
   attackTime = 0;
   attackCombo = (attackCombo + 1) % 2;
 
-  if (!itId) {
-    attackDuration = 0.22; playAttackSound('punch');
-  } else if (itId === 'spear') {
-    attackDuration = 0.28; playAttackSound('thrust');
-  } else if (itId === 'dagger') {
-    attackDuration = 0.20; playAttackSound('slash');
-  } else if (itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer') {
-    attackDuration = 0.38; playAttackSound('heavy');
-  } else if (itId === 'staff_fire' || itId === 'staff_frost') {
-    attackDuration = 0.32; playAttackSound('staff');
-  } else if (itId === 'bow') {
-    attackDuration = 0.30; playAttackSound('bow');
+  if (isHeavy) {
+    // Pomalejší těžký útok (Slot 2 / RMB) s pohybem celého těla
+    if (!itId) {
+      attackDuration = 0.42; playAttackSound('heavy');
+    } else if (itId === 'spear') {
+      attackDuration = 0.48; playAttackSound('thrust');
+    } else if (itId === 'dagger') {
+      attackDuration = 0.40; playAttackSound('slash');
+    } else if (itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer') {
+      attackDuration = 0.56; playAttackSound('heavy');
+    } else if (itId === 'staff_fire' || itId === 'staff_frost') {
+      attackDuration = 0.50; playAttackSound('staff');
+    } else if (itId === 'bow') {
+      attackDuration = 0.50; playAttackSound('bow');
+    } else {
+      attackDuration = 0.48; playAttackSound('heavy');
+    }
+
+    // Fyzický pohyb postavy při těžkém útoku (výpad vpřed, skokový dopad nebo zpětný ráz luku)
+    const fwdX = -Math.sin(yaw);
+    const fwdZ = -Math.cos(yaw);
+    face = Math.atan2(fwdX, fwdZ);
+
+    if (itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer' || (item && item.subcat === 'axe')) {
+      // Skokový drtivý dopad vpřed
+      P.vx = fwdX * 6.4;
+      P.vz = fwdZ * 6.4;
+      if (P.ground && !P.inWater) {
+        P.vy = 2.5;
+        P.ground = false;
+      }
+    } else if (itId === 'spear') {
+      // Dlouhý skluzný výpad vpřed
+      P.vx = fwdX * 8.2;
+      P.vz = fwdZ * 8.2;
+    } else if (itId === 'dagger') {
+      // Bleskový nízký přemet/pirueta vpřed
+      P.vx = fwdX * 7.2;
+      P.vz = fwdZ * 7.2;
+    } else if (itId === 'bow') {
+      // Stabilizační zakleknutí a mírný zpětný ráz tělem
+      P.vx = -fwdX * 2.8;
+      P.vz = -fwdZ * 2.8;
+    } else if (itId === 'staff_fire' || itId === 'staff_frost') {
+      // Magický výkrok s rázem
+      P.vx = fwdX * 4.2;
+      P.vz = fwdZ * 4.2;
+    } else {
+      // Meče, katany, palcáty a pěsti: razantní výpadový krok vpřed s rotací těla
+      P.vx = fwdX * 6.2;
+      P.vz = fwdZ * 6.2;
+    }
   } else {
-    attackDuration = 0.26; playAttackSound('slash');
+    // Rychlý primární útok (Slot 1 / LMB) nebo skill
+    if (!itId) {
+      attackDuration = 0.22; playAttackSound('punch');
+    } else if (itId === 'spear') {
+      attackDuration = 0.28; playAttackSound('thrust');
+    } else if (itId === 'dagger') {
+      attackDuration = 0.20; playAttackSound('slash');
+    } else if (itId === 'greatsword' || itId === 'battleaxe' || itId === 'hammer') {
+      attackDuration = 0.38; playAttackSound('heavy');
+    } else if (itId === 'staff_fire' || itId === 'staff_frost') {
+      attackDuration = 0.32; playAttackSound('staff');
+    } else if (itId === 'bow') {
+      attackDuration = 0.30; playAttackSound('bow');
+    } else {
+      attackDuration = 0.26; playAttackSound('slash');
+    }
   }
 
-  // Střelné a magické zbraně vystřelují 3D projektil
-  if (itId === 'bow' || itId === 'staff_fire' || itId === 'staff_frost') {
-    ProjectileManager.spawnFromPlayer(itId, whichHand);
-  }
+  if (!isSkill) {
+    const hitOpts = isHeavy ? { attackType: 'heavy', damageMult: 1.50, reachBonus: 0.45, knockbackMult: 1.7 } : { attackType: 'light' };
+    // Střelné a magické zbraně vystřelují 3D projektil
+    if (itId === 'bow' || itId === 'staff_fire' || itId === 'staff_frost') {
+      ProjectileManager.spawnFromPlayer(itId, whichHand, hitOpts);
+    }
 
-  setTimeout(() => {
-    checkPvPHit(whichHand);
-  }, Math.min(110, Math.round(attackDuration * 320)));
+    setTimeout(() => {
+      checkPvPHit(whichHand, hitOpts);
+    }, Math.min(180, Math.round(attackDuration * 340)));
+  }
+  return true;
 }
 
 function triggerAttack() {
-  triggerHandAttack('dominant');
+  return triggerHandAttack('dominant', { attackType: 'light' });
 }
 
 const keys = {};
@@ -765,30 +862,54 @@ let isPlayerBlocking = false;
 let blockingHand = null;
 window.isPlayerBlocking = () => isPlayerBlocking;
 
-// Event listenery pro ovládání myší
+function startActionBarBlock() {
+  if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || isRolling) return;
+  isPlayerBlocking = true;
+  blockingHand = 'actionbar';
+  P.isBlocking = true;
+  if (typeof playBlockSound === 'function') playBlockSound();
+}
+
+function stopActionBarBlock() {
+  isPlayerBlocking = false;
+  blockingHand = null;
+  P.isBlocking = false;
+}
+window.startActionBarBlock = startActionBarBlock;
+window.stopActionBarBlock = stopActionBarBlock;
+
+// Event listenery pro ovládání myší (Mapovatelné spouštěče Akční Lišty)
 function initPlayerControls(cv) {
   cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('mousedown', e => {
     if (typeof tryEnableFullscreen === 'function') tryEnableFullscreen();
     const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
     if (escOpen || charOpen || invOpen || (typeof emoteOpen !== 'undefined' && emoteOpen) || (typeof chatOpen !== 'undefined' && chatOpen) || (typeof minimapOpen !== 'undefined' && minimapOpen) || isP2POpen) return;
-    if (e.button === 0) {
-      // LEVÉ TLAČÍTKO MYŠI (LMB) = DOMINANTNÍ RUKA
-      handleHandAction('dominant');
-      if (!document.pointerLockElement) {
-        drag = true;
-        try { cv.requestPointerLock(); } catch (err) { }
-      }
-    } else if (e.button === 2) {
-      // PRAVÉ TLAČÍTKO MYŠI (RMB) = SEKUNDÁRNÍ RUKA
-      handleHandAction('secondary');
+
+    if (e.button === 0 && !document.pointerLockElement) {
+      drag = true;
+      try { cv.requestPointerLock(); } catch (err) { }
+    }
+
+    const bindCode = 'Mouse' + e.button;
+    if (typeof ActionBarManager !== 'undefined' && typeof ActionBarManager.triggerByInputCode === 'function') {
+      ActionBarManager.triggerByInputCode(bindCode);
+    } else {
+      // Fallback pokud není načten ActionBarManager
+      if (e.button === 0) handleHandAction('dominant');
+      else if (e.button === 2) handleHandAction('secondary');
     }
   });
 
   addEventListener('mouseup', e => {
     drag = false;
-    if (e.button === 0) handleHandRelease('dominant');
-    if (e.button === 2) handleHandRelease('secondary');
+    const bindCode = 'Mouse' + e.button;
+    if (typeof ActionBarManager !== 'undefined' && typeof ActionBarManager.releaseByInputCode === 'function') {
+      ActionBarManager.releaseByInputCode(bindCode);
+    } else {
+      if (e.button === 0) handleHandRelease('dominant');
+      if (e.button === 2) handleHandRelease('secondary');
+    }
   });
   addEventListener('mousemove', e => {
     const isP2POpen = document.getElementById('p2pModal') && !document.getElementById('p2pModal').hidden;
@@ -829,9 +950,53 @@ function hits(x, y, z, customH) {
   return false;
 }
 
+// Automatické vyproštění hráče, pokud se jeho hitbox kdykoliv ocitne uvnitř bloku (např. při teleportaci nebo výpadu)
+function resolvePlayerStuck() {
+  if (!hits(P.x, P.y, P.z)) return false;
+
+  // 1. Zkusit drobné horizontální a vertikální odsunutí od hrany bloku
+  const nudges = [0, -0.18, 0.18, -0.35, 0.35, -0.55, 0.55];
+  const ySteps = [0, 0.25, 0.52, 1.02, -0.25];
+  for (const dy of ySteps) {
+    for (const dx of nudges) {
+      for (const dz of nudges) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        if (!hits(P.x + dx, P.y + dy, P.z + dz)) {
+          P.x += dx;
+          P.y += dy;
+          P.z += dz;
+          if (dy > 0) {
+            P.vy = Math.max(0, P.vy);
+            P.ground = true;
+          }
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Pokud je hráč hlouběji v bloku, plynule jej vytáhnout nahoru na první volný povrch
+  for (let step = 1; step <= 36; step++) {
+    const testY = P.y + step * S;
+    if (!hits(P.x, testY, P.z)) {
+      P.y = testY;
+      P.renderY = testY;
+      P.vy = 0;
+      P.ground = true;
+      return true;
+    }
+  }
+  return false;
+}
+if (typeof window !== 'undefined') {
+  window.resolvePlayerStuck = resolvePlayerStuck;
+}
+
 function physics(dt) {
   if (autoJumpTimer > 0) autoJumpTimer -= dt;
   if (waterJumpTimer > 0) waterJumpTimer -= dt;
+
+  resolvePlayerStuck();
 
   const wb = y => block(Math.floor(P.x / S), Math.floor(y / S), Math.floor(P.z / S));
   const lq = b => b === 5 || b === 11;
@@ -939,9 +1104,15 @@ function physics(dt) {
 
     let sp;
     if (inW) {
+      if (P.isRiding && typeof window !== 'undefined' && window.PetManager && typeof window.PetManager.dismountPet === 'function') {
+        window.PetManager.dismountPet(true);
+      }
       sp = (sprint ? 4.5 : 3.2) * totalMult; // Plavecká rychlost
     } else if (waterExitTimer > 0) {
       sp = 4.2 * totalMult; // Přechodová rychlost po opuštění vody
+    } else if (P.isRiding) {
+      const baseRideSpd = P.rideSpeed || 9.5;
+      sp = (sprint ? baseRideSpd * 1.22 : baseRideSpd) * totalMult; // Rychlost jízdy na mazlíčkovi
     } else {
       sp = (sprint ? 9 : 5.5) * totalMult; // Běžná pozemní rychlost
     }
@@ -1025,7 +1196,9 @@ function physics(dt) {
     }
   } else {
     P.vy -= 26 * dt;
-    if (keys.Space && P.ground && !isRolling) P.vy = 9.2; // Normální výskok na souši
+    if (keys.Space && P.ground && !isRolling) {
+      P.vy = P.isRiding ? (P.rideJumpBoost || 10.5) : 9.2; // Výskok (nebo skok s mazlíčkem)
+    }
     if (P.vy < -30) P.vy = -30;
   }
 

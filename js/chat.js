@@ -191,9 +191,33 @@ const COMMAND_DEFS = [
   },
   {
     cmd: 'spawn',
-    syntax: '/spawn',
-    desc: 'Teleportuje na výchozí bod (spawn) světa',
-    getSuggestions: () => []
+    syntax: '/spawn <název moba>',
+    desc: 'Spawne vybrané zvíře nebo moba před tebou (bez názvu teleportuje na spawn)',
+    getSuggestions: (args) => {
+      const mobs = [
+        { name: 'ovcak', desc: '🐕 Německý ovčák (Ochočení [E]: Morková kost)' },
+        { name: 'husky', desc: '🐕 Sibiřský husky (Ochočení [E]: Morková kost)' },
+        { name: 'jezevcik', desc: '🐕 Jezevčík (Ochočení [E]: Morková kost)' },
+        { name: 'kocka', desc: '🐈 Kočka domácí (Ochočení [E]: Čerstvý losos)' },
+        { name: 'krava', desc: '🐄 Strakatá kráva (Ochočení [E]: Zlatá pšenice)' },
+        { name: 'ovce', desc: '🐑 Chundelatá ovce (Ochočení [E]: Sladký jetel)' },
+        { name: 'kozel', desc: '🐐 Horský kozel (Ochočení [E]: Horské jablko)' },
+        { name: 'veverka', desc: '🐿️ Zrzavá veverka (Ochočení [E]: Dubový žalud)' },
+        { name: 'vlk', desc: '🐺 Lesní vlk (Nepřátelská šelma)' },
+        { name: 'goblin', desc: '👺 Skřet nájezdník (Nepřátelský mob)' },
+        { name: 'skeleton', desc: '💀 Kostlivý válečník (Nepřátelský mob)' },
+        { name: 'golem', desc: '🗿 Kamenný golem (Elitní boss mob)' }
+      ];
+      const prefix = (args.join(' ') || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return mobs
+        .filter(m => !prefix || m.name.startsWith(prefix) || m.desc.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(prefix))
+        .map(m => ({
+          insert: `/spawn ${m.name}`,
+          display: m.name,
+          syntax: `/spawn ${m.name}`,
+          desc: m.desc
+        }));
+    }
   },
   {
     cmd: 'locate',
@@ -826,6 +850,40 @@ function executeCommand(cmdStr) {
     }
 
     case 'spawn': {
+      // Pokud je zadán argument (/spawn <název moba>), spawne dané zvíře nebo nestvůru přímo před hráčem!
+      if (args.length > 0) {
+        const mobQuery = args.join(' ').trim();
+        if (window.EntityManager && typeof window.EntityManager.spawnCreatureInFrontOfPlayer === 'function') {
+          const res = window.EntityManager.spawnCreatureInFrontOfPlayer(mobQuery, (typeof P !== 'undefined' && P.level) ? P.level : 1);
+          if (res && !res.error && res.creature) {
+            const cfg = res.config || {};
+            const tameHint = cfg.tameItemName
+              ? ` <span style="color:#fde047;">(Ochočení klávesou <b>[E]</b> pomocí: <b>${escapeChatHtml(cfg.tameItemName)}</b>)</span>`
+              : '';
+            addChatMessage(
+              null,
+              `🐾 Před tebou byl spawnut: <strong>${escapeChatHtml(res.creature.name)}</strong>!${tameHint}`,
+              'system'
+            );
+            if (typeof toast === 'function') {
+              toast(`🐾 Spawnuto: ${res.creature.name}${cfg.tameItemName ? ` (Ochočit [E]: ${cfg.tameItemName})` : ''}`);
+            }
+            return true;
+          } else {
+            addChatMessage(
+              null,
+              `Neznámý mob nebo zvíře "<strong>${escapeChatHtml(mobQuery)}</strong>".<br>Dostupná zvířata a mobové: <code>ovcak</code>, <code>husky</code>, <code>jezevcik</code>, <code>kocka</code>, <code>krava</code>, <code>ovce</code>, <code>kozel</code>, <code>veverka</code>, <code>vlk</code>, <code>goblin</code>, <code>skeleton</code>, <code>golem</code>.`,
+              'error'
+            );
+            return false;
+          }
+        } else {
+          addChatMessage(null, 'Správce entit (EntityManager) není připraven.', 'error');
+          return false;
+        }
+      }
+
+      // Bez argumentu (/spawn): teleport na výchozí spawn světa + nápověda pro /spawn <mob>
       P.x = SPX;
       P.z = (typeof SPZ !== 'undefined') ? SPZ : 0.5;
       P.y = SPY;
@@ -837,7 +895,11 @@ function executeCommand(cmdStr) {
       const spXb = Math.round(SPX / S);
       const spYb = Math.round(SPY / S);
       const spZb = Math.round(P.z / S);
-      addChatMessage(null, `Teleportován na výchozí spawn světa (X: ${spXb}, Y: ${spYb}, Z: ${spZb}).`, 'system');
+      addChatMessage(
+        null,
+        `Teleportován na výchozí spawn světa (X: ${spXb}, Y: ${spYb}, Z: ${spZb}).<br><span style="opacity:0.85">Tip: Pro spawnutí moba před tebou zadej <code>/spawn &lt;název moba&gt;</code> (např. <code>/spawn ovcak</code>, <code>/spawn husky</code>, <code>/spawn kocka</code>, <code>/spawn kozel</code>, <code>/spawn veverka</code>).</span>`,
+        'system'
+      );
       if (typeof toast === 'function') toast('Teleportován na spawn');
       break;
     }
@@ -872,13 +934,16 @@ function executeCommand(cmdStr) {
 
     case 'give': {
       if (args.length === 0) {
-        addChatMessage(null, 'Použití: <code>/give &lt;id_předmětu&gt;</code> (např. <code>/give sword</code>, <code>/give wood</code>).', 'info');
+        addChatMessage(null, 'Použití: <code>/give &lt;id_předmětu&gt;</code> (např. <code>/give sword</code>, <code>/give tame_bone</code>).', 'info');
         return;
       }
       const itemId = args[0].toLowerCase();
       const it = (typeof INV !== 'undefined') ? INV.find(x => x.id === itemId || x.id.includes(itemId)) : null;
       if (it) {
-        if (typeof HB !== 'undefined') {
+        if (it.count !== undefined) {
+          it.count = (it.count || 0) + 1;
+        }
+        if (typeof HB !== 'undefined' && it.cat === 'weapon') {
           let emptySlot = HB.indexOf(null);
           if (emptySlot === -1 && HB.length < (typeof MAXHB !== 'undefined' ? MAXHB : 9)) {
             HB.push(it.id);
@@ -891,9 +956,10 @@ function executeCommand(cmdStr) {
           }
           if (typeof renderHB === 'function') renderHB();
           if (typeof selSlot === 'function') selSlot(emptySlot);
-          addChatMessage(null, `Předmět <strong>${escapeChatHtml(it.name)}</strong> byl přidán do tvé lišty.`, 'system');
-          if (typeof toast === 'function') toast(`Získáno: ${it.name}`);
         }
+        if (typeof renderInv === 'function') renderInv();
+        addChatMessage(null, `Předmět <strong>${escapeChatHtml(it.name)}</strong> byl přidán do tvého inventáře.`, 'system');
+        if (typeof toast === 'function') toast(`Získáno: ${it.name}`);
       } else {
         addChatMessage(null, `Neznámý předmět "${escapeChatHtml(args[0])}".`, 'error');
       }
@@ -919,13 +985,14 @@ function executeCommand(cmdStr) {
       addChatMessage(
         null,
         `<strong>Dostupné příkazy konzole:</strong><br>` +
+        `• <code>/spawn &lt;název moba&gt;</code> – Spawne zvíře nebo moba před tebou (např. <code>ovcak</code>, <code>husky</code>, <code>jezevcik</code>, <code>kocka</code>, <code>krava</code>, <code>ovce</code>, <code>kozel</code>, <code>veverka</code>, <code>vlk</code>, <code>goblin</code>, <code>skeleton</code>, <code>golem</code>)<br>` +
+        `• <code>/spawn</code> – Teleportuje hráče zpět na výchozí spawn<br>` +
         `• <code>/tp &lt;jméno hráče&gt;</code> – Teleportuje přímo k vybranému hráči<br>` +
         `• <code>/tp &lt;X&gt; [Y] &lt;Z&gt;</code> – Teleportuje na dané souřadnice světa<br>` +
         `• <code>/locate &lt;biom&gt;</code> – Vyhledá biom (les, poust, snih, hory, plaz, more, prales)<br>` +
-        `• <code>/spawn</code> – Teleportuje hráče zpět na výchozí spawn<br>` +
         `• <code>/heal</code> – Okamžitě doplní životy (HP), staminu a kyslík na 100 %<br>` +
         `• <code>/time &lt;den | noc&gt;</code> – Nastaví denní dobu světa<br>` +
-        `• <code>/give &lt;předmět&gt;</code> – Přidá voxelový předmět do lišty<br>` +
+        `• <code>/give &lt;předmět&gt;</code> – Přidá voxelový předmět do inventáře<br>` +
         `• <code>/list</code> – Vypíše seznam připojených hráčů<br>` +
         `• <code>/clear</code> – Vymaže historii zpráv v konzoli<br>` +
         `• <code>/help</code> – Zobrazí tento přehled příkazů`,

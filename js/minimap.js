@@ -21,9 +21,22 @@ const MM_SIZES = [
 ];
 
 // Načtení a uložení prozkoumaného území
+function getMinimapStorageKey() {
+  const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
+  try {
+    if (typeof GameStorage !== 'undefined' && typeof GameStorage.getActiveGame === 'function') {
+      const act = GameStorage.getActiveGame();
+      if (act && (act.worldId || act.id)) {
+        return `voxel_map_explored_v2_${act.worldId || act.id}_${sKey}`;
+      }
+    }
+  } catch (e) {}
+  return `voxel_map_explored_v2_${sKey}`;
+}
+
 function loadExploredHistory() {
   try {
-    const key = (typeof SEED !== 'undefined') ? `voxel_map_explored_${SEED}` : 'voxel_map_explored_default';
+    const key = getMinimapStorageKey();
     const saved = localStorage.getItem(key);
     if (saved) {
       const arr = JSON.parse(saved);
@@ -39,7 +52,7 @@ function saveExploredHistory() {
   if (now - lastExploredSaveTime < 3000) return; // Debounce 3 sekundy
   lastExploredSaveTime = now;
   try {
-    const key = (typeof SEED !== 'undefined') ? `voxel_map_explored_${SEED}` : 'voxel_map_explored_default';
+    const key = getMinimapStorageKey();
     const arr = Array.from(exploredChunks);
     // Ukládat maximálně 500 nejrelevantnějších chunků pro úsporu místa
     const toSave = arr.length > 500 ? arr.slice(-500) : arr;
@@ -99,12 +112,18 @@ function toggleMinimap(force) {
       updateMinimapSize();
       updateMinimapCam();
     });
-    toast('3D Mapa světa: Otevřena na celou obrazovku [M]');
+    toast('3D Mapa světa: Klikni na objevenou budovu pro teleportaci [M]');
   } else {
+    closeMinimapTeleportPrompt();
+    const tt = $('mmPoiTooltip');
+    if (tt) tt.hidden = true;
     try { (window.cv || (window.renderer && renderer.domElement))?.requestPointerLock(); } catch (e) {}
     toast('3D Mapa: Zavřeno [M]');
   }
 }
+
+let mmDownClientX = 0, mmDownClientY = 0, mmMovedDuringDrag = false;
+let mmSelectedTeleportPoi = null;
 
 function initMinimap() {
   const canvas = $('minimapCanvas');
@@ -136,47 +155,65 @@ function initMinimap() {
   rim.position.set(-1.8, 1.4, -1.5);
   mmScene.add(rim);
 
-  // 3D Voxelová Značka Hráče (svítící šipka ve stylu Cube World)
+  // 3D Voxelová Značka Hráče (složená z kostek)
   mmPlayerMarker = (() => {
     const group = new THREE.Group();
-
-    // Voxelová šipka
-    const pointerGeo = new THREE.ConeGeometry(0.85, 1.7, 4);
-    pointerGeo.rotateX(Math.PI / 2);
-    pointerGeo.rotateY(Math.PI / 4);
     const pointerMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff });
-    const pointer = new THREE.Mesh(pointerGeo, pointerMat);
-    pointer.scale.set(0.7, 0.35, 1.1);
-    group.add(pointer);
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.55), pointerMat);
+    tip.position.set(0, 0, 0.55);
+    group.add(tip);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.35, 0.65), pointerMat);
+    body.position.set(0, 0, -0.05);
+    group.add(body);
 
-    // Vnější pulzující prstenec
-    const ringGeo = new THREE.RingGeometry(0.9, 1.2, 16);
-    ringGeo.rotateX(-Math.PI / 2);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, side: THREE.DoubleSide });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.y = -0.3;
-    group.add(ring);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.28), ringMat);
+      seg.position.set(Math.cos(a) * 1.05, -0.3, Math.sin(a) * 1.05);
+      group.add(seg);
+    }
 
     mmScene.add(group);
     return group;
   })();
 
-  // Ovládání myší: levé tlačítko = rotace dioramatu, pravé tlačítko / Shift = posun (Pan)
+  // Ovládání myší: levé tlačítko = kliknutí na budovu / rotace dioramatu, pravé tlačítko / Shift = posun (Pan)
   canvas.addEventListener('contextmenu', e => e.preventDefault());
 
   canvas.addEventListener('mousedown', e => {
     if (e.button === 2 || e.shiftKey) {
       mmIsPanning = true;
-    } else {
+    } else if (e.button === 0) {
       mmIsDragging = true;
     }
     mmLastX = e.clientX;
     mmLastY = e.clientY;
+    mmDownClientX = e.clientX;
+    mmDownClientY = e.clientY;
+    mmMovedDuringDrag = false;
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    if (!minimapOpen) return;
+    if (!mmIsDragging && !mmIsPanning) {
+      updateMinimapHoverTooltip(e.clientX, e.clientY);
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    const tt = $('mmPoiTooltip');
+    if (tt) tt.hidden = true;
   });
 
   window.addEventListener('mousemove', e => {
     if ((!mmIsDragging && !mmIsPanning) || !minimapOpen) return;
     const dx = e.clientX - mmLastX, dy = e.clientY - mmLastY;
+    if (Math.hypot(e.clientX - mmDownClientX, e.clientY - mmDownClientY) > 6) {
+      mmMovedDuringDrag = true;
+      const tt = $('mmPoiTooltip');
+      if (tt) tt.hidden = true;
+    }
     mmLastX = e.clientX;
     mmLastY = e.clientY;
 
@@ -195,10 +232,33 @@ function initMinimap() {
     updateMinimapCam();
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', e => {
+    const wasLeftDrag = mmIsDragging;
     mmIsDragging = false;
     mmIsPanning = false;
+
+    if (wasLeftDrag && e.button === 0 && !mmMovedDuringDrag && minimapOpen) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        const hitPoi = findPoiMarkerAtClientPos(e.clientX, e.clientY);
+        if (hitPoi) {
+          openMinimapTeleportPrompt(hitPoi);
+        }
+      }
+    }
   });
+
+  // Napojení modalu teleportace
+  const tpCancelBtn = $('mmTpCancelBtn');
+  if (tpCancelBtn) tpCancelBtn.onclick = () => closeMinimapTeleportPrompt();
+  const tpConfirmBtn = $('mmTpConfirmBtn');
+  if (tpConfirmBtn) tpConfirmBtn.onclick = () => confirmMinimapTeleport();
+  const tpModal = $('mmTeleportModal');
+  if (tpModal) {
+    tpModal.addEventListener('click', e => {
+      if (e.target === tpModal) closeMinimapTeleportPrompt();
+    });
+  }
 
   // Zoom kolečkem myši (plynulý rozsah od 18 do 280)
   canvas.addEventListener('wheel', e => {
@@ -561,85 +621,261 @@ const mmPoiMarkersMap = new Map();
 function createPoiMarkerMesh(poi) {
   if (typeof THREE === 'undefined') return null;
   const group = new THREE.Group();
-  group.userData = { id: poi.id, type: poi.type };
+  group.userData = { id: poi.id, type: poi.type, poi };
 
   const normType = String(poi.type || '').toLowerCase();
+  const addBox = (parent, w, h, d, x, y, z, mat, name) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    m.userData = { id: poi.id, type: poi.type, poi };
+    if (name) m.name = name;
+    parent.add(m);
+    return m;
+  };
 
   if (normType === 'shrine') {
-    // Vznášející se azurový oktaedr s rotujícím prstencem
-    const geo = new THREE.OctahedronGeometry(0.85, 0);
-    const mat = (typeof THREE.MeshStandardMaterial !== 'undefined')
+    // Voxelový chrám se stupňovitým krystalem a prstencem z kostiček
+    const stoneMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
+      ? new THREE.MeshLambertMaterial({ color: 0xcbd5e1 })
+      : new THREE.MeshBasicMaterial({ color: 0xcbd5e1 });
+    const crystalMat = (typeof THREE.MeshStandardMaterial !== 'undefined')
       ? new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, roughness: 0.2, metalness: 0.8, flatShading: true })
       : new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const core = new THREE.Mesh(geo, mat);
-    group.add(core);
-
-    const ringGeo = new THREE.TorusGeometry(1.25, 0.1, 4, 12);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
+
+    // Základna a 4 rohové sloupky svatyně
+    addBox(group, 1.5, 0.22, 1.5, 0, -0.55, 0, stoneMat);
+    for (const sx of [-0.55, 0.55]) {
+      for (const sz of [-0.55, 0.55]) {
+        addBox(group, 0.22, 0.75, 0.22, sx, -0.1, sz, stoneMat);
+      }
+    }
+    // Stupňovitý voxelový krystal uprostřed
+    addBox(group, 0.65, 0.65, 0.65, 0, 0.25, 0, crystalMat);
+    addBox(group, 0.38, 1.05, 0.38, 0, 0.25, 0, crystalMat);
+
+    const ring = new THREE.Group();
     ring.name = 'ring';
+    ring.position.set(0, 0.25, 0);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      addBox(ring, 0.22, 0.16, 0.22, Math.cos(a) * 1.15, 0, Math.sin(a) * 1.15, ringMat);
+    }
     group.add(ring);
   } else if (normType === 'ruins') {
-    // Kamenná klenba s prastarou runou
+    // Voxelová kamenná klenba s prastarou runou
     const mat = (typeof THREE.MeshLambertMaterial !== 'undefined')
       ? new THREE.MeshLambertMaterial({ color: 0x94a3b8 })
       : new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), mat); p1.position.set(-0.6, 0.7, 0); group.add(p1);
-    const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), mat); p2.position.set(0.6, 0.7, 0); group.add(p2);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.35, 0.5), mat); top.position.set(0, 1.5, 0); group.add(top);
+    addBox(group, 1.6, 0.22, 1.2, 0, 0.05, 0, mat);
+    addBox(group, 0.4, 1.35, 0.4, -0.58, 0.72, 0, mat);
+    addBox(group, 0.4, 1.35, 0.4, 0.58, 0.72, 0, mat);
+    addBox(group, 1.75, 0.35, 0.5, 0, 1.48, 0, mat);
 
-    const rune = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0x60a5fa }));
-    rune.position.set(0, 0.7, 0);
-    rune.name = 'rune';
-    group.add(rune);
+    const runeMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+    addBox(group, 0.35, 0.35, 0.35, 0, 0.75, 0, runeMat, 'rune');
   } else if (normType === 'camp') {
-    // Táborový oheň s plamenem a uhlíky
-    const flameGeo = new THREE.ConeGeometry(0.7, 1.4, 4);
-    flameGeo.rotateY(Math.PI / 4);
+    // Voxelový tábor (stan z kostek + ohniště z kostek)
+    const tentMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
+      ? new THREE.MeshLambertMaterial({ color: 0xd97706 })
+      : new THREE.MeshBasicMaterial({ color: 0xd97706 });
     const flameMat = (typeof THREE.MeshStandardMaterial !== 'undefined')
       ? new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, flatShading: true })
       : new THREE.MeshBasicMaterial({ color: 0xf97316 });
-    const flame = new THREE.Mesh(flameGeo, flameMat);
-    flame.position.y = 0.7;
+    const emberMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
+
+    // Stupňovitý voxelový stan vzadu
+    addBox(group, 1.2, 0.35, 0.9, 0, 0.2, -0.35, tentMat);
+    addBox(group, 0.85, 0.35, 0.85, 0, 0.55, -0.35, tentMat);
+    addBox(group, 0.45, 0.3, 0.8, 0, 0.85, -0.35, tentMat);
+
+    // Voxelový plamen vpředu
+    const flame = new THREE.Group();
     flame.name = 'flame';
+    flame.position.set(0, 0.35, 0.45);
+    addBox(flame, 0.5, 0.5, 0.5, 0, 0, 0, flameMat);
+    addBox(flame, 0.3, 0.45, 0.3, 0, 0.4, 0, new THREE.MeshBasicMaterial({ color: 0xfef08a }));
     group.add(flame);
 
-    const emberMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
     for (let i = 0; i < 4; i++) {
       const ang = (i / 4) * Math.PI * 2;
-      const emb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), emberMat);
-      emb.position.set(Math.cos(ang) * 0.7, 0.12, Math.sin(ang) * 0.7);
-      group.add(emb);
+      addBox(group, 0.24, 0.22, 0.24, Math.cos(ang) * 0.5, 0.11, 0.45 + Math.sin(ang) * 0.5, emberMat);
     }
   } else if (normType === 'chest') {
-    // Zlatá pokladnice se zámkem
+    // Voxelová zlatá pokladnice se zámkem
     const chestMat = (typeof THREE.MeshStandardMaterial !== 'undefined')
       ? new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xb45309, roughness: 0.3, metalness: 0.6, flatShading: true })
       : new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.7), chestMat);
-    body.position.y = 0.3;
-    group.add(body);
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.25, 0.74), chestMat);
-    lid.position.y = 0.7;
-    group.add(lid);
-    const latch = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.2, 0.1), new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
-    latch.position.set(0, 0.52, 0.38);
-    group.add(latch);
+    addBox(group, 1.0, 0.6, 0.7, 0, 0.3, 0, chestMat);
+    addBox(group, 1.04, 0.25, 0.74, 0, 0.7, 0, chestMat);
+    addBox(group, 0.2, 0.22, 0.12, 0, 0.52, 0.38, new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
   } else {
-    // Strážní věž / Maják
+    // Voxelová strážní věž / Maják z kostek
     const towerMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
       ? new THREE.MeshLambertMaterial({ color: 0x64748b })
       : new THREE.MeshBasicMaterial({ color: 0x64748b });
-    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.55, 1.8, 4), towerMat);
-    tower.position.y = 0.9;
-    group.add(tower);
-    const beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-    beacon.position.y = 2.0;
-    beacon.name = 'beacon';
-    group.add(beacon);
+    const roofMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
+      ? new THREE.MeshLambertMaterial({ color: 0xb45309 })
+      : new THREE.MeshBasicMaterial({ color: 0xb45309 });
+    addBox(group, 1.1, 0.35, 1.1, 0, 0.18, 0, towerMat);
+    addBox(group, 0.78, 1.25, 0.78, 0, 0.95, 0, towerMat);
+    addBox(group, 1.05, 0.28, 1.05, 0, 1.68, 0, roofMat);
+    addBox(group, 0.48, 0.48, 0.48, 0, 2.08, 0, new THREE.MeshBasicMaterial({ color: 0x38bdf8 }), 'beacon');
   }
 
   return group;
+}
+
+function getPoiDisplayMeta(poi) {
+  const normType = String((poi && poi.type) || '').toLowerCase();
+  const typeMeta = {
+    shrine:   { icon: '⛩️', typeLabel: 'Prastará svatyně' },
+    ruins:    { icon: '🏛️', typeLabel: 'Kamenné ruiny' },
+    camp:     { icon: '⛺', typeLabel: 'Opuštěný tábor' },
+    landmark: { icon: '🗼', typeLabel: 'Strážní věž' },
+    chest:    { icon: '🧰', typeLabel: 'Truhla s pokladem' }
+  }[normType] || { icon: '🏛️', typeLabel: 'Významná stavba' };
+
+  const bx = (typeof poi.x === 'number') ? poi.x : (poi.bx || 0);
+  const bz = (typeof poi.z === 'number') ? poi.z : (poi.bz || 0);
+  const pbx = (typeof P !== 'undefined') ? Math.floor(P.x / S) : 0;
+  const pbz = (typeof P !== 'undefined') ? Math.floor(P.z / S) : 0;
+  const distBlocks = Math.round(Math.hypot(bx - pbx, bz - pbz));
+
+  return {
+    icon: typeMeta.icon,
+    typeLabel: typeMeta.typeLabel,
+    title: poi.name || typeMeta.typeLabel,
+    bx,
+    bz,
+    distBlocks
+  };
+}
+
+function findPoiMarkerAtClientPos(clientX, clientY) {
+  if (!mmCam || !mmPoiGroup || !window.POIManager) return null;
+  const canvas = $('minimapCanvas');
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+
+  // 1) Raycast proti 3D voxelovým značkám pouze OBahraných/Objevených budov
+  if (typeof THREE !== 'undefined' && typeof THREE.Raycaster === 'function') {
+    const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), mmCam);
+    const visibleMarkers = mmPoiGroup.children.filter(c => c.visible && c.userData && c.userData.poi && window.POIManager.isDiscovered(c.userData.poi));
+    const hits = raycaster.intersectObjects(visibleMarkers, true);
+    if (hits.length > 0) {
+      let obj = hits[0].object;
+      while (obj && (!obj.userData || !obj.userData.poi)) {
+        obj = obj.parent;
+      }
+      if (obj && obj.userData && obj.userData.poi && window.POIManager.isDiscovered(obj.userData.poi)) {
+        return obj.userData.poi;
+      }
+    }
+  }
+
+  // 2) 2D projekce pozic objevených značek na obrazovku (tolerance 36 px pro pohodlné kliknutí)
+  let bestPoi = null;
+  let bestDist = 36;
+  for (const [id, mesh] of mmPoiMarkersMap.entries()) {
+    if (!mesh || !mesh.visible || !mesh.userData || !mesh.userData.poi) continue;
+    if (!window.POIManager.isDiscovered(mesh.userData.poi)) continue;
+    const v = mesh.position.clone().project(mmCam);
+    if (v.z > 1) continue;
+    const sx = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+    const sy = rect.top + (-v.y * 0.5 + 0.5) * rect.height;
+    const d = Math.hypot(clientX - sx, clientY - sy);
+    if (d < bestDist) {
+      bestDist = d;
+      bestPoi = mesh.userData.poi;
+    }
+  }
+  return bestPoi;
+}
+
+function updateMinimapHoverTooltip(clientX, clientY) {
+  const canvas = $('minimapCanvas');
+  const tt = $('mmPoiTooltip');
+  if (!canvas) return;
+  const hitPoi = findPoiMarkerAtClientPos(clientX, clientY);
+  if (!hitPoi) {
+    canvas.style.cursor = 'grab';
+    if (tt) tt.hidden = true;
+    return;
+  }
+
+  canvas.style.cursor = 'pointer';
+  if (tt) {
+    const meta = getPoiDisplayMeta(hitPoi);
+    const viewport = canvas.parentElement;
+    const vpRect = viewport ? viewport.getBoundingClientRect() : canvas.getBoundingClientRect();
+    tt.innerHTML = `${meta.icon} ${meta.title}<span class="mm-tt-sub">⚡ Klikni pro teleportaci (${meta.distBlocks} bloků)</span>`;
+    tt.style.left = `${clientX - vpRect.left}px`;
+    tt.style.top = `${clientY - vpRect.top}px`;
+    tt.hidden = false;
+  }
+}
+
+function openMinimapTeleportPrompt(poiOrId) {
+  if (!poiOrId || !window.POIManager) return null;
+  let poi = poiOrId;
+  if (typeof poiOrId === 'string') {
+    for (const p of (window.POIManager.instances ? window.POIManager.instances.values() : [])) {
+      if (p.id === poiOrId) { poi = p; break; }
+    }
+    if (typeof poi === 'string') {
+      poi = (window.POIManager.pois || []).find(p => p.id === poiOrId);
+    }
+  }
+  if (!poi || typeof poi !== 'object') return null;
+  if (!window.POIManager.isDiscovered(poi)) {
+    if (typeof toast === 'function') toast('🔒 K této budově se můžeš teleportovat až poté, co ji objevíš!');
+    return null;
+  }
+
+  mmSelectedTeleportPoi = poi;
+  const meta = getPoiDisplayMeta(poi);
+
+  const modal = $('mmTeleportModal');
+  const iconEl = $('mmTpIcon');
+  const titleEl = $('mmTpTitle');
+  const metaEl = $('mmTpMeta');
+  const tt = $('mmPoiTooltip');
+  if (tt) tt.hidden = true;
+
+  if (iconEl) iconEl.textContent = meta.icon;
+  if (titleEl) titleEl.textContent = meta.title;
+  if (metaEl) metaEl.textContent = `${meta.typeLabel} · Vzdálenost: ${meta.distBlocks} bloků [X: ${meta.bx}, Z: ${meta.bz}]`;
+  if (modal) modal.hidden = false;
+
+  return poi;
+}
+
+function closeMinimapTeleportPrompt() {
+  mmSelectedTeleportPoi = null;
+  const modal = $('mmTeleportModal');
+  if (modal) modal.hidden = true;
+}
+
+function confirmMinimapTeleport() {
+  const target = mmSelectedTeleportPoi;
+  if (!target || !window.POIManager || !window.POIManager.isDiscovered(target) || typeof window.POIManager.teleportToPOI !== 'function') {
+    closeMinimapTeleportPrompt();
+    return false;
+  }
+  const ok = window.POIManager.teleportToPOI(target);
+  closeMinimapTeleportPrompt();
+  if (ok) {
+    mmPanX = 0;
+    mmPanZ = 0;
+    mmNeedsRebuild = true;
+    if (minimapOpen) toggleMinimap(false);
+  }
+  return ok;
 }
 
 function updateMinimapMarkers(now) {
@@ -675,6 +911,7 @@ function updateMinimapMarkers(now) {
 
       if (!mesh) continue;
       mesh.visible = true;
+      mesh.userData = { id: poi.id, type: poi.type, poi };
 
       const poiBX = (typeof poi.x === 'number') ? poi.x : (poi.bx || 0);
       const poiBZ = (typeof poi.z === 'number') ? poi.z : (poi.bz || 0);
@@ -762,5 +999,8 @@ if (typeof window !== 'undefined') {
   window.isChunkRevealed = isChunkRevealed;
   window.showDiscoveryToast = showDiscoveryToast;
   window.updateMinimapMarkers = updateMinimapMarkers;
+  window.findPoiMarkerAtClientPos = findPoiMarkerAtClientPos;
+  window.openMinimapTeleportPrompt = openMinimapTeleportPrompt;
+  window.closeMinimapTeleportPrompt = closeMinimapTeleportPrompt;
+  window.confirmMinimapTeleport = confirmMinimapTeleport;
 }
-

@@ -39,7 +39,7 @@ const INV = [
     id: 'dagger',
     name: 'Zlodějská dýka',
     cat: 'weapon',
-    subcat: 'other',
+    subcat: 'dagger',
     rarity: 'uncommon',
     damage: 18,
     reach: 2.2,
@@ -52,7 +52,7 @@ const INV = [
     id: 'battleaxe',
     name: 'Válečná sekera',
     cat: 'weapon',
-    subcat: 'other',
+    subcat: 'axe',
     rarity: 'rare',
     damage: 42,
     reach: 3.4,
@@ -65,7 +65,7 @@ const INV = [
     id: 'mace',
     name: 'Okovaný palcát',
     cat: 'weapon',
-    subcat: 'other',
+    subcat: 'blunt',
     rarity: 'uncommon',
     damage: 30,
     reach: 3.0,
@@ -130,7 +130,7 @@ const INV = [
     id: 'hammer',
     name: 'Kovářské kladivo',
     cat: 'weapon',
-    subcat: 'other',
+    subcat: 'blunt',
     rarity: 'epic',
     damage: 50,
     reach: 3.2,
@@ -598,14 +598,199 @@ const INV = [
     buffDuration: 30,
     desc: 'Azuřitově modrý lektvar s rozpuštěným modrým krystalem. Zvyšuje rychlost pohybu o +30% na 30 sekund.',
     statList: ['🏃 +30% Rychlost pohybu', '⏱️ Trvání: 30 sekund', '🧪 Alchymistický lektvar']
+  },
+
+  // --- Předměty pro ochočení zvířat (Taming Items) ---
+  {
+    id: 'tame_bone',
+    name: 'Morková kost',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'uncommon',
+    tamesTarget: 'Psi (Německý ovčák, Sibiřský husky, Jezevčík)',
+    desc: 'Voňavá morková kost. Neodolatelná pochoutka pro ochočení všech druhů psů (stiskni [E] u psa).',
+    statList: ['🦴 Ochočuje: Všechny druhy psů', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+  {
+    id: 'tame_fish',
+    name: 'Čerstvý losos',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'uncommon',
+    tamesTarget: 'Kočka domácí',
+    desc: 'Šťavnatá říční ryba. Ideální pamlsek pro ochočení divoké kočky (stiskni [E] u kočky).',
+    statList: ['🐟 Ochočuje: Kočka domácí', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+  {
+    id: 'tame_wheat',
+    name: 'Zlatá pšenice',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'common',
+    tamesTarget: 'Strakatá kráva',
+    desc: 'Snop zralého obilí ze slunných polí. Slouží k ochočení krávy (stiskni [E] u krávy).',
+    statList: ['🌾 Ochočuje: Strakatá kráva', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+  {
+    id: 'tame_clover',
+    name: 'Sladký jetel',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'common',
+    tamesTarget: 'Chundelatá ovce',
+    desc: 'Čerstvý luční čtyřlístek a jetel. Nejoblíbenější potrava pro ochočení ovcí (stiskni [E] u ovce).',
+    statList: ['🍀 Ochočuje: Chundelatá ovce', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+  {
+    id: 'tame_apple',
+    name: 'Horské jablko',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'uncommon',
+    tamesTarget: 'Horský kozel',
+    desc: 'Křupavé horské jablko plné šťávy. Pomocí něj si ochočíš horského kozla (stiskni [E] u kozla).',
+    statList: ['🍎 Ochočuje: Horský kozel', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+  {
+    id: 'tame_acorn',
+    name: 'Dubový žalud',
+    cat: 'loot',
+    subcat: 'taming',
+    count: 5,
+    rarity: 'common',
+    tamesTarget: 'Zrzavá veverka',
+    desc: 'Lesklý žalud ze starého dubu. Slouží k ochočení hbité lesní veverky (stiskni [E] u veverky).',
+    statList: ['🌰 Ochočuje: Zrzavá veverka', '🐾 Použití: Stiskni [E] u zvířete']
+  },
+
+  // --- Ochočení Mazlíčci (Kategorie: Mazlíčci / pets) ---
+  {
+    id: 'pet_dog_shepherd',
+    name: 'Německý ovčák',
+    cat: 'pets',
+    subcat: 'dog',
+    slot: 'pet',
+    petType: 'DogShepherd',
+    count: 0,
+    rarity: 'rare',
+    rideSpeed: 9.8,
+    jumpBoost: 10.2,
+    desc: 'Věrný a statný německý ovčák. Po vybavení do slotu mazlíčka ho přivoláš klávesou [R] a můžeš na něm rychle jezdit.',
+    statList: ['🐾 Druh: Pes (Ovčák)', '🏇 Rychlost jízdy: 9.8 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+  },
+  {
+    id: 'pet_dog_husky',
+    name: 'Sibiřský husky',
+    cat: 'pets',
+    subcat: 'dog',
+    slot: 'pet',
+    petType: 'DogHusky',
+    count: 0,
+    rarity: 'epic',
+    rideSpeed: 10.6,
+    jumpBoost: 10.5,
+    desc: 'Vytrvalý severský husky s modrýma očima. Vyniká mimořádnou rychlostí jízdy v každém terénu.',
+    statList: ['🐾 Druh: Pes (Husky)', '🏇 Rychlost jízdy: 10.6 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+  },
+  {
+    id: 'pet_dog_dachshund',
+    name: 'Jezevčík',
+    cat: 'pets',
+    subcat: 'dog',
+    slot: 'pet',
+    petType: 'DogDachshund',
+    count: 0,
+    rarity: 'rare',
+    rideSpeed: 8.8,
+    jumpBoost: 9.6,
+    desc: 'Odvážný dlouhý jezevčík s veselou povahou. Spolehlivý společník na cesty.',
+    statList: ['🐾 Druh: Pes (Jezevčík)', '🏇 Rychlost jízdy: 8.8 m/s', '🦴 Ochočeno pomocí: Morková kost', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+  },
+  {
+    id: 'pet_cat',
+    name: 'Kočka domácí',
+    cat: 'pets',
+    subcat: 'feline',
+    slot: 'pet',
+    petType: 'Cat',
+    count: 0,
+    rarity: 'rare',
+    rideSpeed: 9.5,
+    jumpBoost: 11.4,
+    desc: 'Mrštná mourovatá kočka s tichým krokem a vysokým skokem. Přivolej ji klávesou [R] a vyraz na cestu.',
+    statList: ['🐾 Druh: Kočka', '🏇 Rychlost jízdy: 9.5 m/s', '🦘 Vysoký skok: 11.4', '🐟 Ochočeno pomocí: Čerstvý losos']
+  },
+  {
+    id: 'pet_cow',
+    name: 'Strakatá kráva',
+    cat: 'pets',
+    subcat: 'farm',
+    slot: 'pet',
+    petType: 'Cow',
+    count: 0,
+    rarity: 'uncommon',
+    rideSpeed: 8.4,
+    jumpBoost: 9.4,
+    desc: 'Silná a klidná strakatá kráva, která tě spolehlivě poveze přes hory i údolí.',
+    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.4 m/s', '🌾 Ochočeno pomocí: Zlatá pšenice', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+  },
+  {
+    id: 'pet_sheep',
+    name: 'Chundelatá ovce',
+    cat: 'pets',
+    subcat: 'farm',
+    slot: 'pet',
+    petType: 'Sheep',
+    count: 0,
+    rarity: 'uncommon',
+    rideSpeed: 8.6,
+    jumpBoost: 10.0,
+    desc: 'Měkká a přátelská ovečka s hustou vlnou. Pohodlné sedlo zaručeno!',
+    statList: ['🐾 Druh: Hospodářské zvíře', '🏇 Rychlost jízdy: 8.6 m/s', '🍀 Ochočeno pomocí: Sladký jetel', '⌨️ Přivolání a jízda: Klávesa [R] / [E]']
+  },
+  {
+    id: 'pet_goat',
+    name: 'Horský kozel',
+    cat: 'pets',
+    subcat: 'farm',
+    slot: 'pet',
+    petType: 'Goat',
+    count: 0,
+    rarity: 'epic',
+    rideSpeed: 9.6,
+    jumpBoost: 13.0,
+    desc: 'Neohrožený horský kozel se zatočenými rohy. Dokáže vyskočit i na ty nejstrmější skály.',
+    statList: ['🐾 Druh: Horské zvíře', '🏇 Rychlost jízdy: 9.6 m/s', '🏔️ Obří horský skok: 13.0', '🍎 Ochočeno pomocí: Horské jablko']
+  },
+  {
+    id: 'pet_squirrel',
+    name: 'Zrzavá veverka',
+    cat: 'pets',
+    subcat: 'wild',
+    slot: 'pet',
+    petType: 'Squirrel',
+    count: 0,
+    rarity: 'legendary',
+    rideSpeed: 10.4,
+    jumpBoost: 12.2,
+    desc: 'Bleskurychlá lesní veverka s huňatým ocasem. Překvapivě silný a neuvěřitelně mrštný jezdecký mazlíček!',
+    statList: ['🐾 Druh: Lesní zvíře', '🏇 Rychlost jízdy: 10.4 m/s', '⚡ Mrštný skok: 12.2', '🌰 Ochočeno pomocí: Dubový žalud']
   }
 ];
 
-// Inicializace bází a vylepšení pro zbraně, štíty a brnění
+// Inicializace bází, vylepšení a 3 slotů na skilly pro zbraně, štíty a brnění
 for (const it of INV) {
   if (it.cat === 'weapon') {
     if (it.baseDamage === undefined && it.damage !== undefined) it.baseDamage = it.damage;
     if (it.upgradeLevel === undefined) it.upgradeLevel = 0;
+    if (it.subcat !== 'shield' && !Array.isArray(it.skillSlots)) {
+      it.skillSlots = [null, null, null];
+    }
   }
   if (it.cat === 'armor' || it.subcat === 'shield') {
     if (it.baseDefense === undefined && it.defense !== undefined) it.baseDefense = it.defense;
@@ -978,6 +1163,131 @@ function icon(id) {
       bx2(4, 6, 8, 8, '#0284c7');
       bx2(5, 7, 6, 6, '#38bdf8');
       px(5, 7, '#ffffff'); px(6, 8, '#e0f2fe');
+      break;
+
+    // --- PŘEDMĚTY PRO OCHOČENÍ ---
+    case 'tame_bone':
+      ln(4, 12, 12, 4, '#f8fafc');
+      ln(5, 12, 12, 5, '#e2e8f0');
+      bx2(2, 11, 3, 3, '#f8fafc'); bx2(4, 12, 2, 3, '#cbd5e1');
+      bx2(11, 2, 3, 3, '#f8fafc'); bx2(10, 1, 2, 3, '#cbd5e1');
+      break;
+
+    case 'tame_fish':
+      bx2(4, 6, 7, 4, '#38bdf8');
+      bx2(5, 5, 5, 6, '#0284c7');
+      bx2(6, 7, 4, 2, '#f97316');
+      bx2(11, 5, 3, 2, '#38bdf8');
+      bx2(11, 9, 3, 2, '#38bdf8');
+      px(5, 7, '#0f172a'); px(3, 8, '#7dd3fc');
+      break;
+
+    case 'tame_wheat':
+      ln(4, 14, 12, 3, '#eab308');
+      ln(6, 14, 10, 3, '#ca8a04');
+      bx2(8, 2, 5, 5, '#facc15');
+      bx2(6, 4, 4, 4, '#fde047');
+      bx2(5, 9, 4, 2, '#dc2626');
+      break;
+
+    case 'tame_clover':
+      ln(8, 8, 8, 14, '#15803d');
+      bx2(4, 4, 4, 4, '#22c55e');
+      bx2(9, 4, 4, 4, '#4ade80');
+      bx2(4, 9, 4, 4, '#4ade80');
+      bx2(9, 9, 4, 4, '#22c55e');
+      px(8, 8, '#bbf7d0');
+      break;
+
+    case 'tame_apple':
+      bx2(4, 5, 8, 8, '#dc2626');
+      bx2(5, 4, 6, 10, '#ef4444');
+      px(8, 2, '#78350f');
+      bx2(9, 2, 3, 2, '#22c55e');
+      px(6, 6, '#ffffff'); px(6, 7, '#fecaca');
+      break;
+
+    case 'tame_acorn':
+      bx2(4, 3, 8, 4, '#451a03');
+      bx2(5, 2, 6, 2, '#78350f');
+      px(8, 1, '#451a03');
+      bx2(5, 7, 6, 6, '#b45309');
+      bx2(6, 13, 4, 1, '#92400e');
+      px(6, 8, '#fcd34d');
+      break;
+
+    // --- OCHOČENÍ MAZLÍČCI ---
+    case 'pet_dog_shepherd':
+      bx2(4, 5, 8, 7, '#b45309');
+      bx2(5, 6, 6, 3, '#292524');
+      bx2(4, 2, 2, 3, '#292524');
+      bx2(10, 2, 2, 3, '#292524');
+      bx2(6, 9, 4, 4, '#44403c');
+      px(6, 7, '#ffffff'); px(9, 7, '#ffffff');
+      px(7, 10, '#0f172a'); px(8, 13, '#ef4444');
+      break;
+
+    case 'pet_dog_husky':
+      bx2(4, 5, 8, 7, '#475569');
+      bx2(5, 7, 6, 6, '#f8fafc');
+      bx2(4, 2, 2, 3, '#334155');
+      bx2(10, 2, 2, 3, '#334155');
+      px(6, 7, '#38bdf8'); px(9, 7, '#38bdf8');
+      bx2(7, 10, 2, 2, '#0f172a');
+      break;
+
+    case 'pet_dog_dachshund':
+      bx2(3, 6, 10, 5, '#78350f');
+      bx2(2, 7, 2, 5, '#451a03');
+      bx2(12, 7, 2, 5, '#451a03');
+      bx2(6, 9, 4, 4, '#b45309');
+      px(6, 7, '#0f172a'); px(9, 7, '#0f172a');
+      px(7, 10, '#0f172a');
+      break;
+
+    case 'pet_cat':
+      bx2(4, 5, 8, 7, '#f97316');
+      bx2(4, 3, 2, 2, '#ea580c');
+      bx2(10, 3, 2, 2, '#ea580c');
+      bx2(5, 9, 6, 3, '#ffedd5');
+      px(6, 7, '#22c55e'); px(9, 7, '#22c55e');
+      px(7, 9, '#f43f5e');
+      break;
+
+    case 'pet_cow':
+      bx2(4, 5, 8, 7, '#f8fafc');
+      bx2(4, 5, 3, 3, '#1e293b');
+      bx2(9, 7, 3, 2, '#1e293b');
+      bx2(3, 3, 2, 2, '#d6d3d1');
+      bx2(11, 3, 2, 2, '#d6d3d1');
+      bx2(5, 10, 6, 3, '#fda4af');
+      px(6, 7, '#0f172a'); px(9, 7, '#0f172a');
+      break;
+
+    case 'pet_sheep':
+      bx2(3, 3, 10, 9, '#f1f5f9');
+      bx2(5, 6, 6, 6, '#44403c');
+      bx2(5, 4, 6, 2, '#ffffff');
+      px(6, 8, '#ffffff'); px(9, 8, '#ffffff');
+      break;
+
+    case 'pet_goat':
+      bx2(5, 5, 6, 7, '#d6d3d1');
+      bx2(4, 2, 2, 3, '#78716c');
+      bx2(10, 2, 2, 3, '#78716c');
+      bx2(7, 12, 2, 3, '#a8a29e');
+      px(6, 7, '#eab308'); px(9, 7, '#eab308');
+      px(7, 10, '#44403c');
+      break;
+
+    case 'pet_squirrel':
+      bx2(4, 6, 6, 7, '#c2410c');
+      bx2(10, 3, 4, 9, '#ea580c');
+      bx2(11, 2, 3, 4, '#f97316');
+      bx2(4, 4, 2, 2, '#9a3412');
+      bx2(8, 4, 2, 2, '#9a3412');
+      px(5, 8, '#0f172a'); px(8, 8, '#0f172a');
+      bx2(5, 10, 4, 3, '#ffedd5');
       break;
   }
   return c.toDataURL();

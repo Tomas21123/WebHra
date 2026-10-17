@@ -445,6 +445,25 @@ function gen(cx, cz) {
     }
   }
 
+  // 3. Voxelové budovy a struktury světa (POIs složené z reálných kostek v chunku)
+  const putBlock = (wx, y, wz, b) => {
+    const lx = wx - cx * CS, lz = wz - cz * CS;
+    if (lx < 0 || lx >= CS || lz < 0 || lz >= CS || y < 0) return;
+    if (y >= H) {
+      if (b === 0) return;
+      const newH = Math.max(y + 48, H + 96), newD = new Uint8Array(256 * newH);
+      newD.set(d); d = newD; H = newH; c.d = d; c.H = H;
+    }
+    d[lx + lz * CS + y * 256] = b;
+    if (b !== 0 && y > maxY) {
+      maxY = y;
+      c.maxY = maxY;
+    }
+  };
+  if (typeof window !== 'undefined' && window.POIManager && typeof window.POIManager.stampChunkStructures === 'function') {
+    window.POIManager.stampChunkStructures(cx, cz, putBlock);
+  }
+
   // Aplikace změn bloků (položené / zničené bloky ze sítě či uloženého světa)
   if (typeof window !== 'undefined' && window.networkManager && window.networkManager.worldDeltas) {
     const deltas = window.networkManager.worldDeltas;
@@ -716,7 +735,7 @@ function buildMesh(c) {
               a = o1 && o2 ? 0 : 3 - (o1 + o2 + o3);
             }
             ao.push(a);
-            const l = (b === 11 || isCutout(b)) ? (isCutout(b) ? 1.05 * F.s * tint : 1.15) : AOV[a] * F.s * tint;
+            const l = (b === 11 || b === 35 || isCutout(b)) ? (isCutout(b) ? 1.05 * F.s * tint : 1.2) : AOV[a] * F.s * tint;
             let tu, tv;
             if (F.k === 0) {
               tv = ((F.uy ? su : sv) + 1) / 2;
@@ -802,7 +821,8 @@ function pump(budget) {
 }
 
 // ============================================================================
-// Procedural POIs & 3D Voxel Structures (Milestone 2 - F4)
+// Procedural POIs & Real Voxel Block Structures (Milestone 2 - F4)
+// Všechny generované budovy jsou složené ze skutečných kostek (voxelů)!
 // ============================================================================
 (function () {
   'use strict';
@@ -826,16 +846,30 @@ function pump(budget) {
     openedChests: new Set(),
     activeShrines: new Map(),
 
-    init: function () {
+    _getStorageScope: function () {
+      const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
       try {
-        const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
+        if (typeof GameStorage !== 'undefined' && typeof GameStorage.getActiveGame === 'function') {
+          const act = GameStorage.getActiveGame();
+          if (act && (act.worldId || act.id)) {
+            return `${act.worldId || act.id}_${sKey}`;
+          }
+        }
+      } catch (e) {}
+      return `${sKey}`;
+    },
+
+    init: function () {
+      this.discoveredIds = this.discoveredPOIs;
+      try {
+        const scope = this._getStorageScope();
         if (typeof localStorage !== 'undefined') {
-          const disc = localStorage.getItem(`voxel_poi_discovered_${sKey}`) || localStorage.getItem(`voxel_discovered_pois_${sKey}`);
+          const disc = localStorage.getItem(`voxel_poi_discovered_v2_${scope}`);
           if (disc) {
             const arr = JSON.parse(disc);
             if (Array.isArray(arr)) arr.forEach(id => this.discoveredPOIs.add(id));
           }
-          const opn = localStorage.getItem(`voxel_opened_chests_${sKey}`);
+          const opn = localStorage.getItem(`voxel_opened_chests_v2_${scope}`);
           if (opn) {
             const arr = JSON.parse(opn);
             if (Array.isArray(arr)) arr.forEach(id => this.openedChests.add(id));
@@ -846,12 +880,11 @@ function pump(budget) {
 
     save: function () {
       try {
-        const sKey = (typeof SEED !== 'undefined') ? SEED : 'default';
+        const scope = this._getStorageScope();
         if (typeof localStorage !== 'undefined') {
           const discList = Array.from(this.discoveredPOIs);
-          localStorage.setItem(`voxel_poi_discovered_${sKey}`, JSON.stringify(discList));
-          localStorage.setItem(`voxel_discovered_pois_${sKey}`, JSON.stringify(discList));
-          localStorage.setItem(`voxel_opened_chests_${sKey}`, JSON.stringify(Array.from(this.openedChests)));
+          localStorage.setItem(`voxel_poi_discovered_v2_${scope}`, JSON.stringify(discList));
+          localStorage.setItem(`voxel_opened_chests_v2_${scope}`, JSON.stringify(Array.from(this.openedChests)));
         }
       } catch (e) {}
     },
@@ -877,7 +910,6 @@ function pump(budget) {
       let bestBX = cellX * MACRO_L + 80;
       let bestBZ = cellZ * MACRO_L + 80;
       let bestBY = Math.max(sea + 3, 47);
-      let foundDry = false;
 
       // Hledání vhodného místa v buňce
       for (const [ox, oz] of offsets) {
@@ -897,7 +929,6 @@ function pump(budget) {
           bestBX = candBX;
           bestBZ = candBZ;
           bestBY = candBY;
-          foundDry = true;
           break;
         }
       }
@@ -909,6 +940,7 @@ function pump(budget) {
 
       const id = `poi_${cellX}_${cellZ}`;
       const isOpened = this.openedChests.has(id);
+      const isDisc = this.discoveredPOIs.has(id);
 
       const poi = {
         id,
@@ -925,8 +957,10 @@ function pump(budget) {
         wz: bestBZ * s,
         type,
         displayName,
+        name: displayName,
         xpReward: 50,
         xp: 50,
+        discovered: isDisc,
         group: null,
         attached: false,
         guardiansSpawned: false,
@@ -949,8 +983,381 @@ function pump(budget) {
       return [this.getPoiForCell(cellX, cellZ)];
     },
 
-    isDiscovered: function (poiId) {
-      return this.discoveredPOIs.has(poiId);
+    // =========================================================================
+    // Vykreslení skutečných voxelových budov přímo do blokové mřížky chunku
+    // =========================================================================
+    stampChunkStructures: function (cx, cz, putBlock) {
+      const cs = (typeof CS !== 'undefined') ? CS : 16;
+      const chunkMinX = cx * cs;
+      const chunkMaxX = chunkMinX + cs - 1;
+      const chunkMinZ = cz * cs;
+      const chunkMaxZ = chunkMinZ + cs - 1;
+
+      const baseCellX = Math.floor(chunkMinX / MACRO_L);
+      const baseCellZ = Math.floor(chunkMinZ / MACRO_L);
+
+      for (let dcx = -1; dcx <= 1; dcx++) {
+        for (let dcz = -1; dcz <= 1; dcz++) {
+          const poi = this.getPoiForCell(baseCellX + dcx, baseCellZ + dcz);
+          if (!poi) continue;
+
+          const R = 12; // Poloměr půdorysu budov + rovného vstupního nádvoří v blocích
+          const pbx = (typeof poi.bx === 'number') ? poi.bx : poi.x;
+          const pbz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
+          if (pbx + R < chunkMinX || pbx - R > chunkMaxX ||
+              pbz + R < chunkMinZ || pbz - R > chunkMaxZ) {
+            continue;
+          }
+
+          this._stampSinglePOI(poi, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, putBlock);
+        }
+      }
+    },
+
+    _stampSinglePOI: function (poi, minX, maxX, minZ, maxZ, put) {
+      const bx = (typeof poi.bx === 'number') ? poi.bx : poi.x;
+      const by = (typeof poi.by === 'number') ? poi.by : poi.y;
+      const bz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
+      const type = poi.type;
+
+      // Pomocná funkce: postaví pevný základ od přirozeného terénu až do úrovně yFloor
+      // a vyčistí prostor nad budovou od případných stromů či trávy
+      const prepareColumn = (wx, wz, yFloor, clearHeight, foundationBlock) => {
+        if (wx < minX || wx > maxX || wz < minZ || wz > maxZ) return false;
+        const th = (typeof height === 'function') ? height(wx, wz) : by;
+        const startY = Math.min(th, yFloor - 3);
+        for (let y = startY; y <= yFloor; y++) {
+          put(wx, y, wz, foundationBlock);
+        }
+        for (let y = yFloor + 1; y <= yFloor + clearHeight; y++) {
+          put(wx, y, wz, 0);
+        }
+        return true;
+      };
+
+      // Rovné, čisté kamenné předdvoří před jižním vchodem budovy (pro 100% bezpečnou teleportaci bez zaseknutí)
+      const entranceStartZ = (type === 'Camp' || type === 'Ruins') ? 8 : (type === 'Shrine' ? 7 : 6);
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = entranceStartZ; dz <= entranceStartZ + 3; dz++) {
+          prepareColumn(bx + dx, bz + dz, by, 18, 23);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 1. PRASTARÁ SVATYNĚ (Shrine) – Kaskádový chrám z kostek se 4 sloupy a oltářem
+      // -----------------------------------------------------------------------
+      if (type === 'Shrine') {
+        for (let dx = -6; dx <= 6; dx++) {
+          for (let dz = -6; dz <= 6; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+            const maxD = Math.max(adx, adz);
+
+            // Odstranění rohových kostek vnějšího stupně pro čistý chrámový půdorys
+            if (adx === 6 && adz === 6) continue;
+
+            // Spodní stupeň podstavce (y = by): tmavý oltářní kámen / kamenné cihly
+            const baseBlock = (maxD === 6) ? 36 : 33;
+            if (!prepareColumn(wx, wz, by, 16, baseBlock)) continue;
+
+            // Horní chrámová terasa (y = by + 1) pro dx, dz v [-5..5] + přístupové schody na 4 stranách
+            const isStair = (maxD === 6 && (adx <= 1 || adz <= 1));
+            if (maxD <= 5 || isStair) {
+              if (adx === 5 && adz === 5) continue;
+              const isRuneCross = (adx <= 1 || adz <= 1) && maxD <= 4;
+              const floorBlock = isRuneCross ? 36 : 33;
+              put(wx, by + 1, wz, floorBlock);
+            }
+
+            // 4 mohutné rohové sloupy (2x2 kostky) na pozicích (±3..±4, ±3..±4)
+            const inPillarX = (adx >= 3 && adx <= 4);
+            const inPillarZ = (adz >= 3 && adz <= 4);
+            if (inPillarX && inPillarZ) {
+              // Patka sloupu (y = by + 2)
+              put(wx, by + 2, wz, 36);
+              // Dřík sloupu z kamenných cihel (y = by + 3 .. by + 8)
+              for (let py = by + 3; py <= by + 8; py++) {
+                put(wx, py, wz, 33);
+              }
+              // Hlavice sloupu se zlatým lemem (y = by + 9)
+              put(wx, by + 9, wz, 36);
+              // Zářivý runový krystal na vrcholu vnitřního rohu sloupu (y = by + 10)
+              if (adx === 3 && adz === 3) {
+                put(wx, by + 10, wz, 35);
+              }
+            }
+
+            // Centrální oltář z kostek uprostřed svatyně (dx, dz v [-1..1])
+            if (adx <= 1 && adz <= 1) {
+              put(wx, by + 2, wz, 36);
+              if (adx === 0 && adz === 0) {
+                // Vyvýšený střed oltáře se zářivou krystalovou kostkou
+                put(wx, by + 3, wz, 35);
+              } else if (adx === 0 || adz === 0) {
+                put(wx, by + 3, wz, 36);
+              }
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 2. TAJEMNÉ ZŘÍCENINY (Ruins) – Starobylý chrám s klenbami, mechem a liánami
+      // -----------------------------------------------------------------------
+      else if (type === 'Ruins') {
+        for (let dx = -7; dx <= 7; dx++) {
+          for (let dz = -7; dz <= 7; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+            const maxD = Math.max(adx, adz);
+            if (adx === 7 && adz === 7) continue;
+
+            // Základ a zvětralá kamenná podlaha
+            const isMossy = ((dx * 7 + dz * 13) & 3) === 0;
+            const fBlock = isMossy ? 23 : 33;
+            if (!prepareColumn(wx, wz, by, 15, fBlock)) continue;
+
+            if (maxD <= 6) {
+              put(wx, by + 1, wz, isMossy ? 23 : 33);
+            }
+
+            // Obvodové zdi a kamenné klenby na |dx| === 5 nebo |dz| === 5
+            const onWallX = (adx === 5 && adz <= 5);
+            const onWallZ = (adz === 5 && adx <= 5);
+            if (onWallX || onWallZ) {
+              // Vstupní brána na jihu (+Z) a severu (-Z) s klenutým překladem
+              const isDoorway = (adz === 5 && adx <= 1);
+              const isSideWindow = (adx === 5 && adz <= 1);
+
+              // Výška zříceniny kolísá deterministicky podle souřadnice (efekt pobořeného chrámu)
+              const wallHash = Math.abs((dx * 19 + dz * 31) % 5);
+              const wallTop = (adx === 5 && adz === 5) ? 8 : (4 + wallHash);
+
+              for (let wy = 2; wy <= wallTop; wy++) {
+                if (isDoorway && wy <= 6) continue;
+                if (isSideWindow && wy >= 4 && wy <= 5) continue;
+                const wBlk = ((wy + dx + dz) % 3 === 0) ? 23 : 33;
+                put(wx, by + wy, wz, wBlk);
+              }
+
+              // Kamenný oblouk nad jižní a severní bránou
+              if (adz === 5 && adx <= 2) {
+                put(wx, by + 7, wz, 33);
+                if (adx <= 1) put(wx, by + 8, wz, 36);
+                // Visící liány z klenby
+                if (adx === 1) {
+                  put(wx, by + 6, wz, 25);
+                  put(wx, by + 5, wz, 25);
+                }
+              }
+            }
+
+            // Povalený kamenný sloup z kostek na podlaze (dx v [2..3], dz v [1..3])
+            if (dx >= 2 && dx <= 3 && dz >= 1 && dz <= 2) {
+              put(wx, by + 2, wz, 23);
+            }
+
+            // Středový podstavec pod truhlou
+            if (adx <= 1 && adz <= 1) {
+              put(wx, by + 1, wz, 36);
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 3. TÁBOR NESTVŮR (Camp) – Dřevěná palisáda, voxelový stan, bedny a ohniště
+      // -----------------------------------------------------------------------
+      else if (type === 'Camp') {
+        for (let dx = -7; dx <= 7; dx++) {
+          for (let dz = -7; dz <= 7; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+            const maxD = Math.max(adx, adz);
+            if (adx === 7 && adz === 7) continue;
+
+            // Udusaná zemina a pískové nádvoří tábora
+            const groundBlk = (maxD <= 2) ? 23 : ((dx + dz) % 2 === 0 ? 2 : 4);
+            if (!prepareColumn(wx, wz, by, 14, groundBlk)) continue;
+
+            // Dřevěná kůlová palisáda po obvodu (maxD === 7) s bránou na jihu (dz === 7, |dx| <= 1)
+            if (maxD === 7) {
+              const isGate = (dz === 7 && adx <= 1);
+              if (!isGate) {
+                const stakeH = ((dx + dz) & 1) === 0 ? 4 : 3;
+                for (let py = 1; py <= stakeH; py++) {
+                  put(wx, by + py, wz, 6); // Kmeny stromů
+                }
+              }
+              // Strážní sloupky u brány s pochodněmi
+              if (dz === 7 && adx === 2) {
+                for (let py = 1; py <= 5; py++) put(wx, by + py, wz, 6);
+                put(wx, by + 5, wz, 34);
+                put(wx, by + 6, wz, 11); // Plamen pochodně
+              }
+            }
+
+            // Voxelový stan (A-frame z kostek) v severozápadní části (dx v [-5..-1], dz v [-5..-1])
+            if (dx >= -5 && dx <= -1 && dz >= -5 && dz <= -1) {
+              put(wx, by, wz, 34); // Dřevěná podlaha stanu
+              const tentRelX = dx + 3; // -2 .. +2
+              const roofH = 4 - Math.abs(tentRelX); // Stupňovitá sedlová střecha: výška 2, 3, 4
+              // Zadní stěna stanu (dz === -5)
+              if (dz === -5) {
+                for (let ty = 1; ty <= roofH; ty++) {
+                  put(wx, by + ty, wz, ty === roofH ? 37 : 34);
+                }
+              } else {
+                // Boční šikmé stěny stanu z plátna (blok 37) a dřevěné podpěry
+                if (Math.abs(tentRelX) === 2) {
+                  put(wx, by + 1, wz, 6);
+                  put(wx, by + 2, wz, 37);
+                } else if (Math.abs(tentRelX) === 1) {
+                  put(wx, by + 3, wz, 37);
+                } else if (tentRelX === 0) {
+                  put(wx, by + 4, wz, 37);
+                }
+              }
+            }
+
+            // Dřevěné zásobní bedny na východní straně
+            if (dx >= 3 && dx <= 4 && dz >= -3 && dz <= -2) {
+              put(wx, by + 1, wz, 34);
+              if (dx === 4 && dz === -3) put(wx, by + 2, wz, 34);
+            }
+
+            // Centrální kamenné ohniště z kostek (dx, dz v [-1..1])
+            if (adx <= 1 && adz <= 1) {
+              if (adx === 0 && adz === 0) {
+                put(wx, by + 1, wz, 11); // Žhnoucí oheň uprostřed
+              } else if (adx === 0 || adz === 0) {
+                put(wx, by + 1, wz, 23); // Kamenná obruba ohniště
+              }
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 4. STRÁŽNÍ MAJÁK / VĚŽ (Landmark) – Vysoká kamenná věž s cimbuřím a ohněm
+      // -----------------------------------------------------------------------
+      else if (type === 'Landmark') {
+        for (let dx = -5; dx <= 5; dx++) {
+          for (let dz = -5; dz <= 5; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+            const maxD = Math.max(adx, adz);
+            if (adx === 5 && adz === 5) continue;
+
+            // Pevný kamenný sokl věže
+            if (!prepareColumn(wx, wz, by, 22, 33)) continue;
+
+            // Schodišťový stupeň soklu (y = by + 1)
+            if (maxD <= 4 || (dz === 5 && adx <= 1)) {
+              put(wx, by + 1, wz, (adx <= 1 && adz <= 1) ? 36 : 33);
+            }
+
+            // Tělo věže (dx, dz v [-3..3], y = by + 2 .. by + 14)
+            if (maxD <= 3) {
+              const isPerimeter = (adx === 3 || adz === 3);
+              const isCorner = (adx === 3 && adz === 3);
+              const isDoor = (dz === 3 && adx <= 1);
+              const isWindow = ((adx === 3 && adz === 0) || (adz === 3 && adx === 0));
+
+              for (let ty = 2; ty <= 14; ty++) {
+                if (isPerimeter) {
+                  if (isDoor && ty <= 5) continue; // Vstupní brána do přízemí věže
+                  if (isWindow && (ty === 8 || ty === 9)) continue; // Střílny / okna
+                  const blk = isCorner ? 36 : (((ty + dx + dz) % 4 === 0) ? 23 : 33);
+                  put(wx, by + ty, wz, blk);
+                } else {
+                  // Dřevěná patra uvnitř věže (ve výšce 6 a 10)
+                  if ((ty === 6 || ty === 10) && !(adx === 0 && adz === 0)) {
+                    put(wx, by + ty, wz, 34);
+                  }
+                }
+              }
+            }
+
+            // Předsunuté vyhlídkové ochozy s cimbuřím (dx, dz v [-4..4], y = by + 15 .. by + 16)
+            if (maxD <= 4) {
+              put(wx, by + 15, wz, (maxD === 4) ? 36 : 33);
+              // Zuby cimbuří po obvodu
+              if (maxD === 4 && ((dx + dz) % 2 === 0)) {
+                put(wx, by + 16, wz, 33);
+                if (adx === 4 && adz === 4) {
+                  put(wx, by + 17, wz, 35); // Rohové krystalové lucerny
+                }
+              }
+            }
+
+            // Signální ohnivý maják na vrcholu věže (dx, dz v [-1..1], y = by + 16 .. by + 18)
+            if (adx <= 1 && adz <= 1) {
+              put(wx, by + 16, wz, 36);
+              if (adx === 0 && adz === 0) {
+                put(wx, by + 17, wz, 11);
+                put(wx, by + 18, wz, 11);
+              } else if (adx === 0 || adz === 0) {
+                put(wx, by + 17, wz, 11);
+              }
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 5. TAJEMNÁ POKLADNICE (Chest) – Kamenný pavilon / krypta se střechou z kostek
+      // -----------------------------------------------------------------------
+      else if (type === 'Chest') {
+        for (let dx = -4; dx <= 4; dx++) {
+          for (let dz = -4; dz <= 4; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+            const maxD = Math.max(adx, adz);
+            if (adx === 4 && adz === 4) continue;
+
+            if (!prepareColumn(wx, wz, by, 12, 33)) continue;
+
+            // Podlaha pavilonu (y = by + 1)
+            if (maxD <= 3 || (adx <= 1 || adz <= 1)) {
+              put(wx, by + 1, wz, (adx <= 1 && adz <= 1) ? 36 : 33);
+            }
+
+            // 4 rohové kamenné pilíře (na ±3, ±3)
+            if (adx === 3 && adz === 3) {
+              for (let py = 2; py <= 5; py++) {
+                put(wx, by + py, wz, py === 5 ? 36 : 33);
+              }
+            }
+
+            // Stupňovitá klenutá střecha pavilonu z kostek (y = by + 6 .. by + 8)
+            if (maxD <= 3) {
+              put(wx, by + 6, wz, (maxD === 3) ? 36 : 33);
+            }
+            if (maxD <= 2) {
+              put(wx, by + 7, wz, 33);
+            }
+            if (adx === 0 && adz === 0) {
+              put(wx, by + 8, wz, 35); // Zářivý krystal na špičce střechy
+              put(wx, by + 5, wz, 35); // Stropní krystalová lucerna nad truhlou
+            }
+          }
+        }
+      }
+    },
+
+    isDiscovered: function (poiOrId) {
+      const poiId = (typeof poiOrId === 'object' && poiOrId) ? poiOrId.id : poiOrId;
+      if (!poiId) return false;
+      if (this.discoveredPOIs.has(poiId)) return true;
+      let poi = (typeof poiOrId === 'object' && poiOrId) ? poiOrId : null;
+      if (!poi) {
+        for (const p of this.instances.values()) {
+          if (p.id === poiId) { poi = p; break; }
+        }
+        if (!poi) poi = this.pois.find(p => p.id === poiId);
+      }
+      return !!(poi && poi.discovered === true);
     },
 
     discoverPOI: function (poiId) {
@@ -968,9 +1375,26 @@ function pump(budget) {
       if (!poi) {
         poi = this.pois.find(p => p.id === poiId);
       }
+      if (poi) {
+        poi.discovered = true;
+      }
 
       const xp = (poi && (poi.xpReward || poi.xp)) || 50;
-      const name = (poi && poi.displayName) || 'Neznámé místo';
+      const name = (poi && (poi.displayName || poi.name)) || 'Neznámé místo';
+
+      // Odkrytí chunku s budovou na 3D mapě
+      if (poi && typeof exploredChunks !== 'undefined') {
+        const cs = (typeof CS !== 'undefined') ? CS : 16;
+        const pbx = (typeof poi.bx === 'number') ? poi.bx : (poi.x || 0);
+        const pbz = (typeof poi.bz === 'number') ? poi.bz : (poi.z || 0);
+        const pcx = Math.floor(pbx / cs);
+        const pcz = Math.floor(pbz / cs);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            exploredChunks.add(`${pcx + dx},${pcz + dz}`);
+          }
+        }
+      }
 
       // 1. Udělení zkušeností
       if (typeof window !== 'undefined') {
@@ -1030,162 +1454,305 @@ function pump(budget) {
       return true;
     },
 
+    // =========================================================================
+    // Teleportace hráče POUZE k objevené budově + 100% ochrana proti zaseknutí v bloku
+    // =========================================================================
+    teleportToPOI: function (poiOrId) {
+      let poi = (typeof poiOrId === 'object' && poiOrId) ? poiOrId : null;
+      if (!poi && typeof poiOrId === 'string') {
+        for (const p of this.instances.values()) {
+          if (p.id === poiOrId) { poi = p; break; }
+        }
+        if (!poi) poi = this.pois.find(p => p.id === poiOrId);
+      }
+      if (!poi || !this.isDiscovered(poi)) {
+        if (typeof toast === 'function') toast('🔒 K této budově se můžeš teleportovat až poté, co ji objevíš!');
+        return false;
+      }
+
+      const s = (typeof S !== 'undefined') ? S : 0.5;
+      const cs = (typeof CS !== 'undefined') ? CS : 16;
+      const pObj = (typeof window !== 'undefined' && window.P) ? window.P : (typeof P !== 'undefined' ? P : null);
+      if (!pObj) return false;
+
+      const pbx = (typeof poi.bx === 'number') ? poi.bx : poi.x;
+      const pby = (typeof poi.by === 'number') ? poi.by : (poi.y || 47);
+      const pbz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
+
+      // Střed připraveného vstupního předdvoří na jižní straně (+Z)
+      const entranceOffsetBlocks = (poi.type === 'Camp' || poi.type === 'Ruins') ? 9 : (poi.type === 'Shrine' ? 8 : 7);
+      const prefBX = pbx;
+      const prefBZ = pbz + entranceOffsetBlocks;
+
+      // 1. Vynutit vygenerování všech chunků v okolí budovy i předdvoří
+      if (typeof getChunk === 'function') {
+        const tcx = Math.floor(prefBX / cs);
+        const tcz = Math.floor(prefBZ / cs);
+        for (let dx = -2; dx <= 2; dx++) {
+          for (let dz = -2; dz <= 2; dz++) {
+            getChunk(tcx + dx, tcz + dz);
+          }
+        }
+      }
+
+      // 2. Vyčistit prostor 3x3x5 kostek přímo v místě přistání v chunk datech (proti větvím stromů apod.)
+      if (typeof getChunk === 'function' && typeof vs === 'function') {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            const wx = prefBX + dx;
+            const wz = prefBZ + dz;
+            const ch = getChunk(wx >> 4, wz >> 4);
+            if (!ch || !ch.d) continue;
+            const lx = wx & 15, lz = wz & 15;
+            // Zaručit pevnou podlahu na pby
+            if (pby >= 0 && pby < ch.H && ch.d[lx + lz * cs + pby * 256] === 0) {
+              ch.d[lx + lz * cs + pby * 256] = 23;
+            }
+            // Vyčistit 6 bloků vzduchu nad podlahou předdvoří (y = pby + 1 .. pby + 6)
+            for (let clearY = pby + 1; clearY <= Math.min(ch.H - 1, pby + 6); clearY++) {
+              ch.d[lx + lz * cs + clearY * 256] = 0;
+            }
+            ch.meshed = false;
+          }
+        }
+      }
+
+      // 3. Ověření celého 3D hitboxu hráče (šířka ±HW, výška 1.8m)
+      const isBoxFree = (wx, wy, wz) => {
+        if (typeof hits === 'function') {
+          return !hits(wx, wy, wz, 1.8);
+        }
+        if (typeof vs === 'function') {
+          const hw = 0.3;
+          for (let i = Math.floor((wx - hw) / s); i <= Math.floor((wx + hw) / s); i++) {
+            for (let j = Math.floor(wy / s); j <= Math.floor((wy + 1.79) / s); j++) {
+              for (let k = Math.floor((wz - hw) / s); k <= Math.floor((wz + hw) / s); k++) {
+                if (vs(i, j, k)) return false;
+              }
+            }
+          }
+        }
+        return true;
+      };
+
+      let finalX = (prefBX + 0.5) * s;
+      let finalZ = (prefBZ + 0.5) * s;
+      let finalY = (pby + 1.04) * s;
+
+      // Kandidáti v předdvoří a kolem budovy
+      const candidates = [
+        [prefBX, prefBZ],
+        [prefBX, prefBZ + 1],
+        [prefBX - 1, prefBZ],
+        [prefBX + 1, prefBZ],
+        [prefBX, prefBZ + 2],
+        [pbx, pbz - entranceOffsetBlocks]
+      ];
+
+      let foundSafe = false;
+      for (const [cxB, czB] of candidates) {
+        const testWX = (cxB + 0.5) * s;
+        const testWZ = (czB + 0.5) * s;
+        for (let byTest = pby; byTest <= pby + 14; byTest++) {
+          const testWY = (byTest + 1.04) * s;
+          const hasFloor = (typeof vs === 'function') ? vs(cxB, byTest, czB) : true;
+          if (hasFloor && isBoxFree(testWX, testWY, testWZ)) {
+            finalX = testWX;
+            finalY = testWY;
+            finalZ = testWZ;
+            foundSafe = true;
+            break;
+          }
+        }
+        if (foundSafe) break;
+      }
+
+      // Pokud by i přesto cokoliv kolidovalo, zvedat Y dokud není celý hitbox 100% volný
+      let liftSteps = 0;
+      while (!isBoxFree(finalX, finalY, finalZ) && liftSteps < 30) {
+        finalY += s;
+        liftSteps++;
+      }
+
+      pObj.x = finalX;
+      pObj.y = finalY;
+      pObj.z = finalZ;
+      pObj.renderY = finalY;
+      pObj.vx = 0;
+      pObj.vy = 0;
+      pObj.vz = 0;
+      pObj.ground = true;
+      pObj.isRolling = false;
+      if (typeof isRolling !== 'undefined') isRolling = false;
+      if (typeof resetAttackState === 'function') resetAttackState();
+
+      // Natočení kamery a postavy čelem k budově (směrem -Z)
+      if (typeof yaw !== 'undefined') yaw = 0;
+      if (typeof face !== 'undefined') face = Math.PI;
+      if (typeof model !== 'undefined' && model) {
+        model.position.set(pObj.x, pObj.y, pObj.z);
+        model.rotation.y = Math.PI;
+      }
+
+      if (typeof lastC !== 'undefined') lastC = '';
+      if (typeof manage === 'function') manage();
+      if (typeof pump === 'function') pump(45);
+      if (typeof markExploredAroundPlayer === 'function') markExploredAroundPlayer();
+
+      if (typeof window !== 'undefined' && typeof window.playDiscoveryChime === 'function') {
+        window.playDiscoveryChime();
+      }
+      if (typeof window !== 'undefined' && typeof window.spawnLevelUpParticles === 'function') {
+        window.spawnLevelUpParticles(pObj.x, pObj.y, pObj.z);
+      }
+      if (typeof window !== 'undefined' && window.networkManager && typeof window.networkManager.sendPlayerTransform === 'function') {
+        window.networkManager.sendPlayerTransform();
+      }
+      if (typeof toast === 'function') {
+        toast(`✨ Teleportováno k budově: ${poi.displayName || poi.name}!`);
+      }
+      return true;
+    },
+
+    // =========================================================================
+    // Voxelové interaktivní prvky a osvětlení budov (100% složené z kostek!)
+    // =========================================================================
     buildPOIMesh: function (poi) {
       if (poi.group) return poi.group;
       if (typeof THREE === 'undefined') return null;
 
+      const s = (typeof S !== 'undefined') ? S : 0.5;
       const grp = new THREE.Group();
-      grp.position.set(poi.wx, poi.wy, poi.wz);
+      // Umístění na střed bloku (bx + 0.5, bz + 0.5) a povrch podlahy budovy (by + 2)
+      grp.position.set((poi.bx + 0.5) * s, (poi.by + 2) * s, (poi.bz + 0.5) * s);
 
       if (poi.type === 'Shrine') {
-        // Prastará svatyně
-        const daisMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
-        const dais = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.4, 5.2), daisMat);
-        dais.position.y = 0.2;
-        grp.add(dais);
-        const daisUpper = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.3, 4.2), new THREE.MeshLambertMaterial({ color: 0x64748b }));
-        daisUpper.position.y = 0.55;
-        grp.add(daisUpper);
-
-        // 4 kamenné sloupy
-        const colMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
-        const colOffsets = [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]];
-        colOffsets.forEach(([cx, cz]) => {
-          const col = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 0.5), colMat);
-          col.position.set(cx, 2.15, cz);
-          grp.add(col);
-        });
-
-        // Oltář uprostřed
-        const altar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.2), new THREE.MeshLambertMaterial({ color: 0x334155 }));
-        altar.position.set(0, 0.95, 0);
-        grp.add(altar);
-
-        // Vznášející se runový krystal
+        // Vznášející se runový krystal a prstenec – 100% složený z voxelových kostek!
         const crystalGroup = new THREE.Group();
-        crystalGroup.position.set(0, 2.3, 0);
-        const crystalGeo = new THREE.OctahedronGeometry(0.55, 0);
-        const crystalMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0284c7 });
-        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-        crystalGroup.add(crystal);
+        crystalGroup.position.set(0, 2.25, 0);
 
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.06, 6, 16), new THREE.MeshBasicMaterial({ color: 0x7dd3fc }));
-        crystalGroup.add(ring);
+        const voxSize = 0.16;
+        const cubeGeo = new THREE.BoxGeometry(voxSize, voxSize, voxSize);
+        const coreMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0284c7 });
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
 
-        const light = new THREE.PointLight(0x38bdf8, 1.4, 14);
+        // 1. Voxelový krystal (stupňovitý 3D diamant z kostek)
+        for (let vy = -3; vy <= 3; vy++) {
+          const maxSpan = 3 - Math.abs(vy);
+          for (let vx = -maxSpan; vx <= maxSpan; vx++) {
+            for (let vz = -maxSpan; vz <= maxSpan; vz++) {
+              if (Math.abs(vx) + Math.abs(vz) <= maxSpan) {
+                const isSurface = (Math.abs(vx) + Math.abs(vz) + Math.abs(vy) === 3);
+                const isCenter = (vx === 0 && vy === 0 && vz === 0);
+                if (!isSurface && !isCenter) continue;
+                const m = new THREE.Mesh(cubeGeo, isCenter ? innerMat : coreMat);
+                m.position.set(vx * voxSize, vy * voxSize, vz * voxSize);
+                crystalGroup.add(m);
+              }
+            }
+          }
+        }
+
+        // 2. Voxelový prstenec z kostek kolem krystalu
+        const ringGroup = new THREE.Group();
+        const ringCoords = [
+          [0, 6], [2, 6], [4, 5], [5, 4], [6, 2],
+          [6, 0], [6, -2], [5, -4], [4, -5], [2, -6],
+          [0, -6], [-2, -6], [-4, -5], [-5, -4], [-6, -2],
+          [-6, 0], [-6, 2], [-5, 4], [-4, 5], [-2, 6]
+        ];
+        const rVoxSize = 0.14;
+        const rGeo = new THREE.BoxGeometry(rVoxSize, rVoxSize, rVoxSize);
+        for (const [rx, ry] of ringCoords) {
+          const rm = new THREE.Mesh(rGeo, ringMat);
+          rm.position.set(rx * rVoxSize, ry * rVoxSize, 0);
+          ringGroup.add(rm);
+        }
+        crystalGroup.add(ringGroup);
+
+        const light = new THREE.PointLight(0x38bdf8, 1.5, 16);
         crystalGroup.add(light);
 
         grp.add(crystalGroup);
         poi.crystalGroup = crystalGroup;
         poi.crystalLight = light;
-        poi.crystalBaseY = 2.3;
+        poi.crystalBaseY = 2.25;
 
       } else if (poi.type === 'Ruins') {
-        // Tajemné zříceniny
-        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
-        const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 3.8, 0.7), stoneMat);
-        p1.position.set(-1.8, 1.9, 0);
-        const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 3.8, 0.7), stoneMat);
-        p2.position.set(1.8, 1.9, 0);
-        const arch = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.6, 0.8), stoneMat);
-        grp.add(p1);
-        grp.add(p2);
-        grp.add(arch);
-
-        // Zřícený povalený sloup
-        const fallen = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2.8, 6), stoneMat);
-        fallen.rotation.z = Math.PI / 2.3;
-        fallen.position.set(0.6, 0.3, 1.5);
-        grp.add(fallen);
-
-        // Truhla uprostřed ruin
-        this._buildChestGroup(grp, poi);
+        // Voxelová truhla uprostřed kamenných zřícenin
+        this._buildChestGroup(grp, poi, 0, 0, 0);
 
       } else if (poi.type === 'Camp') {
-        // Tábor nestvůr s ohništěm a stany
-        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
-        for (let i = 0; i < 6; i++) {
-          const ang = (i / 6) * Math.PI * 2;
-          const rock = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.35), stoneMat);
-          rock.position.set(Math.cos(ang) * 0.8, 0.12, Math.sin(ang) * 0.8);
-          grp.add(rock);
-        }
-
-        const ember = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.8, 5), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
-        ember.position.y = 0.4;
-        grp.add(ember);
-
-        const fireLight = new THREE.PointLight(0xf97316, 1.5, 16);
-        fireLight.position.y = 0.6;
+        // Voxelová truhla se zásobami vedle stanu a světlo ohniště
+        // V táboře je podlaha na úrovni (poi.by + 1) * s, proto y = -s
+        const fireLight = new THREE.PointLight(0xf97316, 1.6, 18);
+        fireLight.position.set(0, 0.5, 0);
         grp.add(fireLight);
         poi.fireLight = fireLight;
-        poi.baseLightIntensity = 1.5;
+        poi.baseLightIntensity = 1.6;
 
-        // Stan
-        const tentMat = new THREE.MeshLambertMaterial({ color: 0xb45309 });
-        const tent = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.2, 4), tentMat);
-        tent.position.set(-2.8, 1.1, -1.8);
-        tent.rotation.y = Math.PI / 4;
-        grp.add(tent);
-
-        // Truhla se zásobami
-        this._buildChestGroup(grp, poi);
+        this._buildChestGroup(grp, poi, -1.2, -s, 0.8);
 
       } else if (poi.type === 'Chest') {
-        // Samostatná pokladnice
-        this._buildChestGroup(grp, poi);
+        // Voxelová truhla uprostřed kamenného pavilonu pokladnice
+        this._buildChestGroup(grp, poi, 0, 0, 0);
+        const vaultLight = new THREE.PointLight(0xfbbf24, 1.2, 12);
+        vaultLight.position.set(0, 1.4, 0);
+        grp.add(vaultLight);
 
       } else if (poi.type === 'Landmark') {
-        // Strážní maják / vyhlídková věž
-        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
-        const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 6.0, 6), stoneMat);
-        tower.position.y = 3.0;
-        grp.add(tower);
-
-        const platform = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.0, 0.7, 6), stoneMat);
-        platform.position.y = 6.35;
-        grp.add(platform);
-
-        const brazier = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 0.6, 6), new THREE.MeshLambertMaterial({ color: 0x1e293b }));
-        brazier.position.y = 7.0;
-        grp.add(brazier);
-
-        const fire = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
-        fire.position.y = 7.6;
-        grp.add(fire);
-
-        const beaconLight = new THREE.PointLight(0xfbbf24, 2.2, 35);
-        beaconLight.position.y = 7.8;
+        // Světlo majáku na vrcholu voxelové strážní věže + truhla v přízemí věže
+        const beaconLight = new THREE.PointLight(0xfbbf24, 2.2, 36);
+        beaconLight.position.set(0, 16 * s, 0);
         grp.add(beaconLight);
         poi.fireLight = beaconLight;
         poi.baseLightIntensity = 2.2;
+
+        this._buildChestGroup(grp, poi, 0, 0, -0.6);
       }
 
       poi.group = grp;
       return grp;
     },
 
-    _buildChestGroup: function (parentGroup, poi) {
+    _buildChestGroup: function (parentGroup, poi, ox = 0, oy = 0, oz = 0) {
       if (typeof THREE === 'undefined') return;
 
       const chestGroup = new THREE.Group();
-      chestGroup.position.set(0, 0, 0);
+      chestGroup.position.set(ox, oy, oz);
 
       const woodMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
-      const base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), woodMat);
-      base.position.y = 0.25;
+      const darkWoodMat = new THREE.MeshLambertMaterial({ color: 0x451a03 });
+      const goldMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+
+      // Spodní část truhly složená z voxelových dřevěných kvádrů a rohových sloupků
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.44, 0.56), woodMat);
+      base.position.y = 0.22;
       chestGroup.add(base);
 
-      // Kloubové víko truhly
+      for (const sx of [-0.4, 0.4]) {
+        for (const sz of [-0.26, 0.26]) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.46, 0.1), darkWoodMat);
+          post.position.set(sx, 0.23, sz);
+          chestGroup.add(post);
+        }
+      }
+
+      // Kloubové voxelové víko truhly
       const lidGroup = new THREE.Group();
-      lidGroup.position.set(0, 0.5, -0.3); // Osa otáčení v zadním rohu
+      lidGroup.position.set(0, 0.45, -0.28);
 
-      const lid = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.2, 0.62), woodMat);
-      lid.position.set(0, 0.1, 0.31);
-      lidGroup.add(lid);
+      const lidLower = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.14, 0.60), woodMat);
+      lidLower.position.set(0, 0.07, 0.28);
+      lidGroup.add(lidLower);
 
-      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.08), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
-      latch.position.set(0, 0.0, 0.63);
+      const lidUpper = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.10, 0.48), darkWoodMat);
+      lidUpper.position.set(0, 0.18, 0.28);
+      lidGroup.add(lidUpper);
+
+      const latch = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.08), goldMat);
+      latch.position.set(0, 0.02, 0.60);
       lidGroup.add(latch);
 
       if (poi.opened) {
@@ -1215,8 +1782,8 @@ function pump(budget) {
 
           const d = Math.hypot(px - poi.wx, pz - poi.wz);
 
-          // 1. Automatické odhalení při přiblížení na 36 metrů
-          if (d <= 36.0 && !this.isDiscovered(poi.id)) {
+          // 1. Automatické odhalení až při skutečném přiblížení k budově (14 metrů = 28 bloků)
+          if (d <= 14.0 && !this.isDiscovered(poi.id)) {
             this.discoverPOI(poi.id);
           }
 
@@ -1232,13 +1799,13 @@ function pump(budget) {
               if (!poi.guardiansSpawned && em && typeof em.spawnCreature === 'function') {
                 poi.guardiansSpawned = true;
                 if (poi.type === 'Camp') {
-                  em.spawnCreature('Goblin', poi.wx + 2.5, poi.wy, poi.wz + 1.5, 1);
-                  em.spawnCreature('Goblin', poi.wx - 2.0, poi.wy, poi.wz - 2.0, 1);
+                  em.spawnCreature('Goblin', poi.wx + 2.5, poi.wy + 1.0, poi.wz + 4.5, 1);
+                  em.spawnCreature('Goblin', poi.wx - 2.0, poi.wy + 1.0, poi.wz + 4.5, 1);
                 } else if (poi.type === 'Ruins') {
-                  em.spawnCreature('Skeleton', poi.wx + 1.8, poi.wy, poi.wz + 2.0, 1);
-                  em.spawnCreature('Skeleton', poi.wx - 1.5, poi.wy, poi.wz - 1.8, 2);
+                  em.spawnCreature('Skeleton', poi.wx + 1.8, poi.wy + 1.0, poi.wz + 4.0, 1);
+                  em.spawnCreature('Skeleton', poi.wx - 1.5, poi.wy + 1.0, poi.wz + 4.0, 2);
                 } else if (poi.type === 'Landmark') {
-                  em.spawnCreature('Wolf', poi.wx + 3.0, poi.wy, poi.wz + 3.0, 1);
+                  em.spawnCreature('Wolf', poi.wx + 3.5, poi.wy + 1.0, poi.wz + 4.0, 1);
                 }
               }
             }
@@ -1280,8 +1847,8 @@ function pump(budget) {
           if (!poi || !poi.attached) continue;
 
           const d = Math.hypot(px - poi.wx, pz - poi.wz);
-          if (d <= 3.8) {
-            if ((poi.type === 'Chest' || poi.type === 'Ruins' || poi.type === 'Camp') && !poi.opened) {
+          if (d <= 5.2) {
+            if ((poi.type === 'Chest' || poi.type === 'Ruins' || poi.type === 'Camp' || poi.type === 'Landmark') && !poi.opened) {
               poi.opened = true;
               poi.targetAngle = 1.30;
               this.openedChests.add(poi.id);
