@@ -3629,6 +3629,12 @@
   // ---------------------------------------------------------------------------
   const PetManager = {
     activePet: null,
+    defaultRoamRadius: 20.0,
+    setRoamRadius: function (radius) {
+      if (this.activePet) {
+        this.activePet.roamRadius = radius;
+      }
+    },
     get isRiding() {
       return !!(typeof P !== 'undefined' && P && P.isRiding);
     },
@@ -3756,6 +3762,11 @@
         attackCooldownTimer: 0,
         attackAnimTimer: 0,
         targetEnemy: null,
+        roamRadius: (cfg && cfg.roamRadius) || 20.0,
+        roamTargetX: null,
+        roamTargetZ: null,
+        roamWaitTimer: 0.5,
+        roamMoveSpeed: 4.5,
         group,
         limbMeshes,
         labelSprite,
@@ -3836,6 +3847,9 @@
         if (this.activePet.group) {
           this.activePet.group.position.set(this.activePet.x, this.activePet.y, this.activePet.z);
         }
+        this.activePet.roamTargetX = null;
+        this.activePet.roamTargetZ = null;
+        this.activePet.roamWaitTimer = 0.5;
         this._updatePetLabel();
         if (!silent && typeof toast === 'function') {
           toast(`🐾 Sesedl jsi z mazlíčka (${this.activePet.name}).`);
@@ -4102,19 +4116,20 @@
         }
       }
 
-      // Pomocná funkce pro vyhledání nejlepšího nepřátelského cíle
+      // Pomocná funkce pro vyhledání nejlepšího nepřátelského cíle v okruhu mazlíčka
+      const maxRoamRadius = pet.roamRadius || 20.0;
       const findBestEnemy = () => {
         if (typeof window === 'undefined' || !window.EntityManager || !Array.isArray(window.EntityManager.creatures)) return null;
         if (pet.targetEnemy && pet.targetEnemy.state !== 'Dead' && pet.targetEnemy.hp > 0) {
           const distToP = Math.hypot(pet.targetEnemy.x - pObj.x, pet.targetEnemy.z - pObj.z);
-          if (distToP <= 16) return pet.targetEnemy;
+          if (distToP <= maxRoamRadius + 2.0) return pet.targetEnemy;
         }
         let best = null;
-        let bestDist = 12;
+        let bestDist = maxRoamRadius;
         for (const c of window.EntityManager.creatures) {
           if (!c || c.isPassive || c.state === 'Dead' || c.hp <= 0) continue;
           const d = Math.hypot(c.x - pObj.x, c.z - pObj.z);
-          if (d < bestDist) {
+          if (d <= bestDist) {
             bestDist = d;
             best = c;
           }
@@ -4172,13 +4187,14 @@
           });
         }
       } else {
-        // Mazlíček je věrný společník a ochránce!
+        // Mazlíček je věrný společník a ochránce – volně se pohybuje v okruhu až 20 bloků od hráče!
         const enemy = findBestEnemy();
         let targetX, targetZ;
         let moveSpd = 0;
+        const distToPlayer = Math.hypot(pet.x - pObj.x, pet.z - pObj.z);
 
-        if (enemy) {
-          // Mazlíček útočí na nepřítele
+        if (enemy && distToPlayer <= maxRoamRadius + 5.0) {
+          // Mazlíček útočí na nepřítele v okruhu hráče
           pet.targetEnemy = enemy;
           targetX = enemy.x;
           targetZ = enemy.z;
@@ -4194,32 +4210,107 @@
               this.attackTarget(enemy);
             }
           } else {
-            moveSpd = Math.min((pet.rideSpeed || 9.5) * 1.15, distToEnemy * 4.0);
+            moveSpd = Math.min((pet.rideSpeed || 9.5) * 1.15, Math.max(3.0, distToEnemy * 3.5));
             const nx = dx / distToEnemy;
             const nz = dz / distToEnemy;
             pet.x += nx * moveSpd * dt;
             pet.z += nz * moveSpd * dt;
           }
+          pet.roamTargetX = null;
+          pet.roamTargetZ = null;
+          pet.roamWaitTimer = 0.5;
         } else {
-          // Žádný nepřítel: mazlíček věrně následuje hráče po boku
+          // Žádný nepřítel: mazlíček se svobodně pohybuje a zkoumá svět v okruhu až 20 bloků od hráče
           pet.targetEnemy = null;
-          const targetAngle = ((typeof face !== 'undefined') ? face : 0) - Math.PI * 0.45;
-          targetX = pObj.x + Math.sin(targetAngle) * 1.65;
-          targetZ = pObj.z + Math.cos(targetAngle) * 1.65;
-          const dx = targetX - pet.x;
-          const dz = targetZ - pet.z;
-          const dist = Math.hypot(dx, dz);
 
-          if (dist > 22) {
-            pet.x = targetX;
-            pet.z = targetZ;
-          } else if (dist > 0.65) {
-            moveSpd = Math.min(pet.rideSpeed || 9.5, dist * 3.8);
-            const nx = dx / dist;
-            const nz = dz / dist;
-            pet.x += nx * moveSpd * dt;
-            pet.z += nz * moveSpd * dt;
-            pet.rotationY = Math.atan2(nx, nz);
+          // 1. Záchranný teleport: pokud je hráč moc daleko (> 35 bloků), přivolat mazlíčka k hráči
+          if (distToPlayer > 35.0) {
+            const spawnAngle = Math.random() * Math.PI * 2;
+            const spawnDist = 2.0 + Math.random() * 2.5;
+            pet.x = pObj.x + Math.sin(spawnAngle) * spawnDist;
+            pet.z = pObj.z + Math.cos(spawnAngle) * spawnDist;
+            pet.roamTargetX = null;
+            pet.roamTargetZ = null;
+            pet.roamWaitTimer = 0.8;
+          } else if (distToPlayer > maxRoamRadius) {
+            // 2. Mazlíček překročil okruh 20 bloků od hráče: vrací se zpět k hráči do okruhu 20 bloků
+            const dx = pObj.x - pet.x;
+            const dz = pObj.z - pet.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist > 0.001) {
+              const nx = dx / dist;
+              const nz = dz / dist;
+              // Rychlejší běh pro návrat k hráči
+              moveSpd = Math.min((pet.rideSpeed || 9.5) * 1.25, Math.max(4.5, (dist - maxRoamRadius * 0.5) * 2.5));
+              pet.x += nx * moveSpd * dt;
+              pet.z += nz * moveSpd * dt;
+              pet.rotationY = Math.atan2(nx, nz);
+            }
+            pet.roamTargetX = null;
+            pet.roamTargetZ = null;
+            pet.roamWaitTimer = 0.5;
+          } else {
+            // 3. Mazlíček je uvnitř okruhu 20 bloků: autonomní pohyb a toulání
+            let hasValidTarget = (typeof pet.roamTargetX === 'number' && typeof pet.roamTargetZ === 'number');
+            if (hasValidTarget) {
+              const targetDistFromPlayer = Math.hypot(pet.roamTargetX - pObj.x, pet.roamTargetZ - pObj.z);
+              if (targetDistFromPlayer > maxRoamRadius) {
+                hasValidTarget = false;
+              }
+            }
+
+            // Pokud hráč odchází a mazlíček se blíží k vnějšímu okraji (> 18 bloků), nasměrovat k hráči
+            if (distToPlayer > maxRoamRadius * 0.9) {
+              const dx = pObj.x - pet.x;
+              const dz = pObj.z - pet.z;
+              const dist = Math.hypot(dx, dz);
+              if (dist > 0.001) {
+                const nx = dx / dist;
+                const nz = dz / dist;
+                moveSpd = Math.min(pet.rideSpeed || 9.5, 5.0);
+                pet.x += nx * moveSpd * dt;
+                pet.z += nz * moveSpd * dt;
+                pet.rotationY = Math.atan2(nx, nz);
+              }
+              hasValidTarget = false;
+              pet.roamWaitTimer = 0.5;
+            } else if (!hasValidTarget) {
+              // Výběr nového toulacího bodu v okruhu až 20 bloků od hráče
+              if (pet.roamWaitTimer > 0) {
+                pet.roamWaitTimer -= dt;
+                moveSpd = 0;
+                // Jemné rozhlížení v klidu
+                pet.rotationY += Math.sin(animTime * 0.0015) * 0.01;
+              } else {
+                // Zvolit náhodný bod v okruhu 2 až 19 bloků od hráče
+                const angle = Math.random() * Math.PI * 2;
+                const r = 2.0 + Math.random() * (maxRoamRadius - 2.8);
+                pet.roamTargetX = pObj.x + Math.sin(angle) * r;
+                pet.roamTargetZ = pObj.z + Math.cos(angle) * r;
+                pet.roamMoveSpeed = (pet.rideSpeed || 9.5) * (0.35 + Math.random() * 0.3);
+                pet.roamWaitTimer = 0;
+              }
+            } else {
+              // Pohyb k cílovému bodu toulání uvnitř okruhu 20 bloků
+              const dx = pet.roamTargetX - pet.x;
+              const dz = pet.roamTargetZ - pet.z;
+              const distToTarget = Math.hypot(dx, dz);
+
+              if (distToTarget < 1.1) {
+                // Dorazil na místo: pauza, čmuchání a průzkum na 2 až 4.5 sekundy
+                pet.roamTargetX = null;
+                pet.roamTargetZ = null;
+                pet.roamWaitTimer = 2.0 + Math.random() * 2.5;
+                moveSpd = 0;
+              } else {
+                moveSpd = pet.roamMoveSpeed || ((pet.rideSpeed || 9.5) * 0.45);
+                const nx = dx / distToTarget;
+                const nz = dz / distToTarget;
+                pet.x += nx * moveSpd * dt;
+                pet.z += nz * moveSpd * dt;
+                pet.rotationY = Math.atan2(nx, nz);
+              }
+            }
           }
         }
 
