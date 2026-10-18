@@ -431,6 +431,11 @@ function loop(now) {
     G.rg += effectiveDt;
     const currentMaxHp = (typeof P !== 'undefined' && P && typeof P.maxHp === 'number') ? P.maxHp : 100;
     if (G.rg > 4) G.hp = Math.min(currentMaxHp, G.hp + 3 * effectiveDt);
+    if (typeof G !== 'undefined' && G.hp <= 0 && (!P || !P.isDead)) {
+      if (typeof window !== 'undefined' && typeof window.triggerPlayerDeath === 'function') {
+        window.triggerPlayerDeath();
+      }
+    }
     ui();
     if (typeof updateActionBarCooldowns === 'function') updateActionBarCooldowns();
   }

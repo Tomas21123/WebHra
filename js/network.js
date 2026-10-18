@@ -131,6 +131,28 @@ class NetworkManager {
               ps.equipped.forEach(item => EQ.push(item));
             }
 
+            // Obnova RPG úrovně a statistik postavy pro daný svět
+            if (typeof ps.level !== 'undefined') {
+              P.level = Math.max(0, parseInt(ps.level) || 0);
+            }
+            if (typeof ps.xp !== 'undefined') {
+              P.xp = Math.max(0, parseInt(ps.xp) || 0);
+            }
+            if (typeof ps.xpNext !== 'undefined') {
+              P.xpNext = parseInt(ps.xpNext) || (P.level === 0 ? 50 : 100);
+            }
+            if (typeof ps.skillPoints !== 'undefined') {
+              P.skillPoints = Math.max(0, parseInt(ps.skillPoints) || 0);
+            }
+            if (ps.baseStats) {
+              P.baseStats = Object.assign(P.baseStats || {}, ps.baseStats);
+              if (typeof ps.baseStats.attackPower === 'number') P.attackPower = ps.baseStats.attackPower;
+              if (typeof ps.baseStats.maxHp === 'number') P.maxHp = ps.baseStats.maxHp;
+              if (typeof ps.baseStats.maxStamina === 'number') P.maxStamina = ps.baseStats.maxStamina;
+            }
+            if (typeof ui === 'function') ui();
+            if (typeof updateXpUI === 'function') updateXpUI();
+
             // Obnova uloženého inventáře a mazlíčků
             let savedInv = ps.inventory;
             let savedEquippedSlots = ps.equippedSlots;
@@ -222,24 +244,39 @@ class NetworkManager {
               if (typeof renderInv === 'function') renderInv();
               if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
             } else {
-              // Nový svět bez uloženého stavu – začínáme s čistým / prázdným inventářem!
+              // Nový svět bez uloženého stavu – začínáme na Level 0 s mečem sword_rusty a jinak prázdným inventářem!
               if (typeof INV !== 'undefined' && Array.isArray(INV)) {
-                INV.forEach(it => { it.count = 0; if (it.upgradeLevel) it.upgradeLevel = 0; });
+                INV.forEach(it => { it.count = (it.id === 'sword_rusty' ? 1 : 0); if (it.upgradeLevel) it.upgradeLevel = 0; });
               }
               if (typeof EQUIPPED_SLOTS !== 'undefined') {
                 for (const k in EQUIPPED_SLOTS) EQUIPPED_SLOTS[k] = null;
+                EQUIPPED_SLOTS.hand_r = 'sword_rusty';
               }
               if (typeof HB !== 'undefined' && Array.isArray(HB)) {
                 HB.fill(null);
+                HB[0] = 'sword_rusty';
               }
-              if (typeof heldId !== 'undefined') heldId = null;
-              if (typeof hbSel !== 'undefined') hbSel = -1;
+              if (typeof heldId !== 'undefined') heldId = 'sword_rusty';
+              if (typeof hbSel !== 'undefined') hbSel = 0;
+              if (typeof P !== 'undefined') {
+                P.level = 0;
+                P.xp = 0;
+                P.xpNext = 50;
+                P.skillPoints = 0;
+                P.attackPower = 8;
+                if (P.baseStats) P.baseStats.attackPower = 8;
+              }
+              if (typeof G !== 'undefined' && typeof P !== 'undefined') {
+                G.hp = P.maxHp || 100;
+                G.st = P.maxStamina || 100;
+              }
               if (typeof syncEQArray === 'function') syncEQArray();
               if (typeof renderHB === 'function') renderHB();
               if (typeof renderInv === 'function') renderInv();
               if (typeof updateEquipmentUI === 'function') updateEquipmentUI();
               if (typeof applyHeld === 'function') applyHeld();
               if (typeof updatePlayerAppearance === 'function') updatePlayerAppearance();
+              if (typeof ui === 'function') ui();
             }
           }
         }, 500);
@@ -294,6 +331,11 @@ class NetworkManager {
       z: P.z,
       yaw: typeof yaw !== 'undefined' ? yaw : 0,
       pitch: typeof pitch !== 'undefined' ? pitch : 0,
+      level: (typeof P !== 'undefined') ? (P.level || 0) : 0,
+      xp: (typeof P !== 'undefined') ? (P.xp || 0) : 0,
+      xpNext: (typeof P !== 'undefined') ? (P.xpNext || 50) : 50,
+      skillPoints: (typeof P !== 'undefined') ? (P.skillPoints || 0) : 0,
+      baseStats: (typeof P !== 'undefined' && P.baseStats) ? Object.assign({}, P.baseStats) : null,
       hp: typeof G !== 'undefined' ? G.hp : 100,
       st: typeof G !== 'undefined' ? G.st : 100,
       hotbar: (typeof HB !== 'undefined') ? [...HB] : [],
@@ -307,6 +349,9 @@ class NetworkManager {
     GameStorage.updateWorldData(worldId, playerState, this.worldDeltas);
     if (typeof GameStorage.savePlayerInventory === 'function') {
       GameStorage.savePlayerInventory(worldId, inventoryData, equippedSlotsData, activePetId);
+    }
+    if (typeof GameStorage.savePlayerRPGState === 'function') {
+      GameStorage.savePlayerRPGState(null, worldId);
     }
     this.showAutoSaveBadge();
   }

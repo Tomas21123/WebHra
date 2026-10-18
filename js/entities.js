@@ -3070,6 +3070,10 @@
         if (typeof P.stamina === 'number') P.stamina = Math.max(0, P.stamina - 15);
         if (typeof playBlockSound === 'function') playBlockSound();
         if (typeof toast === 'function') toast(`🛡️ Útok nestvůry vykryt štítem (-${mitigatedDmg} HP)`);
+        const blockHp = (typeof P !== 'undefined' && typeof P.hp === 'number') ? P.hp : (typeof G !== 'undefined' ? G.hp : 100);
+        if (blockHp <= 0 && typeof window !== 'undefined' && typeof window.triggerPlayerDeath === 'function') {
+          window.triggerPlayerDeath();
+        }
         return;
       }
 
@@ -3085,6 +3089,12 @@
       if (typeof toast === 'function') {
         const breathPrefix = this.isDragon ? (this.dragonType === 'ice' ? '❄️ Ledový dech wyverny: ' : '🔥 Ohnivý dech wyverny: ') : '';
         toast(`⚠️ ${breathPrefix}${this.name} tě zasáhl za -${dmg} HP!`);
+      }
+
+      // Kontrola smrti hráče při poklesu HP na 0
+      const currentHp = (typeof P !== 'undefined' && typeof P.hp === 'number') ? P.hp : (typeof G !== 'undefined' ? G.hp : 100);
+      if (currentHp <= 0 && typeof window !== 'undefined' && typeof window.triggerPlayerDeath === 'function') {
+        window.triggerPlayerDeath();
       }
 
       // Červený záblesk obrazovky při zranění

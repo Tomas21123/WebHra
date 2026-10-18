@@ -733,6 +733,27 @@ function createPoiMarkerMesh(poi) {
     addBox(group, 1.0, 0.6, 0.7, 0, 0.3, 0, chestMat);
     addBox(group, 1.04, 0.25, 0.74, 0, 0.7, 0, chestMat);
     addBox(group, 0.2, 0.22, 0.12, 0, 0.52, 0.38, new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
+  } else if (normType === 'dungeonlabyrinth') {
+    // Voxelová krypta / vchod do podzemního labyrintu
+    const darkMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+    const runeMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+    addBox(group, 1.4, 0.4, 1.4, 0, 0.2, 0, darkMat);
+    addBox(group, 0.3, 0.8, 0.3, -0.5, 0.6, 0.5, darkMat);
+    addBox(group, 0.3, 0.8, 0.3, 0.5, 0.6, 0.5, darkMat);
+    addBox(group, 1.3, 0.3, 0.5, 0, 1.1, 0.5, darkMat);
+    addBox(group, 0.4, 0.4, 0.4, 0, 0.5, 0, runeMat, 'dungeon_eye');
+  } else if (normType === 'dungeonstronghold') {
+    // Voxelová pevnost / hrad se 4 věžičkami
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+    const goldMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    addBox(group, 1.6, 0.6, 1.6, 0, 0.3, 0, wallMat);
+    for (const sx of [-0.65, 0.65]) {
+      for (const sz of [-0.65, 0.65]) {
+        addBox(group, 0.38, 1.2, 0.38, sx, 0.6, sz, wallMat);
+      }
+    }
+    addBox(group, 0.7, 1.4, 0.7, 0, 0.7, 0, wallMat);
+    addBox(group, 0.3, 0.4, 0.3, 0, 1.5, 0, goldMat, 'keep_flag');
   } else {
     // Voxelová strážní věž / Maják z kostek
     const towerMat = (typeof THREE.MeshLambertMaterial !== 'undefined')
@@ -759,7 +780,9 @@ function getPoiDisplayMeta(poi) {
     landmark: { icon: '🗼', typeLabel: 'Strážní věž' },
     chest:    { icon: '🧰', typeLabel: 'Truhla s pokladem' },
     dragonnestfire: { icon: '🔥🐉', typeLabel: 'Hnízdo ohnivého draka' },
-    dragonnestice:  { icon: '❄️🐉', typeLabel: 'Hnízdo ledového draka' }
+    dragonnestice:  { icon: '❄️🐉', typeLabel: 'Hnízdo ledového draka' },
+    dungeonlabyrinth:  { icon: '🗝️', typeLabel: 'Podzemní labyrint' },
+    dungeonstronghold: { icon: '🏰', typeLabel: 'Velká pevnost' }
   }[normType] || { icon: '🏛️', typeLabel: 'Významná stavba' };
 
   const bx = (typeof poi.x === 'number') ? poi.x : (poi.bx || 0);
@@ -918,6 +941,16 @@ function updateMinimapMarkers(now) {
   const miniScaleH = 0.15;
 
   if (window.POIManager) {
+    if (window.POIManager.discoveredPOIs && typeof window.POIManager.getPoiForCell === 'function') {
+      for (const id of window.POIManager.discoveredPOIs) {
+        if (!window.POIManager.pois || !window.POIManager.pois.some(p => p.id === id)) {
+          const m = String(id).match(/poi_(-?\d+)_(-?\d+)/);
+          if (m) {
+            window.POIManager.getPoiForCell(parseInt(m[1], 10), parseInt(m[2], 10));
+          }
+        }
+      }
+    }
     const list = window.POIManager.pois || [];
     for (const poi of list) {
       if (!window.POIManager.isDiscovered(poi.id)) {

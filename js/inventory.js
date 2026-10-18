@@ -1,26 +1,26 @@
 // ---------- Inventář, Lišta a Výbava (RPG Systém v2) ----------
 const EQUIPPED_SLOTS = {
   cloth_head: null,
-  cloth_chest: 'tunic_linen',
-  cloth_legs: 'pants_leather',
-  cloth_feet: 'boots_leather',
+  cloth_chest: null,
+  cloth_legs: null,
+  cloth_feet: null,
   armor_head: null,
   armor_chest: null,
   armor_legs: null,
   armor_feet: null,
   hand_l: null,
-  hand_r: 'sword',
+  hand_r: 'sword_rusty',
   ring_l: null,
   ring_r: null,
   pet: null
 };
 
-const EQ = [];
-const HB = [null, null, null, null, null];
+const EQ = ['sword_rusty'];
+const HB = ['sword_rusty', null, null, null, null];
 const MAXHB = 5;
 
 let hbSel = 0;
-let heldId = 'sword';
+let heldId = 'sword_rusty';
 let invOpen = false;
 let mainCat = 'all';
 let subCat = 'all';
@@ -1195,6 +1195,11 @@ function renderGridItemsUI() {
   const filtered = INV.filter(it => {
     // Mazlíčci, kteří ještě nebyli ochočeni (count <= 0), se nezobrazují
     if (it.cat === 'pets' && (it.count || 0) <= 0) return false;
+
+    // Položky, které hráč nevlastní (nemá count > 0 ani nejsou vybavené), se v inventáři nezobrazují
+    const isEquipped = (typeof EQ !== 'undefined' && EQ.includes(it.id)) ||
+                       (typeof EQUIPPED_SLOTS !== 'undefined' && Object.values(EQUIPPED_SLOTS).includes(it.id));
+    if (!isEquipped && (it.count || 0) <= 0) return false;
 
     // 1. Filtr kategorie
     if (mainCat === 'weapon' && it.cat !== 'weapon') return false;

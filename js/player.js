@@ -47,9 +47,9 @@ const P = {
   vx: 0, vy: 0, vz: 0,
   ground: false, moveX: 0, moveZ: 0,
   inWater: false, isSwimming: false, isRolling: false,
-  level: 1,
+  level: 0,
   xp: 0,
-  xpNext: 100,
+  xpNext: 50,
   skillPoints: 0,
   hp: 100,
   maxHp: 100,
@@ -58,7 +58,7 @@ const P = {
   baseStats: {
     maxHp: 100,
     maxStamina: 100,
-    attackPower: 10,
+    attackPower: 8,
     defense: 0,
     critChance: 0.05,
     moveSpeed: 6.0
@@ -143,12 +143,13 @@ if (typeof window !== 'undefined') {
 }
 
 function calculateXpNext(level) {
+  if (level !== undefined && level !== null && level <= 0) return 50;
   const l = Math.max(1, Math.floor(level || 1));
   return Math.floor(100 * Math.pow(l, 1.5));
 }
 if (typeof window !== 'undefined') {
   window.calculateXpNext = calculateXpNext;
-  window.getPlayerLevel = () => P.level || 1;
+  window.getPlayerLevel = () => (typeof P.level === 'number' ? P.level : 0);
 }
 
 function showLevelUpBanner(newLevel, levelsGained = 1) {
@@ -216,7 +217,7 @@ if (typeof window !== 'undefined') {
 function checkPlayerLevelUp() {
   const pObj = (typeof window !== 'undefined' && window.P) ? window.P : P;
   if (!pObj) return false;
-  if (typeof pObj.level !== 'number' || pObj.level < 1) pObj.level = 1;
+  if (typeof pObj.level !== 'number' || pObj.level < 0) pObj.level = 0;
   if (typeof pObj.xp !== 'number' || pObj.xp < 0) pObj.xp = 0;
   if (typeof pObj.xpNext !== 'number' || pObj.xpNext <= 0) {
     pObj.xpNext = calculateXpNext(pObj.level);
@@ -337,14 +338,177 @@ ui = function () {
   }
 
   const lvlBadge = document.getElementById('hudLevelBadge');
-  if (lvlBadge) lvlBadge.textContent = `Lv. ${P.level || 1}`;
+  if (lvlBadge) lvlBadge.textContent = `Lv. ${typeof P.level === 'number' ? P.level : 0}`;
   const xpFill = document.getElementById('xpBarFill');
   const xpText = document.getElementById('xpBarText');
-  const xpNext = P.xpNext || calculateXpNext(P.level || 1);
+  const curLevel = typeof P.level === 'number' ? P.level : 0;
+  const xpNext = P.xpNext || calculateXpNext(curLevel);
   const xpPct = Math.max(0, Math.min(100, ((P.xp || 0) / xpNext) * 100));
   if (xpFill) xpFill.style.width = xpPct + '%';
   if (xpText) xpText.textContent = `${P.xp || 0} / ${xpNext} XP`;
 };
+
+// =============================================================================
+// Správa Smrti Hráče a Oživení u Nejbližší Objevené Budovy
+// =============================================================================
+function triggerPlayerDeath() {
+  const pObj = (typeof window !== 'undefined' && window.P) ? window.P : P;
+  if (!pObj || pObj.isDead) return false;
+  pObj.isDead = true;
+
+  // Sesednout z mazlíčka pokud hráč jede
+  if (pObj.isRiding && typeof window.PetManager !== 'undefined' && typeof window.PetManager.dismountPet === 'function') {
+    window.PetManager.dismountPet(true);
+  }
+
+  // Zvukový efekt smrti
+  if (typeof playAttackSound === 'function') {
+    playAttackSound('heavy');
+  }
+
+  // Zobrazit obrazovku smrti
+  const overlay = (typeof document !== 'undefined') ? document.getElementById('deathOverlay') : null;
+  const descEl = (typeof document !== 'undefined') ? document.getElementById('deathDesc') : null;
+  const respawnMsgEl = (typeof document !== 'undefined') ? document.getElementById('deathRespawnMsg') : null;
+
+  if (overlay) {
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    if (descEl) descEl.textContent = 'Tvé tělo podlehlo ranám v boji...';
+    if (respawnMsgEl) respawnMsgEl.textContent = 'Probouzíš se u nejbližší svatyně...';
+  } else if (typeof toast === 'function') {
+    toast('💀 ZEMŘEL JSI! Teleportuji tě k nejbližší svatyni...');
+  }
+
+  // Vyhledání nejbližší teleportační budovy (jak se ukazují na mapě)
+  let targetPOI = null;
+  let minDist = Infinity;
+  const pm = (typeof window !== 'undefined' && window.POIManager) ? window.POIManager : null;
+
+  if (pm) {
+    // 1. Nejprve zkontrolujeme všechny již objevené budovy (svatyně, ruiny, tábory, věže, labyrinty, pevnosti)
+    if (pm.discoveredPOIs && pm.discoveredPOIs.size > 0) {
+      for (const id of pm.discoveredPOIs) {
+        let poi = null;
+        if (pm.instances) {
+          for (const p of pm.instances.values()) {
+            if (p.id === id) { poi = p; break; }
+          }
+        }
+        if (!poi && pm.pois) {
+          poi = pm.pois.find(p => p.id === id);
+        }
+        if (!poi && typeof pm.getPoiForCell === 'function') {
+          const match = String(id).match(/poi_(-?\d+)_(-?\d+)/);
+          if (match) {
+            poi = pm.getPoiForCell(parseInt(match[1], 10), parseInt(match[2], 10));
+          }
+        }
+        if (poi && poi.type !== 'Chest') {
+          const d = Math.hypot(pObj.x - poi.wx, pObj.z - poi.wz);
+          if (d < minDist) {
+            minDist = d;
+            targetPOI = poi;
+          }
+        }
+      }
+    }
+
+    // 2. Pokud hráč zatím neobjevil žádnou budovu, prohledáme okolní macro-buňky (okruh 8 buněk) a najdeme nejbližší budovu
+    if (!targetPOI && typeof pm.getPoiForCell === 'function') {
+      const s = (typeof S !== 'undefined') ? S : 0.5;
+      const macroL = pm.macroCellSize || 64;
+      const curCellX = Math.floor(pObj.x / (macroL * s));
+      const curCellZ = Math.floor(pObj.z / (macroL * s));
+
+      for (let r = 0; r <= 8; r++) {
+        for (let dx = -r; dx <= r; dx++) {
+          for (let dz = -r; dz <= r; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+            const candidate = pm.getPoiForCell(curCellX + dx, curCellZ + dz);
+            if (candidate && candidate.type !== 'Chest') {
+              const d = Math.hypot(pObj.x - candidate.wx, pObj.z - candidate.wz);
+              if (d < minDist) {
+                minDist = d;
+                targetPOI = candidate;
+              }
+            }
+          }
+        }
+        if (targetPOI) break;
+      }
+    }
+
+    // 3. Fallback: Počáteční svatyně poutníků v buňce 0, 0
+    if (!targetPOI && typeof pm.getPoiForCell === 'function') {
+      targetPOI = pm.getPoiForCell(0, 0);
+    }
+
+    // Pokud budova dosud nebyla objevena, odhalíme ji na mapě
+    if (targetPOI && !pm.isDiscovered(targetPOI.id) && typeof pm.discoverPOI === 'function') {
+      pm.discoverPOI(targetPOI.id);
+    }
+  }
+
+  let destName = 'Počáteční svatyně';
+  if (targetPOI && pm && typeof pm.teleportToPOI === 'function') {
+    pm.teleportToPOI(targetPOI);
+    destName = targetPOI.displayName || targetPOI.name || 'Svatyně';
+  } else {
+    // Pokud POIManager není k dispozici, teleportovat na bezpečný spawn
+    const spawnX = (typeof window !== 'undefined' && typeof window.SPX === 'number') ? window.SPX : ((typeof SPX !== 'undefined') ? SPX : 0);
+    const spawnY = (typeof window !== 'undefined' && typeof window.SPY === 'number') ? window.SPY : ((typeof SPY !== 'undefined') ? SPY : 50);
+    const spawnZ = (typeof window !== 'undefined' && typeof window.SPZ === 'number') ? window.SPZ : ((typeof SPZ !== 'undefined') ? SPZ : 0);
+    pObj.x = spawnX;
+    pObj.y = spawnY;
+    pObj.z = spawnZ;
+  }
+  pObj.vx = pObj.vy = pObj.vz = 0;
+
+  if (respawnMsgEl) {
+    respawnMsgEl.textContent = `Probouzíš se u teleportační budovy: ${destName}...`;
+  }
+
+  // Obnovení životů a staminy na maximum
+  pObj.hp = pObj.maxHp || 100;
+  pObj.stamina = pObj.maxStamina || 100;
+  if (typeof G !== 'undefined') {
+    G.hp = pObj.hp;
+    G.st = pObj.stamina;
+    G.rg = 0;
+  }
+  if (typeof ui === 'function') ui();
+
+  // Přemístění mazlíčka k hráči
+  if (typeof window.PetManager !== 'undefined' && window.PetManager && window.PetManager.activePet) {
+    window.PetManager.activePet.x = pObj.x + 2;
+    window.PetManager.activePet.z = pObj.z + 2;
+    window.PetManager.activePet.y = pObj.y;
+    if (window.PetManager.activePet.group) {
+      window.PetManager.activePet.group.position.set(window.PetManager.activePet.x, window.PetManager.activePet.y, window.PetManager.activePet.z);
+    }
+  }
+
+  // Časovač pro plynulé zhasnutí obrazovky smrti po 2 sekundách
+  setTimeout(() => {
+    if (overlay) {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        if (overlay) overlay.style.display = 'none';
+        pObj.isDead = false;
+      }, 500);
+    } else {
+      pObj.isDead = false;
+    }
+    if (typeof toast === 'function') {
+      toast(`✨ Oživen u teleportační budovy: ${destName}! Plné zdraví obnoveno.`);
+    }
+  }, 2000);
+
+  return true;
+}
+window.triggerPlayerDeath = triggerPlayerDeath;
+
 if (typeof window !== 'undefined') {
   window.ui = ui;
   if (window.GameStorage && typeof window.GameStorage.applyPlayerRPGState === 'function') {
@@ -1123,6 +1287,11 @@ if (typeof window !== 'undefined') {
 }
 
 function physics(dt) {
+  if (P && P.isDead) {
+    P.vx = 0;
+    P.vz = 0;
+    return;
+  }
   if (autoJumpTimer > 0) autoJumpTimer -= dt;
   if (waterJumpTimer > 0) waterJumpTimer -= dt;
 

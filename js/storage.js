@@ -74,6 +74,42 @@ const GameStorage = {
   createWorld(name, seed = null) {
     const worlds = this.getWorlds();
     const newSeed = (seed && !isNaN(parseInt(seed))) ? parseInt(seed) : Math.floor(Math.random() * 999999) + 1;
+    const starterEquippedSlots = {
+      cloth_head: null,
+      cloth_chest: null,
+      cloth_legs: null,
+      cloth_feet: null,
+      armor_head: null,
+      armor_chest: null,
+      armor_legs: null,
+      armor_feet: null,
+      hand_l: null,
+      hand_r: 'sword_rusty',
+      ring_l: null,
+      ring_r: null,
+      pet: null
+    };
+    const starterInventory = [
+      { id: 'sword_rusty', count: 1 }
+    ];
+    const starterPlayerState = {
+      level: 0,
+      xp: 0,
+      xpNext: 50,
+      skillPoints: 0,
+      baseStats: {
+        maxHp: 100,
+        maxStamina: 100,
+        attackPower: 8,
+        defense: 0,
+        critChance: 0.05,
+        moveSpeed: 6.0
+      },
+      hp: 100,
+      stamina: 100,
+      equippedSlots: starterEquippedSlots,
+      inventory: starterInventory
+    };
     const newWorld = {
       id: 'world_' + Date.now(),
       name: (name || 'Nový svět').trim().slice(0, 30),
@@ -81,9 +117,32 @@ const GameStorage = {
       p2pCode: Math.floor(1000 + Math.random() * 9000),
       createdAt: new Date().toLocaleDateString('cs-CZ'),
       lastPlayed: new Date().toLocaleDateString('cs-CZ'),
-      playerState: null,
+      playerState: starterPlayerState,
       worldDeltas: {}
     };
+
+    // Uložit čistý výchozí RPG stav a inventář specificky pro tento nový svět
+    this.savePlayerRPGState({
+      userId: this.getUserId(),
+      worldId: newWorld.id,
+      level: 0,
+      xp: 0,
+      xpNext: 50,
+      skillPoints: 0,
+      baseStats: {
+        maxHp: 100,
+        maxStamina: 100,
+        attackPower: 8,
+        defense: 0,
+        critChance: 0.05,
+        moveSpeed: 6.0
+      },
+      hp: 100,
+      stamina: 100,
+      savedAt: Date.now()
+    }, newWorld.id);
+
+    this.savePlayerInventory(newWorld.id, starterInventory, starterEquippedSlots, null);
     worlds.unshift(newWorld);
     this.saveWorlds(worlds);
     return newWorld;
@@ -178,6 +237,18 @@ const GameStorage = {
     let worlds = this.getWorlds();
     worlds = worlds.filter(w => w.id !== id);
     this.saveWorlds(worlds);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(this.getRpgStorageKey(id));
+        localStorage.removeItem(`voxel_inventory_${id}`);
+        const keys = Object.keys(localStorage);
+        for (const k of keys) {
+          if (k.startsWith(`voxel_poi_discovered_v2_${id}`) || k.startsWith(`voxel_opened_chests_v2_${id}`) || k.startsWith(`voxel_explored_chunks_${id}`)) {
+            localStorage.removeItem(k);
+          }
+        }
+      }
+    } catch (e) {}
     return worlds;
   },
 
@@ -310,28 +381,36 @@ const GameStorage = {
     return (u && (u.id !== undefined && u.id !== null)) ? String(u.id) : '999';
   },
 
-  getRpgStorageKey() {
-    return `voxel_rpg_player_${this.getUserId()}`;
+  getRpgStorageKey(worldId = null) {
+    if (!worldId) {
+      const active = this.getActiveGame();
+      worldId = (active && (active.worldId || active.id)) ? (active.worldId || active.id) : 'world_default';
+    }
+    return `voxel_rpg_player_${this.getUserId()}_${worldId}`;
   },
 
   // ---------- RPG POSTUP & PERSISTENCE (F8) ----------
-  savePlayerRPGState(customState = null) {
+  savePlayerRPGState(customState = null, customWorldId = null) {
     try {
-      const key = this.getRpgStorageKey();
+      const active = this.getActiveGame();
+      const worldId = customWorldId || (customState && customState.worldId) || (active && (active.worldId || active.id)) || 'world_default';
+      const key = this.getRpgStorageKey(worldId);
       let stateToSave = customState;
 
       if (!stateToSave && typeof window !== 'undefined' && window.P) {
         const p = window.P;
+        const curLvl = (typeof p.level === 'number') ? p.level : 0;
         stateToSave = {
           userId: this.getUserId(),
-          level: p.level || 1,
+          worldId: worldId,
+          level: curLvl,
           xp: p.xp || 0,
-          xpNext: p.xpNext || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(p.level || 1) : 100),
+          xpNext: p.xpNext || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(curLvl) : (curLvl === 0 ? 50 : 100)),
           skillPoints: p.skillPoints || 0,
           baseStats: {
             maxHp: (p.baseStats && p.baseStats.maxHp) || 100,
             maxStamina: (p.baseStats && p.baseStats.maxStamina) || 100,
-            attackPower: (p.baseStats && p.baseStats.attackPower) || 10,
+            attackPower: (p.baseStats && p.baseStats.attackPower) || 8,
             defense: (p.baseStats && p.baseStats.defense) || 0,
             critChance: (p.baseStats && p.baseStats.critChance) || 0.05,
             moveSpeed: (p.baseStats && p.baseStats.moveSpeed) || 6.0
@@ -345,7 +424,6 @@ const GameStorage = {
       if (stateToSave) {
         const json = JSON.stringify(stateToSave);
         localStorage.setItem(key, json);
-        localStorage.setItem('voxel_rpg_stats', json);
         return true;
       }
     } catch (e) {
@@ -354,29 +432,61 @@ const GameStorage = {
     return false;
   },
 
-  savePlayerRPG(data) {
-    return this.savePlayerRPGState(data);
+  savePlayerRPG(data, customWorldId = null) {
+    return this.savePlayerRPGState(data, customWorldId);
   },
 
-  loadPlayerRPGState() {
+  loadPlayerRPGState(customWorldId = null) {
     try {
-      const key = this.getRpgStorageKey();
+      const active = this.getActiveGame();
+      const worldId = customWorldId || (active && (active.worldId || active.id)) || 'world_default';
+      const key = this.getRpgStorageKey(worldId);
       let raw = localStorage.getItem(key);
+
+      // Pokud záznam pro daný svět zatím v localStorage neexistuje, zkontrolovat svět
       if (!raw) {
-        raw = localStorage.getItem('voxel_rpg_stats');
+        const world = this.getWorld(worldId);
+        if (world && world.playerState && (typeof world.playerState.level !== 'undefined')) {
+          const ps = world.playerState;
+          const lvl = (typeof ps.level === 'number') ? Math.max(0, ps.level) : (ps.level !== undefined && !isNaN(parseInt(ps.level)) ? Math.max(0, parseInt(ps.level)) : 0);
+          return {
+            level: lvl,
+            xp: Math.max(0, Number(ps.xp) || 0),
+            xpNext: Number(ps.xpNext) || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(lvl) : (lvl === 0 ? 50 : 100)),
+            skillPoints: Math.max(0, Number(ps.skillPoints) || 0),
+            baseStats: {
+              maxHp: Number(ps.baseStats?.maxHp) || 100,
+              maxStamina: Number(ps.baseStats?.maxStamina) || 100,
+              attackPower: Number(ps.baseStats?.attackPower) || 8,
+              defense: Number(ps.baseStats?.defense) || 0,
+              critChance: Number(ps.baseStats?.critChance) || 0.05,
+              moveSpeed: Number(ps.baseStats?.moveSpeed) || 6.0
+            },
+            hp: Number(ps.hp) || 100,
+            stamina: Number(ps.stamina) || 100
+          };
+        }
+
+        // Zpětná kompatibilita POUZE pro výchozí svět 'world_default'
+        if (worldId === 'world_default') {
+          const legacyKey = `voxel_rpg_player_${this.getUserId()}`;
+          raw = localStorage.getItem(legacyKey) || localStorage.getItem('voxel_rpg_stats');
+        }
       }
+
       if (raw) {
         const data = JSON.parse(raw);
         if (data && typeof data === 'object') {
+          const lvl = (typeof data.level === 'number') ? Math.max(0, data.level) : (data.level !== undefined && !isNaN(parseInt(data.level)) ? Math.max(0, parseInt(data.level)) : 0);
           return {
-            level: Math.max(1, Number(data.level) || 1),
+            level: lvl,
             xp: Math.max(0, Number(data.xp) || 0),
-            xpNext: Number(data.xpNext) || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(data.level || 1) : 100),
+            xpNext: Number(data.xpNext) || (typeof window.calculateXpNext === 'function' ? window.calculateXpNext(lvl) : (lvl === 0 ? 50 : 100)),
             skillPoints: Math.max(0, Number(data.skillPoints) || 0),
             baseStats: {
               maxHp: Number(data.baseStats?.maxHp) || Number(data.maxHp) || 100,
               maxStamina: Number(data.baseStats?.maxStamina) || Number(data.maxStamina) || 100,
-              attackPower: Number(data.baseStats?.attackPower) || 10,
+              attackPower: Number(data.baseStats?.attackPower) || 8,
               defense: Number(data.baseStats?.defense) || 0,
               critChance: Number(data.baseStats?.critChance) || 0.05,
               moveSpeed: Number(data.baseStats?.moveSpeed) || 6.0
@@ -386,26 +496,45 @@ const GameStorage = {
           };
         }
       }
+
+      // Pro nový svět bez předchozích záznamů: začínáme striktně na Level 0
+      return {
+        level: 0,
+        xp: 0,
+        xpNext: 50,
+        skillPoints: 0,
+        baseStats: {
+          maxHp: 100,
+          maxStamina: 100,
+          attackPower: 8,
+          defense: 0,
+          critChance: 0.05,
+          moveSpeed: 6.0
+        },
+        hp: 100,
+        stamina: 100
+      };
     } catch (e) {
       console.error('[Storage] Chyba při načítání RPG stavu:', e);
     }
     return null;
   },
 
-  loadPlayerRPG() {
-    return this.loadPlayerRPGState();
+  loadPlayerRPG(customWorldId = null) {
+    return this.loadPlayerRPGState(customWorldId);
   },
 
-  applyPlayerRPGState(targetP = (typeof P !== 'undefined' ? P : (typeof window !== 'undefined' ? window.P : null))) {
+  applyPlayerRPGState(targetP = (typeof P !== 'undefined' ? P : (typeof window !== 'undefined' ? window.P : null)), customWorldId = null) {
     if (!targetP) return false;
-    const state = this.loadPlayerRPGState();
+    const state = this.loadPlayerRPGState(customWorldId);
     if (!state) return false;
 
-    targetP.level = state.level;
-    targetP.xp = state.xp;
-    targetP.xpNext = state.xpNext;
-    targetP.skillPoints = state.skillPoints;
+    targetP.level = (typeof state.level === 'number') ? state.level : 0;
+    targetP.xp = Number(state.xp) || 0;
+    targetP.xpNext = Number(state.xpNext) || (targetP.level === 0 ? 50 : 100);
+    targetP.skillPoints = Number(state.skillPoints) || 0;
     targetP.baseStats = Object.assign({}, state.baseStats);
+    targetP.attackPower = targetP.baseStats.attackPower || 8;
 
     const bonusHp = (typeof window !== 'undefined' && typeof window.getPlayerBonusHP === 'function') ? window.getPlayerBonusHP() : 0;
     targetP.maxHp = targetP.baseStats.maxHp + bonusHp;
@@ -418,7 +547,10 @@ const GameStorage = {
       G.st = Math.min(targetP.maxStamina, state.stamina);
     }
 
-    if (typeof ui === 'function') ui();
+    if (typeof window !== 'undefined') {
+      if (typeof window.ui === 'function') window.ui();
+      if (typeof window.updateXpUI === 'function') window.updateXpUI();
+    }
     return true;
   }
 };

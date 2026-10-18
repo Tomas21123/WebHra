@@ -10,6 +10,20 @@ const RARITY_INFO = {
 const INV = [
   // Zbraně & Štíty
   {
+    id: 'sword_rusty',
+    name: 'Zrezivělý meč',
+    cat: 'weapon',
+    subcat: 'sword',
+    rarity: 'common',
+    count: 1,
+    damage: 14,
+    reach: 2.8,
+    speed: 1.0,
+    critChance: 0.05,
+    desc: 'Stará, tupá a orezlá čepel nalezená v trávě. V boji moc neobstojí, ale je to lepší než holé ruce.',
+    statList: ['⚔️ Poškození: 14 HP', '🎯 Dosah: 2.8 m', '⚡ Rychlost: 1.0×', '💥 Šance na kritický zásah: 5%']
+  },
+  {
     id: 'sword',
     name: 'Ocelový meč',
     cat: 'weapon',
@@ -1287,7 +1301,15 @@ if (typeof createSingleVoxMesh === 'undefined') {
 const STEEL = 0xd5dbe6, DSTEEL = 0x8f98ab, GOLD = 0xe8c34a, LEATHER = 0x3a2a1e, WOOD = 0x6a3f1e;
 
 const W3 = (() => {
-  const sw = [], sp = [], dg = [], ba = [], mc = [], gs = [], sf = [], bw = [], hm = [], kt = [];
+  const sw_rusty = [], sw = [], sp = [], dg = [], ba = [], mc = [], gs = [], sf = [], bw = [], hm = [], kt = [];
+
+  // 0. Zrezivělý meč (stará orezlá čepel)
+  const RUST = 0x8b5a2b, DRUST = 0x5c3a21;
+  bx(sw_rusty, -1, -1, -3, 1, 1, 2, LEATHER);
+  bx(sw_rusty, -1, -1, -5, 1, 1, -3, DRUST);
+  bx(sw_rusty, -3, -1, 2, 3, 1, 3, DRUST);
+  bx(sw_rusty, -1, -1, 3, 1, 1, 22, RUST);
+  bx(sw_rusty, 0, -1, 22, 0, 1, 25, RUST);
 
   // 1. Meč (vyvážený jednoruční rytířský meč)
   bx(sw, -1, -1, -3, 1, 1, 2, WOOD);
@@ -1386,6 +1408,7 @@ const W3 = (() => {
   bx(shi, -2, 0, 2, 2, 2, 3, 0xffffff);
 
   const o = {
+    sword_rusty: createSingleVoxMesh(sw_rusty, 0, 0, 0),
     sword: createSingleVoxMesh(sw, 0, 0, 0),
     spear: createSingleVoxMesh(sp, 0, 0, 0),
     dagger: createSingleVoxMesh(dg, 0, 0, 0),
@@ -1465,6 +1488,8 @@ function icon(id) {
 
   switch (id) {
     // --- ZBRANĚ & ŠTÍTY ---
+    case 'sword_rusty':
+      ln(5, 10, 13, 2, '#8b5a2b'); ln(6, 10, 13, 3, '#5c3a21'); ln(3, 9, 6, 12, '#6a3f1e'); ln(4, 11, 2, 13, '#3a2a1e'); px(1, 14, '#5c3a21'); px(14, 1, '#8b5a2b'); break;
     case 'sword':
       ln(5, 10, 13, 2, '#d5dbe6'); ln(6, 10, 13, 3, '#9aa3b4'); ln(3, 9, 6, 12, '#e8c34a'); ln(4, 11, 2, 13, '#6a3f1e'); px(1, 14, '#e8c34a'); px(14, 1, '#ffffff'); break;
     case 'spear':

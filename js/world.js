@@ -542,6 +542,7 @@ const CORN = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
 const AOV = [0.5, 0.68, 0.84, 1];
 
 function buildMesh(c) {
+  const tilesArr = (typeof TILES !== 'undefined') ? TILES : ((typeof window !== 'undefined' && window.TILES) ? window.TILES : null);
   const ox = c.cx * CS, oz = c.cz * CS, d = c.d;
   const B = (x, y, z) => y < 0 ? 3 : (x >= 0 && x < CS && z >= 0 && z < CS) ? (y >= c.H ? 0 : d[x + z * CS + y * 256]) : block(ox + x, y, oz + z);
   const O = () => ({ p: [], u: [], c: [], i: [], n: 0 }), SO = O(), W = O();
@@ -565,7 +566,7 @@ function buildMesh(c) {
             cg = 1 - 0.05 * dry - 0.06 * wet;
             cb = (1 - 0.4 * dry + 0.25 * cold - 0.15 * wet) * (1.05 - 0.15 * n);
           }
-          const t = TILES[b] ? TILES[b][0] : 0;
+          const t = (tilesArr && tilesArr[b]) ? tilesArr[b][0] : 0;
           const tx = t & 7, ty = t >> 3;
           const u0 = tx * 0.125 + 0.002, u1 = (tx + 1) * 0.125 - 0.002;
           const v0 = 1 - (ty + 1) * 0.125 + 0.002, v1 = 1 - ty * 0.125 - 0.002;
@@ -626,7 +627,7 @@ function buildMesh(c) {
 
         // 2. Popadané listí (plochý horizontální koberec na zemi)
         if (isFlatFloor(b)) {
-          const t = TILES[b] ? TILES[b][0] : 0;
+          const t = (tilesArr && tilesArr[b]) ? tilesArr[b][0] : 0;
           const tx = t & 7, ty = t >> 3;
           const u0 = tx * 0.125 + 0.002, u1 = (tx + 1) * 0.125 - 0.002;
           const v0 = 1 - (ty + 1) * 0.125 + 0.002, v1 = 1 - ty * 0.125 - 0.002;
@@ -712,7 +713,8 @@ function buildMesh(c) {
           const F = FACES[f], n = F.n, nb = B(x + n[0], y + n[1], z + n[2]);
           if (b === 5 ? nb !== 0 : isOpaque(nb)) continue;
 
-          const t = TILES[b] ? TILES[b][F.k === 0 ? 1 : F.k === 1 ? 0 : 2] : 0;
+          const tilesArr = (typeof TILES !== 'undefined') ? TILES : ((typeof window !== 'undefined' && window.TILES) ? window.TILES : null);
+          const t = (tilesArr && tilesArr[b]) ? tilesArr[b][F.k === 0 ? 1 : F.k === 1 ? 0 : 2] : 0;
           const tx = t & 7, ty = t >> 3, u0 = tx * 0.125, v0 = 1 - (ty + 1) * 0.125;
           let tint = 1;
           if (b === 7 || b === 9 || b === 10 || b === 16 || b === 17 || b === 18 || (b === 1 && F.k === 1)) {
@@ -766,22 +768,26 @@ function buildMesh(c) {
   }
 
   const mk = (o, mat) => {
-    if (!o.n) return null;
+    if (!o.n || typeof THREE === 'undefined' || typeof THREE.BufferGeometry !== 'function') return null;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(o.p, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(o.u, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(o.c, 3));
     g.setIndex(new THREE.Uint32BufferAttribute(o.i, 1));
     g.computeBoundingSphere();
-    const me = new THREE.Mesh(g, mat);
-    me.position.set(ox * S, 0, oz * S);
-    me.scale.setScalar(S);
-    scene.add(me);
+    const me = (typeof THREE.Mesh === 'function') ? new THREE.Mesh(g, mat) : { geometry: g, position: { set: () => {} }, scale: { setScalar: () => {} } };
+    if (me.position && typeof me.position.set === 'function') me.position.set(ox * S, 0, oz * S);
+    if (me.scale && typeof me.scale.setScalar === 'function') me.scale.setScalar(S);
+    if (typeof scene !== 'undefined' && scene && typeof scene.add === 'function') {
+      scene.add(me);
+    }
     return me;
   };
 
-  c.mesh = mk(SO, matSolid);
-  c.water = mk(W, matWater);
+  const solidMat = (typeof matSolid !== 'undefined') ? matSolid : ((typeof THREE !== 'undefined' && typeof THREE.MeshBasicMaterial === 'function') ? new THREE.MeshBasicMaterial() : null);
+  const waterMat = (typeof matWater !== 'undefined') ? matWater : ((typeof THREE !== 'undefined' && typeof THREE.MeshBasicMaterial === 'function') ? new THREE.MeshBasicMaterial() : null);
+  c.mesh = mk(SO, solidMat);
+  c.water = mk(W, waterMat);
   if (c.water) c.water.renderOrder = 1;
   c.meshed = true;
 }
@@ -789,8 +795,12 @@ function buildMesh(c) {
 function dispose(c) {
   for (const m of [c.mesh, c.water]) {
     if (m) {
-      scene.remove(m);
-      m.geometry.dispose();
+      if (typeof scene !== 'undefined' && scene && typeof scene.remove === 'function') {
+        scene.remove(m);
+      }
+      if (m.geometry && typeof m.geometry.dispose === 'function') {
+        m.geometry.dispose();
+      }
     }
   }
 }
@@ -838,7 +848,7 @@ function pump(budget) {
 
   const MACRO_L = 160;
   const POI_MARGIN = 24;
-  const POI_TYPES = ['Shrine', 'Ruins', 'Camp', 'Landmark', 'Chest'];
+  const POI_TYPES = ['Shrine', 'Ruins', 'Camp', 'Landmark', 'Chest', 'DungeonLabyrinth', 'DungeonStronghold'];
   const DISPLAY_NAMES = {
     Shrine: 'Prastará svatyně',
     Ruins: 'Tajemné zříceniny',
@@ -846,7 +856,9 @@ function pump(budget) {
     Chest: 'Tajemná pokladnice',
     Landmark: 'Strážní maják',
     DragonNestFire: 'Hnízdo ohnivého draka',
-    DragonNestIce: 'Hnízdo ledového draka'
+    DragonNestIce: 'Hnízdo ledového draka',
+    DungeonLabyrinth: 'Podzemní labyrint zatracených',
+    DungeonStronghold: 'Vznešená nadzemní pevnost'
   };
 
   const POIManager = {
@@ -887,6 +899,19 @@ function pump(budget) {
           }
         }
       } catch (e) {}
+
+      // Pokud dosud v tomto světě není objevena žádná budova, odhalíme počáteční svatyni poutníků
+      if (this.discoveredPOIs.size === 0) {
+        const spawnPoi = this.getPoiForCell(0, 0);
+        if (spawnPoi) {
+          spawnPoi.type = 'Shrine';
+          spawnPoi.displayName = 'Počáteční svatyně poutníků';
+          spawnPoi.name = spawnPoi.displayName;
+          this.discoveredPOIs.add(spawnPoi.id);
+          spawnPoi.discovered = true;
+          this.save();
+        }
+      }
     },
 
     save: function () {
@@ -1019,7 +1044,7 @@ function pump(budget) {
           const poi = this.getPoiForCell(baseCellX + dcx, baseCellZ + dcz);
           if (!poi) continue;
 
-          const R = 12; // Poloměr půdorysu budov + rovného vstupního nádvoří v blocích
+          const R = (poi.type === 'DungeonLabyrinth' || poi.type === 'DungeonStronghold') ? 18 : 12; // Poloměr půdorysu budov + rovného vstupního nádvoří v blocích
           const pbx = (typeof poi.bx === 'number') ? poi.bx : poi.x;
           const pbz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
           if (pbx + R < chunkMinX || pbx - R > chunkMaxX ||
@@ -1054,9 +1079,10 @@ function pump(budget) {
       };
 
       // Rovné, čisté kamenné předdvoří před jižním vchodem budovy (pro 100% bezpečnou teleportaci bez zaseknutí)
-      const entranceStartZ = (type === 'Camp' || type === 'Ruins' || type === 'DragonNestFire' || type === 'DragonNestIce') ? 8 : (type === 'Shrine' ? 7 : 6);
-      for (let dx = -2; dx <= 2; dx++) {
-        for (let dz = entranceStartZ; dz <= entranceStartZ + 3; dz++) {
+      const entranceStartZ = (type === 'DungeonLabyrinth' || type === 'DungeonStronghold') ? 15 : ((type === 'Camp' || type === 'Ruins' || type === 'DragonNestFire' || type === 'DragonNestIce') ? 8 : (type === 'Shrine' ? 7 : 6));
+      const entranceSpanX = (type === 'DungeonLabyrinth' || type === 'DungeonStronghold') ? 3 : 2;
+      for (let dx = -entranceSpanX; dx <= entranceSpanX; dx++) {
+        for (let dz = entranceStartZ; dz <= entranceStartZ + 4; dz++) {
           prepareColumn(bx + dx, bz + dz, by, 18, 23);
         }
       }
@@ -1412,6 +1438,241 @@ function pump(budget) {
           }
         }
       }
+
+      // -----------------------------------------------------------------------
+      // 7. OBROVSKÝ PODZEMNÍ LABYRINT (DungeonLabyrinth)
+      // Povrchová krypta se schodištěm vedoucím do rozsáhlého podzemního labyrintu
+      // s klenutými chodbami, kryptami, sloupy a truhlou s pokladem a zbraní
+      // -----------------------------------------------------------------------
+      else if (type === 'DungeonLabyrinth') {
+        const dungFloor = by - 7;
+        const dungCeil = by - 1;
+
+        // 1. Povrchová krypta a vstupní schodiště (dx v [-4..4], dz v [1..14])
+        for (let dx = -4; dx <= 4; dx++) {
+          for (let dz = 1; dz <= 14; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            const adx = Math.abs(dx);
+            if (wx < minX || wx > maxX || wz < minZ || wz > maxZ) continue;
+
+            // Obvodové kamenné zdi povrchové krypty
+            if (adx === 4 || dz === 14) {
+              const wallH = 6;
+              for (let y = by; y <= by + wallH; y++) put(wx, y, wz, 33);
+              put(wx, by + wallH + 1, wz, 36);
+            } else if (adx <= 3 && dz >= 2 && dz <= 13) {
+              // Schodiště klesající dolů ze souřadnice dz = 13 (y = by) do dz = 3 (y = dungFloor)
+              const stairStep = Math.min(6, Math.max(0, Math.floor((13 - dz) * 0.7)));
+              const stepFloorY = by - stairStep;
+
+              // Vyčistit schodišťovou šachtu nahoru
+              for (let y = stepFloorY + 1; y <= by + 5; y++) put(wx, y, wz, 0);
+              // Pevné schodišťové stupně
+              put(wx, stepFloorY, wz, (stairStep % 2 === 0) ? 33 : 36);
+              for (let y = dungFloor; y < stepFloorY; y++) put(wx, y, wz, 33);
+
+              // Pochodně / lucerny na stěnách schodiště
+              if (adx === 3 && (dz === 6 || dz === 10)) {
+                put(wx, stepFloorY + 2, wz, 11);
+              }
+            }
+          }
+        }
+
+        // 2. Podzemní labyrintová síť chodeb a sálů (dx v [-16..16], dz v [-16..16])
+        for (let dx = -16; dx <= 16; dx++) {
+          for (let dz = -16; dz <= 16; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            if (wx < minX || wx > maxX || wz < minZ || wz > maxZ) continue;
+
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+
+            // Podlaha podzemí z kamenných cihel a mechu
+            const isMossy = ((dx * 13 + dz * 7) & 3) === 0;
+            put(wx, dungFloor, wz, isMossy ? 23 : 33);
+
+            // Strop podzemního komplexu
+            put(wx, dungCeil, wz, 33);
+
+            // Určení, zda je tato pozice otevřeným prostorem (sál nebo chodba)
+            // A: Centrální sál (dx v [-3..3], dz v [-3..3])
+            const inCenterVault = (adx <= 3 && adz <= 3);
+
+            // B: 4 Hlavní křížové chodby šířky 3 bloky (dx nebo dz v [-1..1] do vzdálenosti 14)
+            const inCrossCorridor = ((adx <= 1 && adz <= 14) || (adz <= 1 && adx <= 14));
+
+            // C: Obvodový okružní labyrintový koridor šířky 3 bloky (na poloměru ~9)
+            const inRingCorridor = ((Math.abs(adx - 9) <= 1 && adz <= 13) || (Math.abs(adz - 9) <= 1 && adx <= 13));
+
+            // D: 4 Rohové krypty (sály s relikviemi a sarkofágy)
+            const inCornerCrypt = (adx >= 8 && adx <= 14 && adz >= 8 && adz <= 14);
+
+            const isPassage = inCenterVault || inCrossCorridor || inRingCorridor || inCornerCrypt;
+
+            if (isPassage) {
+              // Vyhloubit vnitřek chodby/sálu
+              for (let y = dungFloor + 1; y < dungCeil; y++) {
+                put(wx, y, wz, 0);
+              }
+
+              // Sloupy a dekorace v centrálním sále
+              if (inCenterVault) {
+                if (adx === 2 && adz === 2) {
+                  for (let y = dungFloor + 1; y < dungCeil; y++) put(wx, y, wz, 36);
+                  put(wx, dungFloor + 3, wz, 35); // Zářící runový krystal na sloupu
+                } else if (adx === 0 && adz === 0) {
+                  put(wx, dungFloor + 1, wz, 36); // Podstavec pod centrální truhlu
+                }
+              }
+
+              // Sarkofágy a oltáře v rohových kryptách
+              if (inCornerCrypt) {
+                const isRoomCenter = (adx === 11 && adz === 11);
+                if (isRoomCenter) {
+                  put(wx, dungFloor + 1, wz, 36);
+                  put(wx, dungFloor + 2, wz, 11); // Plamenný oltář
+                }
+                // Rohové pilíře krypty
+                if ((adx === 9 || adx === 13) && (adz === 9 || adz === 13)) {
+                  for (let y = dungFloor + 1; y < dungCeil; y++) put(wx, y, wz, 33);
+                }
+              }
+
+              // Pochodně na stěnách podél chodeb
+              if ((adx === 2 && adz % 4 === 0 && adz <= 12) || (adz === 2 && adx % 4 === 0 && adx <= 12)) {
+                put(wx, dungFloor + 2, wz, 11);
+              }
+            } else {
+              // Plné masivní zdi labyrintu
+              for (let y = dungFloor + 1; y < dungCeil; y++) {
+                const wallBlk = ((y + dx + dz) % 5 === 0) ? 23 : 33;
+                put(wx, y, wz, wallBlk);
+              }
+            }
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 8. VELKÁ NADZEMNÍ PEVNOST (DungeonStronghold)
+      // Obrovská středověká citadela se 4 rohovými baštami, cimbuřím, hradbami,
+      // vstupní barbakánovou branou a 3-patrovým centrálním donjonem (Keep)
+      // -----------------------------------------------------------------------
+      else if (type === 'DungeonStronghold') {
+        for (let dx = -16; dx <= 16; dx++) {
+          for (let dz = -16; dz <= 16; dz++) {
+            const wx = bx + dx, wz = bz + dz;
+            if (wx < minX || wx > maxX || wz < minZ || wz > maxZ) continue;
+
+            const adx = Math.abs(dx), adz = Math.abs(dz);
+
+            // Odříznutí vnějších rohů za baštami
+            if (adx >= 16 || adz >= 16) continue;
+
+            // Základ a zpevněná podlaha nádvoří pevnosti
+            if (!prepareColumn(wx, wz, by, 22, 33)) continue;
+            put(wx, by + 1, wz, ((dx + dz) & 1) === 0 ? 33 : 23);
+
+            // A: 4 Masivní rohové bašty / věže (adx v [11..14], adz v [11..14])
+            const inTower = (adx >= 11 && adx <= 14 && adz >= 11 && adz <= 14);
+            if (inTower) {
+              const isTowerWall = (adx === 11 || adx === 14 || adz === 11 || adz === 14);
+              for (let y = by + 2; y <= by + 13; y++) {
+                if (isTowerWall) {
+                  // Střílny v baštách
+                  const isEmbrasure = ((adx === 14 || adz === 14) && (y === by + 6 || y === by + 10));
+                  put(wx, y, wz, isEmbrasure ? 0 : 33);
+                } else {
+                  // Dřevěné podlahy v baště (mezipatra)
+                  if (y === by + 5 || y === by + 9) put(wx, y, wz, 34);
+                  else put(wx, y, wz, 0);
+                }
+              }
+              // Horní ochoz bašty s cimbuřím (y = by + 14 .. by + 15)
+              put(wx, by + 14, wz, 36);
+              if (isTowerWall && ((dx + dz) % 2 === 0)) {
+                put(wx, by + 15, wz, 33); // Zuby cimbuří bašty
+              }
+              // Signální oheň a strážní krystal na špičce bašty
+              if (adx === 14 && adz === 14) {
+                put(wx, by + 15, wz, 36);
+                put(wx, by + 16, wz, 11);
+              }
+              continue;
+            }
+
+            // B: Obvodové hradby (Curtain Walls) spojující bašty (na adx nebo adz v [12..14] s výškou 8 bloků)
+            const onWallX = (adx >= 12 && adx <= 13 && adz < 11);
+            const onWallZ = (adz >= 12 && adz <= 13 && adx < 11);
+            if (onWallX || onWallZ) {
+              // Vstupní brána barbakánu na jižní zdi (dz v [12..13], adx <= 2)
+              const isGateArch = (adz >= 12 && adx <= 2 && dz > 0);
+              for (let y = by + 2; y <= by + 8; y++) {
+                if (isGateArch && y <= by + 5) {
+                  put(wx, y, wz, 0); // Otevřený průjezd brány
+                } else {
+                  put(wx, y, wz, 33);
+                }
+              }
+              // Dřevěný ochoz hradby pro obránce na vnitřní straně
+              put(wx, by + 7, wz, 34);
+              // Cimbuří podél vnější hrany hradeb (y = by + 9)
+              if (((adx === 13 || adz === 13) && ((dx + dz) % 2 === 0))) {
+                put(wx, by + 9, wz, 36);
+              }
+              // Klenutý překlad nad jižní bránou s pochodněmi
+              if (isGateArch) {
+                put(wx, by + 6, wz, 36);
+                if (adx === 2) put(wx, by + 4, wz, 11);
+              }
+            }
+
+            // C: Centrální královský donjon / Citadela (Keep) (adx <= 5 && adz <= 5)
+            if (adx <= 5 && adz <= 5) {
+              const isKeepWall = (adx === 5 || adz === 5);
+              const isKeepDoor = (dz === 5 && adx <= 1);
+
+              for (let y = by + 2; y <= by + 15; y++) {
+                if (isKeepWall) {
+                  if (isKeepDoor && y <= by + 5) {
+                    put(wx, y, wz, 0); // Vstupní portál donjonu
+                  } else {
+                    // Okna a střílny donjonu ve 2. a 3. patře
+                    const isWin = ((adx === 0 || adz === 0) && (y === by + 8 || y === by + 12));
+                    put(wx, y, wz, isWin ? 0 : 36);
+                  }
+                } else {
+                  // Vnitřní dřevěná patra donjonu (přízemí, 1. patro, 2. patro)
+                  if (y === by + 6 || y === by + 11) {
+                    put(wx, y, wz, (adx === 0 && adz === 0) ? 0 : 34);
+                  } else {
+                    put(wx, y, wz, 0);
+                  }
+                }
+              }
+
+              // Trůnní sál a podstavec pro truhlu se zbraněmi a pokladem donjonu
+              if (adx <= 1 && adz >= -3 && adz <= -1) {
+                put(wx, by + 2, wz, 36);
+                if (adx === 0 && adz === -2) {
+                  put(wx, by + 3, wz, 35); // Runový klenot za truhlou
+                }
+              }
+
+              // Vrcholová vyhlídková věž donjonu s cimbuřím (y = by + 16 .. by + 17)
+              put(wx, by + 16, wz, isKeepWall ? 36 : 33);
+              if (isKeepWall && ((dx + dz) % 2 === 0)) {
+                put(wx, by + 17, wz, 33);
+              }
+              // Centrální zlatý maják donjonu
+              if (adx === 0 && adz === 0) {
+                put(wx, by + 17, wz, 35);
+                put(wx, by + 18, wz, 11);
+              }
+            }
+          }
+        }
+      }
     },
 
     isDiscovered: function (poiOrId) {
@@ -1548,7 +1809,7 @@ function pump(budget) {
       const pbz = (typeof poi.bz === 'number') ? poi.bz : poi.z;
 
       // Střed připraveného vstupního předdvoří na jižní straně (+Z)
-      const entranceOffsetBlocks = (poi.type === 'Camp' || poi.type === 'Ruins' || poi.type === 'DragonNestFire' || poi.type === 'DragonNestIce') ? 9 : (poi.type === 'Shrine' ? 8 : 7);
+      const entranceOffsetBlocks = (poi.type === 'DungeonLabyrinth' || poi.type === 'DungeonStronghold') ? 16 : ((poi.type === 'Camp' || poi.type === 'Ruins' || poi.type === 'DragonNestFire' || poi.type === 'DragonNestIce') ? 9 : (poi.type === 'Shrine' ? 8 : 7));
       const prefBX = pbx;
       const prefBZ = pbz + entranceOffsetBlocks;
 
@@ -1790,6 +2051,24 @@ function pump(budget) {
         grp.add(nestLight);
         poi.fireLight = nestLight;
         poi.baseLightIntensity = 2.2;
+
+      } else if (poi.type === 'DungeonLabyrinth') {
+        // Voxelová truhla v podzemním sálu labyrintu (-7 bloků pod zemí)
+        this._buildChestGroup(grp, poi, 0, -7 * s, 0);
+        const dungLight = new THREE.PointLight(0xa855f7, 2.4, 30);
+        dungLight.position.set(0, -6.5 * s, 0);
+        grp.add(dungLight);
+        poi.fireLight = dungLight;
+        poi.baseLightIntensity = 2.4;
+
+      } else if (poi.type === 'DungeonStronghold') {
+        // Voxelová královská truhla v donjonu pevnosti
+        this._buildChestGroup(grp, poi, 0, 0, -2 * s);
+        const strongholdLight = new THREE.PointLight(0xfbbf24, 2.6, 36);
+        strongholdLight.position.set(0, 1.8, -2 * s);
+        grp.add(strongholdLight);
+        poi.fireLight = strongholdLight;
+        poi.baseLightIntensity = 2.6;
       }
 
       poi.group = grp;
@@ -1893,6 +2172,21 @@ function pump(budget) {
                 } else if (poi.type === 'DragonNestIce') {
                   const dragonTier = Math.min(5, Math.max(2, Math.floor(Math.random() * 3) + 2)); // Tier 2-4
                   em.spawnCreature('WyvernIce', poi.wx, poi.wy + 1.5, poi.wz, calcLvl(5), dragonTier);
+                } else if (poi.type === 'DungeonLabyrinth') {
+                  // Početná posádka podzemního labyrintu: Kostlivci, Skřeti a Kamenný golem
+                  em.spawnCreature('Skeleton', poi.wx + 3.0, poi.wy - 3.0, poi.wz + 3.0, calcLvl(2));
+                  em.spawnCreature('Skeleton', poi.wx - 3.0, poi.wy - 3.0, poi.wz - 3.0, calcLvl(2));
+                  em.spawnCreature('Goblin', poi.wx + 4.0, poi.wy - 3.0, poi.wz - 4.0, calcLvl(2));
+                  em.spawnCreature('Goblin', poi.wx - 4.0, poi.wy - 3.0, poi.wz + 4.0, calcLvl(2));
+                  em.spawnCreature('Golem', poi.wx, poi.wy - 3.0, poi.wz, calcLvl(4));
+                } else if (poi.type === 'DungeonStronghold') {
+                  // Početná posádka velké pevnosti: Strážní kostlivci, skřeti na nádvoří a strážce donjonu Golem
+                  em.spawnCreature('Skeleton', poi.wx + 5.0, poi.wy + 1.0, poi.wz + 5.0, calcLvl(3));
+                  em.spawnCreature('Skeleton', poi.wx - 5.0, poi.wy + 1.0, poi.wz + 5.0, calcLvl(3));
+                  em.spawnCreature('Skeleton', poi.wx, poi.wy + 1.0, poi.wz + 6.0, calcLvl(3));
+                  em.spawnCreature('Goblin', poi.wx + 4.0, poi.wy + 1.0, poi.wz - 4.0, calcLvl(2));
+                  em.spawnCreature('Goblin', poi.wx - 4.0, poi.wy + 1.0, poi.wz - 4.0, calcLvl(2));
+                  em.spawnCreature('Golem', poi.wx, poi.wy + 1.0, poi.wz - 1.0, calcLvl(4));
                 }
               }
             }
@@ -1935,30 +2229,71 @@ function pump(budget) {
 
           const d = Math.hypot(px - poi.wx, pz - poi.wz);
           if (d <= 5.2) {
-            if ((poi.type === 'Chest' || poi.type === 'Ruins' || poi.type === 'Camp' || poi.type === 'Landmark') && !poi.opened) {
+            if ((poi.type === 'Chest' || poi.type === 'Ruins' || poi.type === 'Camp' || poi.type === 'Landmark' || poi.type === 'DungeonLabyrinth' || poi.type === 'DungeonStronghold') && !poi.opened) {
               poi.opened = true;
               poi.targetAngle = 1.30;
               this.openedChests.add(poi.id);
               this.save();
 
-              if (typeof toast === 'function') {
-                toast(`🎁 Otevřena ${poi.displayName}! (+80 XP, Zlato & Předměty)`);
-              }
+              const isHugeDungeon = (poi.type === 'DungeonLabyrinth' || poi.type === 'DungeonStronghold');
+              const xpGained = isHugeDungeon ? 150 : 80;
+
               if (typeof window !== 'undefined' && typeof window.addPlayerXP === 'function') {
-                window.addPlayerXP(80, poi.displayName);
+                window.addPlayerXP(xpGained, poi.displayName);
               } else if (typeof P !== 'undefined') {
-                P.xp = (P.xp || 0) + 80;
+                P.xp = (P.xp || 0) + xpGained;
                 if (typeof window.checkPlayerLevelUp === 'function') window.checkPlayerLevelUp();
               }
 
-              // Odměny do inventáře
+              // Odměny do inventáře:
+              let weaponDropName = null;
               if (typeof INV !== 'undefined' && Array.isArray(INV)) {
-                const potion = INV.find(it => it.id === 'potion_hp');
-                if (potion) potion.count = (potion.count || 0) + 2;
+                // V dungeonu padá garantovaná zbraň, u ostatních truhel 65% šance na zbraň
+                const shouldDropWeapon = isHugeDungeon || Math.random() < 0.65;
+                if (shouldDropWeapon) {
+                  const WEAPONS_POOL = [
+                    'sword', 'spear', 'battleaxe', 'dagger', 'mace',
+                    'greatsword', 'staff_fire', 'bow', 'katana', 'hammer',
+                    'shield_wood', 'shield_iron'
+                  ];
+                  const chosenWeaponId = WEAPONS_POOL[Math.floor(Math.random() * WEAPONS_POOL.length)];
+                  const wIt = INV.find(it => it.id === chosenWeaponId);
+                  if (wIt) {
+                    wIt.count = (wIt.count || 0) + 1;
+                    weaponDropName = wIt.name;
+                    // Pokud je v hotbaru volno, přiřadit zbraň do hotbaru
+                    if (typeof HB !== 'undefined' && Array.isArray(HB)) {
+                      const emptyIdx = HB.indexOf(null);
+                      if (emptyIdx !== -1) {
+                        HB[emptyIdx] = wIt.id;
+                      }
+                    }
+                  }
+                }
+
+                // Lektvary a suroviny
+                const potion = INV.find(it => it.id === 'potion_hp' || it.id === 'potion_health');
+                if (potion) potion.count = (potion.count || 0) + (isHugeDungeon ? 4 : 2);
+
+                const potionStr = INV.find(it => it.id === 'potion_strength');
+                if (potionStr && isHugeDungeon) potionStr.count = (potionStr.count || 0) + 2;
+
                 const iron = INV.find(it => it.id === 'ore_iron');
-                if (iron) iron.count = (iron.count || 0) + 3;
-                const gold = INV.find(it => it.id === 'coin_gold' || it.id === 'gold');
-                if (gold) gold.count = (gold.count || 0) + 40;
+                if (iron) iron.count = (iron.count || 0) + (isHugeDungeon ? 6 : 3);
+
+                const gold = INV.find(it => it.id === 'coin_gold' || it.id === 'gold' || it.id === 'ore_gold');
+                if (gold) gold.count = (gold.count || 0) + (isHugeDungeon ? 100 : 40);
+              }
+
+              if (typeof renderHB === 'function') renderHB();
+              if (typeof renderInv === 'function') renderInv();
+
+              if (typeof toast === 'function') {
+                if (weaponDropName) {
+                  toast(`🎁 Otevřena ${poi.displayName}! (+${xpGained} XP, ⚔️ Zbraň: ${weaponDropName}, Lektvary & Zlato)`);
+                } else {
+                  toast(`🎁 Otevřena ${poi.displayName}! (+${xpGained} XP, Zlato & Lektvary)`);
+                }
               }
               return true;
             } else if (poi.type === 'Shrine') {
@@ -1990,6 +2325,8 @@ function pump(budget) {
 
   if (typeof window !== 'undefined') {
     window.POIManager = POIManager;
+    window.POI_TYPES = POI_TYPES;
+    window.DISPLAY_NAMES = DISPLAY_NAMES;
   }
 })();
 

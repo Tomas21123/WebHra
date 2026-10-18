@@ -84,6 +84,7 @@ function shade(hexNum, lum) {
 
 // ---------- Stav hráče (Životy, Stamina, Kyslík) ----------
 const G = { hp: 100, st: 100, o2: 100, rg: 0, sd: 0, tired: 0 };
+if (typeof window !== 'undefined') window.G = G;
 const bH = document.querySelector('.hp i'), bHt = document.querySelector('.hp span');
 const bS = document.querySelector('.st i'), bSt = document.querySelector('.st span');
 const bO = document.querySelector('.o2 i'), bOt = document.querySelector('.o2 span'), bOBox = document.querySelector('.o2');
@@ -111,10 +112,17 @@ function hurt(n) {
     return;
   }
   G.hp = Math.max(0, G.hp - n);
+  if (typeof P !== 'undefined' && typeof P.hp === 'number') {
+    P.hp = G.hp;
+  }
   G.rg = 0;
   if (G.hp <= 0) {
-    P.x = SPX; P.z = 0.5; P.y = SPY;
-    P.vx = P.vy = P.vz = 0;
-    G.hp = 100; G.st = 100; G.o2 = 100;
+    if (typeof window !== 'undefined' && typeof window.triggerPlayerDeath === 'function') {
+      window.triggerPlayerDeath();
+    } else {
+      P.x = SPX; P.z = 0.5; P.y = SPY;
+      P.vx = P.vy = P.vz = 0;
+      G.hp = 100; G.st = 100; G.o2 = 100;
+    }
   }
 }
