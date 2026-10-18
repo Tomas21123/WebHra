@@ -768,6 +768,12 @@
       color: #7dd3fc;
     }
 
+    .auth-alert.warning {
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fcd34d;
+    }
+
     .auth-form {
       display: none;
       flex-direction: column;
@@ -1107,6 +1113,276 @@
       border-color: #38bdf8;
       box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
     }
+
+    /* Ozubené kolečko (Nastavení účtu) a Dropdown */
+    .settings-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .gear-btn {
+      position: relative;
+      font-size: 20px;
+      line-height: 1;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .gear-btn:hover .gear-icon-anim,
+    .gear-btn.active .gear-icon-anim {
+      transform: rotate(60deg);
+      display: inline-block;
+    }
+
+    .gear-icon-anim {
+      display: inline-block;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .gear-btn.active {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.2);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    .settings-menu-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 270px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 25px rgba(56, 189, 248, 0.15);
+      padding: 12px;
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      animation: dropdownFadeSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: top right;
+    }
+
+    .settings-menu-dropdown.show {
+      display: flex;
+    }
+
+    @keyframes dropdownFadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .settings-menu-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      background: rgba(2, 6, 23, 0.5);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .settings-menu-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(56, 189, 248, 0.25));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .settings-menu-user {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .settings-nick {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .settings-email {
+      font-size: 11.5px;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .settings-menu-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 4px 0;
+    }
+
+    .settings-menu-items {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .settings-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #cbd5e1;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s ease;
+    }
+
+    .settings-menu-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f8fafc;
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateX(3px);
+    }
+
+    .settings-menu-item.primary {
+      color: #38bdf8;
+    }
+    .settings-menu-item.primary:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #7dd3fc;
+    }
+
+    .settings-menu-item.danger {
+      color: #f87171;
+    }
+    .settings-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .settings-menu-item .item-icon {
+      font-size: 16px;
+      width: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Ověření e-mailu kódem */
+    .verify-instructions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      margin-bottom: 12px;
+    }
+
+    .verify-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .verify-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #cbd5e1;
+    }
+
+    .verify-text strong {
+      color: #38bdf8;
+      word-break: break-all;
+    }
+
+    .verify-code-wrap input.verify-code-input {
+      font-family: monospace;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 10px;
+      text-align: center;
+      padding-left: 14px;
+      padding-right: 14px;
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(2, 6, 23, 0.85);
+    }
+
+    .verify-code-wrap input.verify-code-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+
+    .code-hint {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .resend-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+
+    .btn-resend-code {
+      background: transparent;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      padding: 5px 12px;
+      color: #38bdf8;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-resend-code:hover:not(:disabled) {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      color: #7dd3fc;
+    }
+
+    .btn-resend-code:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #64748b;
+    }
   </style>
 </head>
 
@@ -1150,6 +1426,38 @@
 
         <button id="btnSound" class="icon-btn" title="Zapnout / Vypnout zvuk">🔊</button>
         <button id="btnFullscreen" class="icon-btn" title="Režim celé obrazovky">⛶</button>
+
+        <!-- Ozubené kolečko (Uživatelské menu: Změna hesla, nickname, odhlášení) -->
+        <div class="settings-dropdown-wrapper">
+          <button id="btnSettingsMenu" class="icon-btn gear-btn" title="Uživatelská nastavení" aria-label="Nastavení účtu" aria-haspopup="true" aria-expanded="false">
+            <span class="gear-icon-anim">⚙️</span>
+          </button>
+          <div id="settingsDropdownMenu" class="settings-menu-dropdown">
+            <div class="settings-menu-header">
+              <div class="settings-menu-avatar">👤</div>
+              <div class="settings-menu-user">
+                <span id="menuNickDisplay" class="settings-nick">Hráč</span>
+                <span id="menuEmailDisplay" class="settings-email">Nepřihlášen</span>
+              </div>
+            </div>
+            <div class="settings-menu-divider"></div>
+            <div class="settings-menu-items">
+              <button type="button" class="settings-menu-item" id="menuItemChangeNick">
+                <span class="item-icon">✏️</span>
+                <span class="item-text">Změnit nickname</span>
+              </button>
+              <button type="button" class="settings-menu-item" id="menuItemChangePassword">
+                <span class="item-icon">🔑</span>
+                <span class="item-text">Změnit heslo</span>
+              </button>
+              <div class="settings-menu-divider"></div>
+              <button type="button" class="settings-menu-item danger" id="menuItemLogout">
+                <span class="item-icon">🚪</span>
+                <span class="item-text">Odhlásit se</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -1283,6 +1591,7 @@
       <div class="auth-tabs">
         <button type="button" class="auth-tab active" data-tab="login">Přihlášení</button>
         <button type="button" class="auth-tab" data-tab="register">Registrace</button>
+        <button type="button" class="auth-tab" data-tab="verify" id="tabVerifyHeader" style="display:none;">Ověření e-mailu</button>
         <button type="button" class="auth-tab" data-tab="reset">Obnova hesla</button>
       </div>
 
@@ -1386,6 +1695,113 @@
         <div class="form-footer">
           Vzpomněl sis na heslo? <a class="auth-link" id="linkToLoginFromReset">Zpět na přihlášení</a>
         </div>
+      </form>
+
+      <!-- Formulář 4: Ověření e-mailu kódem -->
+      <form id="formVerifyEmail" class="auth-form" method="post" action="#" novalidate>
+        <div class="verify-instructions">
+          <div class="verify-icon">✉️</div>
+          <div class="verify-text">
+            Na adresu <strong id="verifyEmailDisplay">vas-email@domena.cz</strong> byl odeslán 6místný ověřovací kód. Zadejte jej pro dokončení registrace:
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="verifyCodeInput">6místný ověřovací kód</label>
+          <div class="input-wrap verify-code-wrap">
+            <span class="input-icon">🔢</span>
+            <input type="text" id="verifyCodeInput" name="code" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required class="verify-code-input">
+          </div>
+          <div class="code-hint">⏱️ Kód je platný 15 minut. Zkontrolujte i složku Spam / Hromadné.</div>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitVerifyCode">
+          <span>Ověřit kód a vstoupit do hry</span>
+          <span class="submit-arrow">➔</span>
+        </button>
+        <div class="resend-box">
+          <span id="resendTimerText">Neobdržel(a) jsi kód?</span>
+          <button type="button" class="btn-resend-code" id="btnResendCode" disabled>
+            <span>Znovu odeslat kód</span> <span id="resendCountdown">(60s)</span>
+          </button>
+        </div>
+        <div class="form-footer">
+          Chybný e-mail? <a class="auth-link" id="linkBackToRegister">Zpět k registraci</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Změna přezdívky (Nickname) -->
+  <div id="modalChangeNickname" class="modal-overlay">
+    <div class="modal-card auth-card">
+      <div class="modal-head">
+        <div class="modal-title"><span>✏️</span> Změna přezdívky</div>
+        <button class="modal-close" id="closeChangeNickname">✕</button>
+      </div>
+      <div id="alertChangeNick" class="auth-alert"></div>
+      <form id="formChangeNickname" class="auth-form active" method="post" action="#" novalidate>
+        <div class="form-group">
+          <label>Současný nickname</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="currentNickDisplay" readonly style="opacity:0.75;cursor:not-allowed;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="inputNewNickname">Nový nickname</label>
+          <div class="input-wrap">
+            <span class="input-icon">✨</span>
+            <input type="text" id="inputNewNickname" placeholder="3 až 30 znaků (písmena, čísla, _ - .)" required minlength="3" maxlength="30" autocomplete="nickname">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="inputNickPassword">Potvrzení heslem (pro zabezpečení)</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="inputNickPassword" placeholder="Zadej své stávající heslo" required autocomplete="current-password">
+          </div>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitChangeNick">
+          <span>Uložit novou přezdívku</span>
+          <span class="submit-arrow">➔</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Změna hesla -->
+  <div id="modalChangePassword" class="modal-overlay">
+    <div class="modal-card auth-card">
+      <div class="modal-head">
+        <div class="modal-title"><span>🔑</span> Změna hesla</div>
+        <button class="modal-close" id="closeChangePassword">✕</button>
+      </div>
+      <div id="alertChangePass" class="auth-alert"></div>
+      <form id="formChangePassword" class="auth-form active" method="post" action="#" novalidate>
+        <div class="form-group">
+          <label for="inputCurrentPass">Současné heslo</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="inputCurrentPass" placeholder="Zadej své aktuální heslo" required autocomplete="current-password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="inputNewPass">Nové heslo</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="inputNewPass" placeholder="Minimálně 6 znaků" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="inputNewPassConfirm">Potvrzení nového hesla</label>
+          <div class="input-wrap">
+            <span class="input-icon">🛡️</span>
+            <input type="password" id="inputNewPassConfirm" placeholder="Zopakuj nové heslo" required minlength="6" autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn-auth-submit" id="submitChangePass">
+          <span>Uložit nové heslo</span>
+          <span class="submit-arrow">➔</span>
+        </button>
       </form>
     </div>
   </div>
@@ -1802,7 +2218,7 @@
     const btnSound = document.getElementById('btnSound');
     const btnFullscreen = document.getElementById('btnFullscreen');
 
-    // Auth elementy
+    // Auth elementy a správa účtu
     const modalAuth = document.getElementById('modalAuth');
     const closeAuth = document.getElementById('closeAuth');
     const btnOpenLogin = document.getElementById('btnOpenLogin');
@@ -1814,16 +2230,59 @@
     const authTabs = document.querySelectorAll('.auth-tab');
     const authAlert = document.getElementById('authAlert');
 
+    // Záložka ověření e-mailu kódem
+    const tabVerifyHeader = document.getElementById('tabVerifyHeader');
     const formLogin = document.getElementById('formLogin');
     const formRegister = document.getElementById('formRegister');
     const formReset = document.getElementById('formReset');
+    const formVerifyEmail = document.getElementById('formVerifyEmail');
+
+    const verifyEmailDisplay = document.getElementById('verifyEmailDisplay');
+    const verifyCodeInput = document.getElementById('verifyCodeInput');
+    const submitVerifyCode = document.getElementById('submitVerifyCode');
+    const btnResendCode = document.getElementById('btnResendCode');
+    const resendCountdown = document.getElementById('resendCountdown');
+    const linkBackToRegister = document.getElementById('linkBackToRegister');
 
     const linkToReset = document.getElementById('linkToReset');
     const linkToRegister = document.getElementById('linkToRegister');
     const linkToLoginFromReg = document.getElementById('linkToLoginFromReg');
     const linkToLoginFromReset = document.getElementById('linkToLoginFromReset');
 
+    // Ozubené kolečko (Dropdown uživatelského menu vpravo nahoře)
+    const btnSettingsMenu = document.getElementById('btnSettingsMenu');
+    const settingsDropdownMenu = document.getElementById('settingsDropdownMenu');
+    const menuNickDisplay = document.getElementById('menuNickDisplay');
+    const menuEmailDisplay = document.getElementById('menuEmailDisplay');
+    const menuItemChangeNick = document.getElementById('menuItemChangeNick');
+    const menuItemChangePassword = document.getElementById('menuItemChangePassword');
+    const menuItemLogout = document.getElementById('menuItemLogout');
+
+    // Modál: Změna přezdívky (Nickname)
+    const modalChangeNickname = document.getElementById('modalChangeNickname');
+    const closeChangeNickname = document.getElementById('closeChangeNickname');
+    const alertChangeNick = document.getElementById('alertChangeNick');
+    const formChangeNickname = document.getElementById('formChangeNickname');
+    const currentNickDisplay = document.getElementById('currentNickDisplay');
+    const inputNewNickname = document.getElementById('inputNewNickname');
+    const inputNickPassword = document.getElementById('inputNickPassword');
+    const submitChangeNick = document.getElementById('submitChangeNick');
+
+    // Modál: Změna hesla
+    const modalChangePassword = document.getElementById('modalChangePassword');
+    const closeChangePassword = document.getElementById('closeChangePassword');
+    const alertChangePass = document.getElementById('alertChangePass');
+    const formChangePassword = document.getElementById('formChangePassword');
+    const inputCurrentPass = document.getElementById('inputCurrentPass');
+    const inputNewPass = document.getElementById('inputNewPass');
+    const inputNewPassConfirm = document.getElementById('inputNewPassConfirm');
+    const submitChangePass = document.getElementById('submitChangePass');
+
     let currentUser = null;
+    let pendingVerificationEmail = '';
+    let pendingVerificationNick = '';
+    let resendTimer = null;
+    let resendSecondsLeft = 60;
 
     // Načtení uživatele z paměti
     function loadSavedUser() {
@@ -1854,6 +2313,10 @@
         authLoggedIn.style.display = 'flex';
         userNickname.textContent = currentUser.nickname;
 
+        if (menuNickDisplay) menuNickDisplay.textContent = currentUser.nickname;
+        if (menuEmailDisplay) menuEmailDisplay.textContent = currentUser.email || 'Ověřený herní účet';
+        if (menuItemLogout) menuItemLogout.style.display = 'flex';
+
         btnPlay.classList.remove('locked');
         playIcon.textContent = '▶';
         playText.textContent = 'Hrát hru';
@@ -1864,6 +2327,10 @@
       } else {
         authLoggedOut.style.display = 'flex';
         authLoggedIn.style.display = 'none';
+
+        if (menuNickDisplay) menuNickDisplay.textContent = 'Nepřihlášený hráč';
+        if (menuEmailDisplay) menuEmailDisplay.textContent = 'Klikněte pro přihlášení';
+        if (menuItemLogout) menuItemLogout.style.display = 'none';
 
         btnPlay.classList.add('locked');
         playIcon.textContent = '🔒';
@@ -1893,6 +2360,7 @@
       formLogin.classList.toggle('active', tabName === 'login');
       formRegister.classList.toggle('active', tabName === 'register');
       formReset.classList.toggle('active', tabName === 'reset');
+      if (formVerifyEmail) formVerifyEmail.classList.toggle('active', tabName === 'verify');
       hideAuthAlert();
     }
 
@@ -1927,6 +2395,15 @@
       switchAuthTab('login');
     });
 
+    if (linkBackToRegister) {
+      linkBackToRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        playClickSound();
+        if (tabVerifyHeader) tabVerifyHeader.style.display = 'none';
+        switchAuthTab('register');
+      });
+    }
+
     btnOpenLogin.addEventListener('click', () => {
       openAuthModal('login');
     });
@@ -1954,6 +2431,7 @@
       let icon = 'ℹ️';
       if (type === 'error') icon = '⚠️';
       if (type === 'success') icon = '✅';
+      if (type === 'warning') icon = '🔔';
 
       let html = `<span class="alert-icon">${icon}</span><div class="alert-msg"><div>${message}</div>`;
       if (showDemoButton) {
@@ -1986,6 +2464,70 @@
     function hideAuthAlert() {
       authAlert.style.display = 'none';
       authAlert.innerHTML = '';
+    }
+
+    function showNickAlert(type, msg) {
+      if (!alertChangeNick) return;
+      alertChangeNick.className = `auth-alert ${type}`;
+      alertChangeNick.style.display = 'flex';
+      let icon = type === 'error' ? '⚠️' : (type === 'success' ? '✅' : 'ℹ️');
+      alertChangeNick.innerHTML = `<span class="alert-icon">${icon}</span><div>${escapeHtml(msg)}</div>`;
+    }
+    function hideNickAlert() {
+      if (alertChangeNick) {
+        alertChangeNick.style.display = 'none';
+        alertChangeNick.innerHTML = '';
+      }
+    }
+
+    function showPassAlert(type, msg) {
+      if (!alertChangePass) return;
+      alertChangePass.className = `auth-alert ${type}`;
+      alertChangePass.style.display = 'flex';
+      let icon = type === 'error' ? '⚠️' : (type === 'success' ? '✅' : 'ℹ️');
+      alertChangePass.innerHTML = `<span class="alert-icon">${icon}</span><div>${escapeHtml(msg)}</div>`;
+    }
+    function hidePassAlert() {
+      if (alertChangePass) {
+        alertChangePass.style.display = 'none';
+        alertChangePass.innerHTML = '';
+      }
+    }
+
+    // Otevření pohledu pro zadání 6místného ověřovacího kódu
+    function openVerificationView(email, notice, nick = '', fallbackCode = '') {
+      pendingVerificationEmail = email;
+      if (nick) pendingVerificationNick = nick;
+      if (verifyEmailDisplay) verifyEmailDisplay.textContent = email;
+      if (verifyCodeInput) verifyCodeInput.value = fallbackCode || '';
+      if (tabVerifyHeader) tabVerifyHeader.style.display = 'block';
+      openModal(modalAuth);
+      switchAuthTab('verify');
+      if (notice) showAuthAlert(fallbackCode ? 'warning' : 'info', notice);
+      startResendCountdown(60);
+      setTimeout(() => {
+        if (verifyCodeInput) verifyCodeInput.focus();
+      }, 200);
+    }
+
+    // Odpočet pro znovuodeslání kódu
+    function startResendCountdown(seconds = 60) {
+      clearInterval(resendTimer);
+      resendSecondsLeft = seconds;
+      if (!btnResendCode || !resendCountdown) return;
+      btnResendCode.disabled = true;
+      resendCountdown.textContent = `(${resendSecondsLeft}s)`;
+
+      resendTimer = setInterval(() => {
+        resendSecondsLeft--;
+        if (resendSecondsLeft <= 0) {
+          clearInterval(resendTimer);
+          btnResendCode.disabled = false;
+          resendCountdown.textContent = '';
+        } else {
+          resendCountdown.textContent = `(${resendSecondsLeft}s)`;
+        }
+      }, 1000);
     }
 
     // Pomocné volání API na https://podsednikt.endora.site/api.php
@@ -2035,6 +2577,12 @@
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>Přihlásit se</span><span class="submit-arrow">➔</span>';
 
+      // Pokud účet ještě nebyl aktivován ověřovacím kódem
+      if (res.data && res.data.status === 'unverified') {
+        openVerificationView(res.data.email || login, res.data.message || 'Váš herní účet ještě nebyl aktivován. Zadejte prosím 6místný kód z e-mailu.', res.data.nickname || '');
+        return;
+      }
+
       if (res.ok && res.data && res.data.status === 'success') {
         const user = res.data.user || { nickname: login, email: login };
         setSessionUser(user);
@@ -2060,7 +2608,7 @@
       }
     });
 
-    // 2. Zpracování registrace
+    // 2. Zpracování registrace s odesláním ověřovacího kódu na e-mail
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('regEmail').value.trim();
@@ -2077,6 +2625,10 @@
         showAuthAlert('error', 'Přezdívka musí mít 3 až 30 znaků.');
         return;
       }
+      if (!/^[a-zA-Z0-9_\-\.]+$/.test(nickname)) {
+        showAuthAlert('error', 'Přezdívka může obsahovat pouze písmena, čísla, podtržítka, pomlčky nebo tečky.');
+        return;
+      }
       if (password.length < 6) {
         showAuthAlert('error', 'Heslo musí mít alespoň 6 znaků.');
         return;
@@ -2088,7 +2640,7 @@
 
       playClickSound();
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>Registruji…</span>';
+      submitBtn.innerHTML = '<span>Odesílám kód…</span>';
       hideAuthAlert();
 
       const res = await apiRequest({ action: 'register', email, nickname, password });
@@ -2096,29 +2648,89 @@
       submitBtn.innerHTML = '<span>Vytvořit herní účet</span><span class="submit-arrow">➔</span>';
 
       if (res.ok && res.data && res.data.status === 'success') {
-        const user = res.data.user || { nickname, email };
-        setSessionUser(user);
-
-        // Výzva prohlížeči k uložení hesla po registraci
-        if (window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
-          try {
-            const cred = new PasswordCredential({
-              id: nickname,
-              password: password,
-              name: nickname
-            });
-            navigator.credentials.store(cred).catch(() => {});
-          } catch (err) {}
+        if (res.data.requires_verification) {
+          openVerificationView(
+            email,
+            res.data.message || 'Na váš e-mail byl odeslán 6místný ověřovací kód pro aktivaci účtu.',
+            nickname,
+            res.data.fallback_code || ''
+          );
+        } else {
+          const user = res.data.user || { nickname, email };
+          setSessionUser(user);
+          showAuthAlert('success', `Účet pro "${escapeHtml(nickname)}" byl vytvořen a byl jsi přihlášen!`);
+          setTimeout(() => closeModal(modalAuth), 750);
         }
-
-        showAuthAlert('success', `Účet pro "${escapeHtml(nickname)}" byl vytvořen a byl jsi přihlášen!`);
-        setTimeout(() => closeModal(modalAuth), 750);
       } else {
         const isServer500 = (res.status === 500 || res.status === 0);
         const msg = res.data?.message || 'Registrace se nezdařila.';
         showAuthAlert('error', msg, isServer500);
       }
     });
+
+    // 2b. Ověření e-mailu 6místným kódem
+    if (formVerifyEmail) {
+      formVerifyEmail.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = (verifyCodeInput.value || '').trim();
+        if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+          showAuthAlert('error', 'Zadejte prosím platný 6místný číselný kód.');
+          return;
+        }
+
+        playClickSound();
+        submitVerifyCode.disabled = true;
+        submitVerifyCode.innerHTML = '<span>Ověřuji kód…</span>';
+        hideAuthAlert();
+
+        const res = await apiRequest({
+          action: 'verify_email',
+          email: pendingVerificationEmail,
+          code: code
+        });
+
+        submitVerifyCode.disabled = false;
+        submitVerifyCode.innerHTML = '<span>Ověřit kód a vstoupit do hry</span><span class="submit-arrow">➔</span>';
+
+        if (res.ok && res.data && res.data.status === 'success') {
+          const user = res.data.user || { email: pendingVerificationEmail, nickname: pendingVerificationNick || 'Hráč' };
+          setSessionUser(user);
+          showAuthAlert('success', res.data.message || 'E-mail byl úspěšně ověřen! Vítejte ve hře.');
+          setTimeout(() => {
+            closeModal(modalAuth);
+            if (tabVerifyHeader) tabVerifyHeader.style.display = 'none';
+          }, 850);
+        } else {
+          showAuthAlert('error', res.data?.message || 'Zadaný ověřovací kód je neplatný.');
+        }
+      });
+    }
+
+    // 2c. Znovuodeslání ověřovacího kódu
+    if (btnResendCode) {
+      btnResendCode.addEventListener('click', async () => {
+        if (!pendingVerificationEmail) return;
+        playClickSound();
+        btnResendCode.disabled = true;
+        hideAuthAlert();
+
+        const res = await apiRequest({
+          action: 'resend_code',
+          email: pendingVerificationEmail
+        });
+
+        if (res.ok && res.data && res.data.status === 'success') {
+          if (res.data.fallback_code && verifyCodeInput) {
+            verifyCodeInput.value = res.data.fallback_code;
+          }
+          showAuthAlert(res.data.fallback_code ? 'warning' : 'success', res.data.message || 'Nový ověřovací kód byl odeslán na váš e-mail.');
+          startResendCountdown(60);
+        } else {
+          showAuthAlert('error', res.data?.message || 'Nepodařilo se znovu odeslat kód.');
+          btnResendCode.disabled = false;
+        }
+      });
+    }
 
     // 3. Zpracování obnovy hesla
     formReset.addEventListener('submit', async (e) => {
@@ -2163,6 +2775,195 @@
         showAuthAlert('error', msg, isServer500);
       }
     });
+
+    // 4. Ozubené kolečko (Dropdown uživatelských možností vpravo nahoře)
+    if (btnSettingsMenu && settingsDropdownMenu) {
+      btnSettingsMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playClickSound();
+        const isOpen = settingsDropdownMenu.classList.toggle('show');
+        btnSettingsMenu.classList.toggle('active', isOpen);
+        btnSettingsMenu.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      // Zavření dropdownu při kliku kamkoliv mimo
+      document.addEventListener('click', (e) => {
+        if (!settingsDropdownMenu.contains(e.target) && !btnSettingsMenu.contains(e.target)) {
+          settingsDropdownMenu.classList.remove('show');
+          btnSettingsMenu.classList.remove('active');
+          btnSettingsMenu.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    // Klik na "Změnit nickname" v dropdownu ozubeného kolečka
+    if (menuItemChangeNick) {
+      menuItemChangeNick.addEventListener('click', () => {
+        if (settingsDropdownMenu) settingsDropdownMenu.classList.remove('show');
+        if (btnSettingsMenu) btnSettingsMenu.classList.remove('active');
+        playClickSound();
+
+        if (!currentUser || !currentUser.email) {
+          openAuthModal('login', 'Pro změnu přezdívky se nejprve přihlaste do svého účtu.');
+          return;
+        }
+
+        if (currentNickDisplay) currentNickDisplay.value = currentUser.nickname;
+        if (inputNewNickname) inputNewNickname.value = '';
+        if (inputNickPassword) inputNickPassword.value = '';
+        hideNickAlert();
+        openModal(modalChangeNickname);
+        setTimeout(() => {
+          if (inputNewNickname) inputNewNickname.focus();
+        }, 180);
+      });
+    }
+
+    // Klik na "Změnit heslo" v dropdownu ozubeného kolečka
+    if (menuItemChangePassword) {
+      menuItemChangePassword.addEventListener('click', () => {
+        if (settingsDropdownMenu) settingsDropdownMenu.classList.remove('show');
+        if (btnSettingsMenu) btnSettingsMenu.classList.remove('active');
+        playClickSound();
+
+        if (!currentUser || !currentUser.email) {
+          openAuthModal('login', 'Pro změnu hesla se nejprve přihlaste do svého účtu.');
+          return;
+        }
+
+        if (inputCurrentPass) inputCurrentPass.value = '';
+        if (inputNewPass) inputNewPass.value = '';
+        if (inputNewPassConfirm) inputNewPassConfirm.value = '';
+        hidePassAlert();
+        openModal(modalChangePassword);
+        setTimeout(() => {
+          if (inputCurrentPass) inputCurrentPass.focus();
+        }, 180);
+      });
+    }
+
+    // Klik na "Odhlásit" v dropdownu ozubeného kolečka
+    if (menuItemLogout) {
+      menuItemLogout.addEventListener('click', () => {
+        if (settingsDropdownMenu) settingsDropdownMenu.classList.remove('show');
+        if (btnSettingsMenu) btnSettingsMenu.classList.remove('active');
+        playClickSound();
+        setSessionUser(null);
+      });
+    }
+
+    // 5. Zpracování formuláře Změna Nickname
+    if (formChangeNickname) {
+      formChangeNickname.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser || !currentUser.email) {
+          showNickAlert('error', 'Nejste přihlášeni.');
+          return;
+        }
+
+        const newNick = (inputNewNickname.value || '').trim();
+        const currentPass = inputNickPassword.value;
+
+        if (!newNick || newNick.length < 3 || newNick.length > 30) {
+          showNickAlert('error', 'Přezdívka musí mít 3 až 30 znaků.');
+          return;
+        }
+        if (!/^[a-zA-Z0-9_\-\.]+$/.test(newNick)) {
+          showNickAlert('error', 'Přezdívka může obsahovat pouze písmena, čísla, podtržítka, pomlčky nebo tečky.');
+          return;
+        }
+        if (!currentPass) {
+          showNickAlert('error', 'Zadejte své stávající heslo pro bezpečnostní ověření.');
+          return;
+        }
+
+        playClickSound();
+        submitChangeNick.disabled = true;
+        submitChangeNick.innerHTML = '<span>Ukládám…</span>';
+        hideNickAlert();
+
+        const res = await apiRequest({
+          action: 'change_nickname',
+          email: currentUser.email,
+          current_password: currentPass,
+          new_nickname: newNick
+        });
+
+        submitChangeNick.disabled = false;
+        submitChangeNick.innerHTML = '<span>Uložit novou přezdívku</span><span class="submit-arrow">➔</span>';
+
+        if (res.ok && res.data && res.data.status === 'success') {
+          currentUser.nickname = newNick;
+          setSessionUser(currentUser);
+          showNickAlert('success', res.data.message || `Přezdívka byla úspěšně změněna na "${escapeHtml(newNick)}".`);
+          inputNickPassword.value = '';
+          setTimeout(() => {
+            closeModal(modalChangeNickname);
+          }, 850);
+        } else {
+          showNickAlert('error', res.data?.message || 'Změna přezdívky se nezdařila.');
+        }
+      });
+    }
+
+    // 6. Zpracování formuláře Změna Hesla
+    if (formChangePassword) {
+      formChangePassword.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser || !currentUser.email) {
+          showPassAlert('error', 'Nejste přihlášeni.');
+          return;
+        }
+
+        const currentPass = inputCurrentPass.value;
+        const newPass = inputNewPass.value;
+        const confirmPass = inputNewPassConfirm.value;
+
+        if (!currentPass) {
+          showPassAlert('error', 'Zadejte současné heslo.');
+          return;
+        }
+        if (!newPass || newPass.length < 6) {
+          showPassAlert('error', 'Nové heslo musí mít alespoň 6 znaků.');
+          return;
+        }
+        if (newPass !== confirmPass) {
+          showPassAlert('error', 'Zadaná nová hesla se neshodují.');
+          return;
+        }
+        if (currentPass === newPass) {
+          showPassAlert('error', 'Nové heslo musí být odlišné od vašeho stávajícího hesla.');
+          return;
+        }
+
+        playClickSound();
+        submitChangePass.disabled = true;
+        submitChangePass.innerHTML = '<span>Ukládám heslo…</span>';
+        hidePassAlert();
+
+        const res = await apiRequest({
+          action: 'change_password',
+          email: currentUser.email,
+          current_password: currentPass,
+          new_password: newPass
+        });
+
+        submitChangePass.disabled = false;
+        submitChangePass.innerHTML = '<span>Uložit nové heslo</span><span class="submit-arrow">➔</span>';
+
+        if (res.ok && res.data && res.data.status === 'success') {
+          showPassAlert('success', res.data.message || 'Heslo bylo úspěšně změněno!');
+          inputCurrentPass.value = '';
+          inputNewPass.value = '';
+          inputNewPassConfirm.value = '';
+          setTimeout(() => {
+            closeModal(modalChangePassword);
+          }, 850);
+        } else {
+          showPassAlert('error', res.data?.message || 'Změna hesla se nezdařila.');
+        }
+      });
+    }
 
     // Elementy nového modálu Výběru Herních Režimů
     const modalGameModes = document.getElementById('modalGameModes');
@@ -2476,9 +3277,11 @@
     btnAbout.addEventListener('click', () => openModal(modalAbout));
     closeAbout.addEventListener('click', () => closeModal(modalAbout));
     closeAuth.addEventListener('click', () => closeModal(modalAuth));
+    if (closeChangeNickname) closeChangeNickname.addEventListener('click', () => closeModal(modalChangeNickname));
+    if (closeChangePassword) closeChangePassword.addEventListener('click', () => closeModal(modalChangePassword));
 
     // Zavření modálu kliknutím na pozadí
-    [modalControls, modalAbout, modalAuth, modalGameModes].filter(Boolean).forEach(m => {
+    [modalControls, modalAbout, modalAuth, modalGameModes, modalChangeNickname, modalChangePassword].filter(Boolean).forEach(m => {
       m.addEventListener('click', (e) => {
         if (e.target === m) closeModal(m);
       });
@@ -2490,8 +3293,14 @@
         closeModal(modalAbout);
         closeModal(modalAuth);
         closeModal(modalGameModes);
+        if (modalChangeNickname) closeModal(modalChangeNickname);
+        if (modalChangePassword) closeModal(modalChangePassword);
+        if (settingsDropdownMenu) {
+          settingsDropdownMenu.classList.remove('show');
+          if (btnSettingsMenu) btnSettingsMenu.classList.remove('active');
+        }
       }
-      if (e.key === 'Enter' && (!modalControls || !modalControls.classList.contains('open')) && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open') && !modalGameModes.classList.contains('open')) {
+      if (e.key === 'Enter' && (!modalControls || !modalControls.classList.contains('open')) && !modalAbout.classList.contains('open') && !modalAuth.classList.contains('open') && !modalGameModes.classList.contains('open') && (!modalChangeNickname || !modalChangeNickname.classList.contains('open')) && (!modalChangePassword || !modalChangePassword.classList.contains('open'))) {
         btnPlay.click();
       }
     });
