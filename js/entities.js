@@ -442,6 +442,88 @@
     return bestY;
   }
 
+  // Procedurální generátor ještěřích šupin, rohoviny a tence potrhaných blan křídel pro wyverny (Ice and Fire styl)
+  const _wyvernTextureCache = {};
+  function getWyvernTexture(texType, colorHex, accentHex) {
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
+    const key = `${texType}_${colorHex}_${accentHex}`;
+    if (_wyvernTextureCache[key]) return _wyvernTextureCache[key];
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const baseC = '#' + (colorHex.toString(16).padStart(6, '0'));
+      const accC = '#' + (accentHex.toString(16).padStart(6, '0'));
+
+      ctx.fillStyle = baseC;
+      ctx.fillRect(0, 0, 64, 64);
+
+      if (texType === 'scales') {
+        // Členité šupiny s dravčím ještěřím reliéfem
+        ctx.fillStyle = accC;
+        for (let y = 0; y < 64; y += 8) {
+          const shift = (y % 16 === 0) ? 0 : 4;
+          for (let x = -4; x < 68; x += 8) {
+            ctx.beginPath();
+            ctx.moveTo(x + shift, y);
+            ctx.lineTo(x + shift + 4, y + 4);
+            ctx.lineTo(x + shift, y + 8);
+            ctx.lineTo(x + shift - 4, y + 4);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 10; i++) {
+          ctx.beginPath();
+          ctx.moveTo((i * 19) % 64, 0);
+          ctx.lineTo((i * 37) % 64, 64);
+          ctx.stroke();
+        }
+      } else if (texType === 'wing') {
+        // Kožnatá, žilnatá blána křídel s mikrotrhlinami
+        ctx.fillStyle = accC;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = 'rgba(15,23,42,0.5)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.moveTo(0, 10 + i * 8);
+          ctx.bezierCurveTo(20, 18 + i * 7, 44, 12 + i * 9, 64, 20 + i * 7);
+          ctx.stroke();
+        }
+      } else if (texType === 'horn') {
+        // Kruhové prstence a drážky zrohovatělé tkáně rohů
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 2;
+        for (let y = 4; y < 64; y += 8) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(64, y);
+          ctx.stroke();
+        }
+      }
+
+      if (typeof THREE !== 'undefined' && typeof THREE.CanvasTexture === 'function') {
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        _wyvernTextureCache[key] = tex;
+        return tex;
+      }
+    } catch (e) {
+      // Fallback pro prostředí bez podpory Canvas 2D
+    }
+    return null;
+  }
+
   // Sdílený 3D stavitel detailních modelů pro divoká zvířata, mazlíčky i monstra
   function buildCreatureVoxelGroup(type, limbMeshes, isTamedPet = false) {
     if (typeof THREE === 'undefined') return null;
@@ -1410,50 +1492,97 @@
       addTwoLegs(0.42, 0.72, 0.42, 0.34, 0, stoneMat, darkStoneMat);
 
     } else if (type === 'WyvernFire' || type === 'WyvernIce') {
-      // Wyverna (Ice and Fire): 2 zadní nohy + 2 křídla tvořící přední končetiny, rohy, dlouhý krk a ocas
+      // Dospělá dravá Wyverna (Ice and Fire styl):
+      // Anatomie: 2 silné zadní raptor nohy + 2 masivní kožnatá křídla tvořící přední opěrné končetiny (tetrapod),
+      // štíhlé svalnaté tělo s hlubokým kýlovitým hrudníkem, S-prohnutý krk, rohy, zubaté čelisti a potrhané blány.
       const isIce = (type === 'WyvernIce');
-      const scaleColor = isIce ? 0x0369a1 : 0x991b1b; // Hluboká modrá vs temně rudá dračí šupina
-      const accentScale= isIce ? 0x0284c7 : 0xb91c1c; // Sekundární tón šupin
-      const bellyColor = isIce ? 0x7dd3fc : 0xf97316; // Mrazivý tyrkys vs plamenná oranž na břiše
-      const darkColor  = isIce ? 0x082f49 : 0x450a0a; // Obsidiánové ostny a hřeben
-      const hornColor  = isIce ? 0x0c4a6e : 0x262626; // Mohutné zahnuté rohy
-      const eyeColor   = isIce ? 0x38bdf8 : 0xfbbf24; // Zářící safírové vs jantarově žluté oči
-      const wingColor  = isIce ? 0x38bdf8 : 0xdc2626; // Blána křídla
-      const talonMat   = new THREE.MeshLambertMaterial({ color: 0x18181b });
-      const toothMat   = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const throatMat  = new THREE.MeshLambertMaterial({ color: 0x7f1d1d });
+      const scaleColor  = isIce ? 0x0369a1 : 0x991b1b; // Hluboká modrá vs temně rudá dračí šupina
+      const accentScale = isIce ? 0x0284c7 : 0xb91c1c; // Sekundární tón šupin
+      const bellyColor  = isIce ? 0x7dd3fc : 0xf97316; // Mrazivý tyrkys vs plamenná oranž na břišních plátech
+      const darkColor   = isIce ? 0x082f49 : 0x3f0a0a; // Obsidiánové ostny a hřbetní hřeben
+      const hornColor   = isIce ? 0x0c4a6e : 0x18181b; // Mohutné zakřivené keratinové rohy
+      const eyeColor    = isIce ? 0x38bdf8 : 0xfbbf24; // Zářící safírové vs jantarově žluté predátorské oči
+      const wingColor   = isIce ? 0x38bdf8 : 0xdc2626; // Kožnatá blána křídel
 
-      const scaleMat   = new THREE.MeshLambertMaterial({ color: scaleColor });
-      const accentMat  = new THREE.MeshLambertMaterial({ color: accentScale });
-      const bellyMat   = new THREE.MeshLambertMaterial({ color: bellyColor });
-      const darkMat    = new THREE.MeshLambertMaterial({ color: darkColor });
-      const hornMat    = new THREE.MeshLambertMaterial({ color: hornColor });
-      const wingMat    = new THREE.MeshLambertMaterial({ color: wingColor, side: THREE.DoubleSide });
+      const scaleTex = getWyvernTexture('scales', scaleColor, accentScale);
+      const accentTex= getWyvernTexture('scales', accentScale, scaleColor);
+      const wingTex  = getWyvernTexture('wing', wingColor, darkColor);
+      const hornTex  = getWyvernTexture('horn', hornColor, 0x000000);
 
-      // 1. Tělo / Masivní hruď a trup
-      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.82, 0.90), scaleMat);
-      chest.position.set(0, 0.95, 0.35);
-      root.add(chest);
+      const talonMat  = new THREE.MeshLambertMaterial({ color: 0x18181b });
+      const toothMat  = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+      const throatMat = new THREE.MeshLambertMaterial({
+        color: isIce ? 0x0284c7 : 0xb91c1c,
+        emissive: isIce ? 0x0369a1 : 0xdc2626,
+        emissiveIntensity: 0.18
+      });
 
-      const waist = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.70, 0.85), accentMat);
-      waist.position.set(0, 0.90, -0.45);
+      const scaleMat  = new THREE.MeshLambertMaterial({ color: scaleColor, map: scaleTex });
+      const accentMat = new THREE.MeshLambertMaterial({ color: accentScale, map: accentTex });
+      const bellyMat  = new THREE.MeshLambertMaterial({ color: bellyColor });
+      const darkMat   = new THREE.MeshLambertMaterial({ color: darkColor, map: hornTex });
+      const hornMat   = new THREE.MeshLambertMaterial({ color: hornColor, map: hornTex });
+      const wingMat   = new THREE.MeshLambertMaterial({ color: wingColor, side: THREE.DoubleSide, map: wingTex, transparent: true, opacity: 0.94 });
+
+      // 1. Tělo / Svalnatý hrudník s hlubokým kýlem a atletickým pasem
+      const chestGrp = new THREE.Group();
+      chestGrp.position.set(0, 0.96, 0.35);
+      root.add(chestGrp);
+      limbMeshes.chest = chestGrp;
+
+      // Hrudní svalstvo a trup
+      const chestCore = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.88, 0.92), scaleMat);
+      chestGrp.add(chestCore);
+
+      // Zešikmené boční svahy hrudníku (eliminují plochou kostkovitost)
+      [-1, 1].forEach(side => {
+        const sidePectoral = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.74, 0.86), accentMat);
+        sidePectoral.position.set(side * 0.48, -0.06, 0);
+        sidePectoral.rotation.z = side * 0.18;
+        chestGrp.add(sidePectoral);
+      });
+
+      // Segmentované břišní pláty (Sternal Gastralia) pod hrudí
+      for (let bIdx = -1; bIdx <= 1; bIdx++) {
+        const sternalPlt = new THREE.Mesh(new THREE.BoxGeometry(0.72 - Math.abs(bIdx) * 0.08, 0.14, 0.28), bellyMat);
+        sternalPlt.position.set(0, -0.46, bIdx * 0.28);
+        chestGrp.add(sternalPlt);
+      }
+
+      // Hřbetní ostny nad hrudníkem
+      for (let sIdx = -2; sIdx <= 2; sIdx++) {
+        const spH = 0.26 + (1 - Math.abs(sIdx) / 3) * 0.18;
+        const sp = new THREE.Mesh(new THREE.BoxGeometry(0.08, spH, 0.16), darkMat);
+        sp.position.set(0, 0.46 + spH * 0.45, sIdx * 0.22);
+        sp.rotation.x = -0.15;
+        chestGrp.add(sp);
+      }
+
+      // Lopatkové trny (Scapular spines)
+      [-1, 1].forEach(side => {
+        const scapSpike = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.16), darkMat);
+        scapSpike.position.set(side * 0.34, 0.48, 0.12);
+        scapSpike.rotation.z = side * 0.35;
+        scapSpike.rotation.x = -0.22;
+        chestGrp.add(scapSpike);
+      });
+
+      // Štíhlý ještěří pas (Flanks & Waist)
+      const waist = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.70, 0.84), accentMat);
+      waist.position.set(0, 0.88, -0.45);
       root.add(waist);
 
-      // Segmentované břišní pláty (Underbelly)
-      const bellyFront = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.24, 0.82), bellyMat);
-      bellyFront.position.set(0, 0.58, 0.35);
-      root.add(bellyFront);
-
-      const bellyRear = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.20, 0.78), bellyMat);
-      bellyRear.position.set(0, 0.60, -0.45);
+      const bellyRear = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.78), bellyMat);
+      bellyRear.position.set(0, 0.52, -0.45);
       root.add(bellyRear);
 
-      // Hřbetní ostny podél celé páteře
-      for (let sIdx = -3; sIdx <= 3; sIdx++) {
-        const spineH = 0.22 + (1 - Math.abs(sIdx) / 4) * 0.16;
-        const spine = new THREE.Mesh(new THREE.BoxGeometry(0.08, spineH, 0.16), darkMat);
-        spine.position.set(0, 1.35 + (sIdx > 0 ? 0.05 : 0), sIdx * 0.24);
-        root.add(spine);
+      // Pánevní hřbetní ostny
+      for (let pIdx = -2; pIdx <= 1; pIdx++) {
+        const pSpH = 0.24 - pIdx * 0.03;
+        const pSpine = new THREE.Mesh(new THREE.BoxGeometry(0.08, pSpH, 0.16), darkMat);
+        pSpine.position.set(0, 1.28, -0.32 + pIdx * 0.22);
+        pSpine.rotation.x = -0.20;
+        root.add(pSpine);
       }
 
       // Sedlo pro ochočenou wyvernu
@@ -1467,93 +1596,140 @@
         root.add(saddle); root.add(stirrupL); root.add(stirrupR);
       }
 
-      // 2. Dlouhý hadí krk ve 3 segmentových obloucích
-      const neckBase = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.52, 0.55), scaleMat);
-      neckBase.position.set(0, 1.15, 0.85);
+      // 2. Anatomicky členitý S-prohnutý ještěří krk (3 kloubové segmenty)
+      const neckBase = new THREE.Group();
+      neckBase.position.set(0, 1.16, 0.85);
+      const neckBaseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.54, 0.56), scaleMat);
+      neckBase.add(neckBaseMesh);
+      const dewlap = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.52), bellyMat);
+      dewlap.position.set(0, -0.24, 0.02);
+      neckBase.add(dewlap);
+      const neckSp1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.18), darkMat);
+      neckSp1.position.set(0, 0.36, -0.05);
+      neckSp1.rotation.x = -0.25;
+      neckBase.add(neckSp1);
       neckBase.rotation.x = -0.32;
       root.add(neckBase);
 
-      const neckSpine1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.18), darkMat);
-      neckSpine1.position.set(0, 1.48, 0.85);
-      root.add(neckSpine1);
-
-      const neckMid = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.48, 0.55), accentMat);
-      neckMid.position.set(0, 1.40, 1.25);
+      const neckMid = new THREE.Group();
+      neckMid.position.set(0, 1.42, 1.25);
+      const neckMidMesh = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.48, 0.54), accentMat);
+      neckMid.add(neckMidMesh);
+      const throatUnder = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.15, 0.50), bellyMat);
+      throatUnder.position.set(0, -0.22, 0.02);
+      neckMid.add(throatUnder);
+      const neckSp2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.18), darkMat);
+      neckSp2.position.set(0, 0.34, -0.05);
+      neckSp2.rotation.x = -0.20;
+      neckMid.add(neckSp2);
       neckMid.rotation.x = -0.15;
       root.add(neckMid);
 
-      const neckSpine2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.18), darkMat);
-      neckSpine2.position.set(0, 1.72, 1.25);
-      root.add(neckSpine2);
-
-      const neckTop = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.44, 0.50), scaleMat);
-      neckTop.position.set(0, 1.62, 1.65);
+      const neckTop = new THREE.Group();
+      neckTop.position.set(0, 1.66, 1.66);
+      const neckTopMesh = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.42, 0.50), scaleMat);
+      neckTop.add(neckTopMesh);
+      const gularPlt = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.46), bellyMat);
+      gularPlt.position.set(0, -0.19, 0.02);
+      neckTop.add(gularPlt);
+      const neckSp3 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.16), darkMat);
+      neckSp3.position.set(0, 0.28, -0.05);
+      neckSp3.rotation.x = -0.18;
+      neckTop.add(neckSp3);
       neckTop.rotation.x = 0.12;
       root.add(neckTop);
 
-      const throatUnder = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 1.15), bellyMat);
-      throatUnder.position.set(0, 1.22, 1.28);
-      throatUnder.rotation.x = -0.35;
-      root.add(throatUnder);
+      limbMeshes.neckSegments = [neckBase, neckMid, neckTop];
 
-      // 3. Majestátní dračí hlava s otevíratelnou tlamou plnou zubů
+      // 3. Dravčí lebka, mohutné zakřivené rohy a otevíratelná tlama s vnitřním žárem
       const headGrp = new THREE.Group();
-      headGrp.position.set(0, 1.76, 1.95);
+      headGrp.position.set(0, 1.82, 1.98);
       root.add(headGrp);
       limbMeshes.head = headGrp;
 
       // Lebka
-      const skull = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.42, 0.60), scaleMat);
+      const skull = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.40, 0.60), scaleMat);
       skull.position.set(0, 0.12, 0);
       headGrp.add(skull);
 
-      // Čenich a horní čelist
-      const upperSnout = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.22, 0.62), scaleMat);
+      // Výrazné nadočnicové oblouky dodávající predátorský výraz
+      [-1, 1].forEach(side => {
+        const brow = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.42), darkMat);
+        brow.position.set(side * 0.24, 0.24, 0.08);
+        brow.rotation.z = side * -0.25;
+        brow.rotation.y = side * 0.15;
+        headGrp.add(brow);
+      });
+
+      // Zúžený čenich s horní čelistí
+      const upperSnout = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.64), scaleMat);
       upperSnout.position.set(0, 0.05, 0.52);
       headGrp.add(upperSnout);
 
       // Nozdry
       [-0.10, 0.10].forEach(nx => {
-        const nostril = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.10), darkMat);
-        nostril.position.set(nx, 0.18, 0.75);
+        const nostril = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.12), darkMat);
+        nostril.position.set(nx, 0.18, 0.76);
         headGrp.add(nostril);
       });
 
-      // Vnitřek horní tlamy
-      const upperMouth = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.06, 0.52), throatMat);
+      // Nosní hřebínek
+      const nasalSpike = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.18), darkMat);
+      nasalSpike.position.set(0, 0.18, 0.45);
+      nasalSpike.rotation.x = -0.35;
+      headGrp.add(nasalSpike);
+
+      // Horní patro tlamy
+      const upperMouth = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.06, 0.54), throatMat);
       upperMouth.position.set(0, -0.06, 0.52);
       headGrp.add(upperMouth);
 
-      // Horní řada zubů
+      // Horní řada zubů: 2 přední dravčí tesáky + zubaté jehly
+      [-0.08, 0.08].forEach(fx => {
+        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), toothMat);
+        frontTooth.position.set(fx, -0.12, 0.81);
+        headGrp.add(frontTooth);
+      });
       [-0.17, 0.17].forEach(sideX => {
         for (let tIdx = 0; tIdx < 4; tIdx++) {
           const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.10, 0.05), toothMat);
-          tooth.position.set(sideX, -0.10, 0.32 + tIdx * 0.12);
+          tooth.position.set(sideX, -0.10, 0.30 + tIdx * 0.13);
           headGrp.add(tooth);
         }
       });
-      [-0.08, 0.08].forEach(fx => {
-        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.04), toothMat);
-        frontTooth.position.set(fx, -0.10, 0.81);
-        headGrp.add(frontTooth);
-      });
 
-      // Spodní čelist (Hinged Jaw)
+      // Spodní čelist na pohyblivém pantu (Hinged Jaw)
       const jawPivot = new THREE.Group();
-      jawPivot.position.set(0, -0.04, 0.12);
+      jawPivot.position.set(0, -0.05, 0.12);
       headGrp.add(jawPivot);
       limbMeshes.jaw = jawPivot;
 
-      const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.14, 0.65), bellyMat);
+      const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.14, 0.66), bellyMat);
       lowerJaw.position.set(0, -0.08, 0.38);
       jawPivot.add(lowerJaw);
 
-      // Jazyk
-      const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.45), throatMat);
+      // Bradový trn (Gular spur)
+      const chinSpur = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.20), darkMat);
+      chinSpur.position.set(0, -0.16, 0.35);
+      chinSpur.rotation.x = -0.40;
+      jawPivot.add(chinSpur);
+
+      // Jazyk a vnitřní hrdelní výheň (Emissive Throat Cavity)
+      const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.46), throatMat);
       tongue.position.set(0, -0.01, 0.38);
       jawPivot.add(tongue);
 
+      const throatCore = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.16, 0.28), throatMat);
+      throatCore.position.set(0, 0.06, 0.10);
+      jawPivot.add(throatCore);
+      limbMeshes.throatMat = throatMat;
+
       // Dolní řada zubů
+      [-0.07, 0.07].forEach(fx => {
+        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.13, 0.04), toothMat);
+        frontTooth.position.set(fx, 0.04, 0.68);
+        jawPivot.add(frontTooth);
+      });
       [-0.15, 0.15].forEach(sideX => {
         for (let tIdx = 0; tIdx < 4; tIdx++) {
           const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.09, 0.05), toothMat);
@@ -1561,27 +1737,28 @@
           jawPivot.add(tooth);
         }
       });
-      [-0.07, 0.07].forEach(fx => {
-        const frontTooth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.10, 0.04), toothMat);
-        frontTooth.position.set(fx, 0.03, 0.68);
-        jawPivot.add(frontTooth);
-      });
 
-      // Zářící oči
+      // Zářící predátorské oči
       addExpressiveEyes(headGrp, 0.30, 0.18, 0.18, eyeColor, 0x0f172a, 1.4, true);
 
-      // Rohy: 2 hlavní dlouhé + 2 lícní hroty
+      // Rohy: 2 hlavní masivní zakřivené rohy (3 segmenty) + 2 lícní trny
       [-1, 1].forEach(side => {
-        const hornBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.50), hornMat);
-        hornBase.position.set(side * 0.22, 0.34, -0.22);
+        const hornBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.44), hornMat);
+        hornBase.position.set(side * 0.22, 0.32, -0.22);
         hornBase.rotation.x = -0.52;
-        hornBase.rotation.y = side * 0.20;
+        hornBase.rotation.y = side * 0.18;
         headGrp.add(hornBase);
 
-        const hornTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.42), hornMat);
-        hornTip.position.set(side * 0.28, 0.52, -0.58);
-        hornTip.rotation.x = -0.82;
-        hornTip.rotation.y = side * 0.26;
+        const hornMid = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 0.38), hornMat);
+        hornMid.position.set(side * 0.29, 0.52, -0.54);
+        hornMid.rotation.x = -0.80;
+        hornMid.rotation.y = side * 0.24;
+        headGrp.add(hornMid);
+
+        const hornTip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.32), hornMat);
+        hornTip.position.set(side * 0.35, 0.72, -0.82);
+        hornTip.rotation.x = -1.05;
+        hornTip.rotation.y = side * 0.28;
         headGrp.add(hornTip);
 
         const cheekSpike = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.30), darkMat);
@@ -1591,120 +1768,163 @@
         headGrp.add(cheekSpike);
       });
 
-      // 4. Masivní křídla tvořící přední končetiny wyverny
+      // 4. Masivní křídla tvořící přední končetiny (Tetrapod Wyvern Wings)
       limbMeshes.wings = [];
       [-1, 1].forEach(side => {
         const wingPivot = new THREE.Group();
-        wingPivot.position.set(side * 0.50, 1.25, 0.45);
+        wingPivot.position.set(side * 0.52, 1.26, 0.46);
 
-        const armHumerus = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.85), scaleMat);
+        // Pažní kost (Humerus)
+        const armHumerus = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.88), scaleMat);
         armHumerus.position.set(side * 0.38, 0.08, 0.15);
         armHumerus.rotation.y = side * 0.40;
-        armHumerus.rotation.z = side * 0.15;
+        armHumerus.rotation.z = side * 0.16;
         wingPivot.add(armHumerus);
 
+        // Loket s ostrou ostruhou (Olecranon spur)
         const elbow = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.20, 0.22), accentMat);
-        elbow.position.set(side * 0.72, 0.15, 0.45);
+        elbow.position.set(side * 0.72, 0.15, 0.46);
         wingPivot.add(elbow);
 
-        const thumbClaw = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.20, 0.10), talonMat);
-        thumbClaw.position.set(side * 0.72, -0.05, 0.55);
-        thumbClaw.rotation.x = 0.45;
+        const elbowSpur = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.18), darkMat);
+        elbowSpur.position.set(side * 0.72, 0.24, 0.40);
+        elbowSpur.rotation.x = -0.45;
+        wingPivot.add(elbowSpur);
+
+        // Předloktí (Radius/Ulna) směřující k zemi
+        const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.55), scaleMat);
+        forearm.position.set(side * 0.74, -0.06, 0.62);
+        forearm.rotation.x = 0.42;
+        wingPivot.add(forearm);
+
+        // Zápěstí (Carpal joint) s mohutným opěrným palcovým drápem (Carpal Talon)
+        const carpalJoint = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.18), accentMat);
+        carpalJoint.position.set(side * 0.76, -0.24, 0.76);
+        wingPivot.add(carpalJoint);
+
+        const thumbClaw = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.28, 0.12), talonMat);
+        thumbClaw.position.set(side * 0.76, -0.38, 0.82);
+        thumbClaw.rotation.x = 0.35;
         wingPivot.add(thumbClaw);
 
-        const ribAngles = [-0.35, -0.05, 0.25, 0.55];
+        // 4 prstové články (Digits I-IV) nesoucí blánu
+        const ribAngles = [-0.35, -0.06, 0.24, 0.54];
         ribAngles.forEach((an, rIdx) => {
-          const ribLen = 2.10 - rIdx * 0.25;
+          const ribLen = 2.25 - rIdx * 0.24;
           const rib = new THREE.Mesh(new THREE.BoxGeometry(ribLen, 0.07, 0.07), darkMat);
-          rib.position.set(side * (0.80 + ribLen * 0.48), 0.10 - rIdx * 0.04, 0.35 - rIdx * 0.32);
+          rib.position.set(side * (0.82 + ribLen * 0.48), 0.10 - rIdx * 0.04, 0.35 - rIdx * 0.32);
           rib.rotation.y = side * (an * 0.75);
           wingPivot.add(rib);
         });
 
-        const membrane = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.04, 1.45), wingMat);
-        membrane.position.set(side * 1.55, 0.08, 0.05);
-        wingPivot.add(membrane);
+        // Potrhaná kožnatá blána křídla (Tattered Patagium)
+        const mainMembrane = new THREE.Mesh(new THREE.BoxGeometry(2.40, 0.04, 1.48), wingMat);
+        mainMembrane.position.set(side * 1.60, 0.08, 0.05);
+        wingPivot.add(mainMembrane);
+
+        const innerFlap = new THREE.Mesh(new THREE.BoxGeometry(1.20, 0.03, 0.85), wingMat);
+        innerFlap.position.set(side * 0.95, 0.04, 0.40);
+        wingPivot.add(innerFlap);
 
         root.add(wingPivot);
         limbMeshes.wings.push(wingPivot);
       });
 
-      // 5. Dvě silné zadní končetiny
+      // 5. Dvě silné zadní dravčí končetiny (Digitigrade Raptor Legs)
       limbMeshes.legs = [];
       [-1, 1].forEach(side => {
         const legPivot = new THREE.Group();
-        legPivot.position.set(side * 0.42, 0.88, -0.42);
+        legPivot.position.set(side * 0.44, 0.88, -0.42);
 
-        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.50, 0.38), scaleMat);
+        // Stehno (Femur)
+        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.52, 0.40), scaleMat);
         thigh.position.set(0, -0.20, 0.05);
-        thigh.rotation.x = -0.22;
+        thigh.rotation.x = -0.24;
         legPivot.add(thigh);
 
-        const shin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.48, 0.24), accentMat);
-        shin.position.set(0, -0.52, -0.08);
-        shin.rotation.x = 0.30;
+        // Kolenní štítek
+        const kneePlate = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.12), darkMat);
+        kneePlate.position.set(0, -0.42, 0.16);
+        legPivot.add(kneePlate);
+
+        // Holen (Digitigrade Tibia)
+        const shin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.50, 0.26), accentMat);
+        shin.position.set(0, -0.54, -0.08);
+        shin.rotation.x = 0.32;
         legPivot.add(shin);
 
-        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.48), talonMat);
+        // Nárt a chodidlo
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.50), talonMat);
         foot.position.set(0, -0.80, 0.12);
         legPivot.add(foot);
 
-        [-0.10, 0, 0.10].forEach(cx => {
-          const claw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.18), darkMat);
-          claw.position.set(cx, -0.82, 0.38);
-          claw.rotation.x = 0.25;
+        // 3 přední dravčí hákovité drápy
+        [-0.11, 0, 0.11].forEach(cx => {
+          const claw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.20), darkMat);
+          claw.position.set(cx, -0.82, 0.40);
+          claw.rotation.x = 0.28;
           legPivot.add(claw);
         });
-        const rearClaw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.14), darkMat);
-        rearClaw.position.set(0, -0.82, -0.14);
-        rearClaw.rotation.x = -0.35;
+
+        // 1 zadní opěrný dráp (Hallux)
+        const rearClaw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.15), darkMat);
+        rearClaw.position.set(0, -0.82, -0.15);
+        rearClaw.rotation.x = -0.38;
         legPivot.add(rearClaw);
 
         root.add(legPivot);
         limbMeshes.legs.push(legPivot);
       });
 
-      // 6. Dlouhý ještěří ocas (4 segmenty) s ostnatou ploutví na konci
+      // 6. Dlouhý ještěří bičovitý ocas (5 článků) s ostnatým koncovým kormidlem
       const tail = new THREE.Group();
-      tail.position.set(0, 0.85, -0.80);
+      tail.position.set(0, 0.85, -0.82);
 
       const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.38, 0.75), scaleMat);
       t1.position.set(0, 0, -0.35);
       tail.add(t1);
-      const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.16), darkMat);
+      const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.16), darkMat);
       s1.position.set(0, 0.24, -0.35);
       tail.add(s1);
 
-      const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.30, 0.75), accentMat);
+      const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.32, 0.75), accentMat);
       t2.position.set(0, -0.06, -1.05);
       tail.add(t2);
       const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.16), darkMat);
       s2.position.set(0, 0.16, -1.05);
       tail.add(s2);
 
-      const t3 = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.75), scaleMat);
+      const t3 = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 0.75), scaleMat);
       t3.position.set(0, -0.12, -1.75);
       tail.add(t3);
       const s3 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.20, 0.14), darkMat);
       s3.position.set(0, 0.08, -1.75);
       tail.add(s3);
 
-      const t4 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.70), accentMat);
+      const t4 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.70), accentMat);
       t4.position.set(0, -0.16, -2.45);
       tail.add(t4);
+      const s4 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.12), darkMat);
+      s4.position.set(0, 0.02, -2.45);
+      tail.add(s4);
 
+      const t5 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.65), scaleMat);
+      t5.position.set(0, -0.19, -3.10);
+      tail.add(t5);
+
+      // Koncová ploutev / kormidlo
       const finL = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.55), wingMat);
-      finL.position.set(-0.24, -0.15, -2.70);
+      finL.position.set(-0.24, -0.18, -3.35);
       finL.rotation.y = 0.40;
       tail.add(finL);
 
       const finR = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.05, 0.55), wingMat);
-      finR.position.set(0.24, -0.15, -2.70);
+      finR.position.set(0.24, -0.18, -3.35);
       finR.rotation.y = -0.40;
       tail.add(finR);
 
       const finCenter = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.36, 0.55), darkMat);
-      finCenter.position.set(0, -0.05, -2.70);
+      finCenter.position.set(0, -0.06, -3.35);
       tail.add(finCenter);
 
       root.add(tail);
@@ -1878,6 +2098,80 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Jemné obláčky kouře a popela stoupající z tlamy/nozder wyverny při doznívání (Recovery fáze)
+  // ---------------------------------------------------------------------------
+  function spawnWyvernSmokePuff(originX, originY, originZ, dirX, dirZ, isIce) {
+    if (typeof scene === 'undefined' || !scene || typeof THREE === 'undefined') return;
+    const smokeGrp = new THREE.Group();
+    smokeGrp.position.set(originX, originY, originZ);
+    scene.add(smokeGrp);
+
+    const smokeColors = isIce ? [0xe0f2fe, 0xbae6fd, 0x94a3b8] : [0x27272a, 0x3f3f46, 0x52525b, 0xf97316];
+    const smokeCount = 6;
+    const baseGeo = new THREE.BoxGeometry(1, 1, 1);
+    const smokeParts = [];
+
+    for (let i = 0; i < smokeCount; i++) {
+      const col = smokeColors[i % smokeColors.length];
+      const mat = new THREE.MeshBasicMaterial({
+        color: col,
+        transparent: true,
+        opacity: 0.70
+      });
+      const mesh = new THREE.Mesh(baseGeo, mat);
+      const initScale = 0.09 + Math.random() * 0.08;
+      mesh.scale.set(initScale, initScale, initScale);
+      mesh.position.set(
+        (Math.random() - 0.5) * 0.3,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.3
+      );
+      smokeGrp.add(mesh);
+      smokeParts.push({
+        mesh,
+        mat,
+        vy: 1.1 + Math.random() * 0.8,
+        vx: (dirX || 0) * 0.5 + (Math.random() - 0.5) * 0.35,
+        vz: (dirZ || 0) * 0.5 + (Math.random() - 0.5) * 0.35,
+        grow: 0.75 + Math.random() * 0.75,
+        life: 0,
+        maxLife: 0.70 + Math.random() * 0.40
+      });
+    }
+
+    let elapsed = 0;
+    const iv = setInterval(() => {
+      elapsed += 0.033;
+      let allDead = true;
+      for (const p of smokeParts) {
+        p.life += 0.033;
+        if (p.life < p.maxLife) {
+          allDead = false;
+          const prog = p.life / p.maxLife;
+          p.mesh.position.x += p.vx * 0.033;
+          p.mesh.position.y += p.vy * 0.033;
+          p.mesh.position.z += p.vz * 0.033;
+          const sc = p.mesh.scale.x + p.grow * 0.033;
+          p.mesh.scale.set(sc, sc, sc);
+          p.mat.opacity = Math.max(0, 0.70 * (1 - prog));
+        } else if (p.mesh.parent) {
+          smokeGrp.remove(p.mesh);
+          p.mesh.geometry.dispose();
+          p.mat.dispose();
+        }
+      }
+
+      if (allDead || elapsed >= 1.2) {
+        clearInterval(iv);
+        if (smokeGrp.parent) scene.remove(smokeGrp);
+      }
+    }, 33);
+  }
+  if (typeof window !== 'undefined') {
+    window.spawnWyvernSmokePuff = spawnWyvernSmokePuff;
+  }
+
+  // ---------------------------------------------------------------------------
   // Třída CreatureInstance
   // ---------------------------------------------------------------------------
   class CreatureInstance {
@@ -1968,6 +2262,9 @@
       this.wanderTarget = { x: this.x, z: this.z };
       this.flashTimer = 0;
       this.deathTimer = 0;
+      this.wyvernAttackStage = 'idle';
+      this.wyvernStageTimer = 0;
+      this.wyvernSmokeCooldown = 0;
 
       // Vizuální 3D reprezentace
       this.group = null;
@@ -2217,7 +2514,17 @@
     }
 
     // Aktualizace AI chování a pohybu v terénu
-    update(playerPos, dt = 0.016) {
+    update(playerPosOrDt, secondArg = 0.016) {
+      let playerPos = null;
+      let dt = 0.016;
+      if (typeof playerPosOrDt === 'number') {
+        dt = playerPosOrDt;
+        playerPos = (typeof secondArg === 'object') ? secondArg : null;
+      } else {
+        playerPos = playerPosOrDt;
+        dt = (typeof secondArg === 'number') ? secondArg : 0.016;
+      }
+
       if (this.state === 'Dead') {
         this.deathTimer -= dt;
         const deathP = Math.max(0, Math.min(1, 1 - (this.deathTimer / 1.2)));
@@ -2284,6 +2591,8 @@
           this.state = 'Wander';
           this.stateTimer = 3.0;
         }
+      } else if (this.isDragon && this.wyvernAttackStage && this.wyvernAttackStage !== 'idle') {
+        this.state = 'Attack';
       } else if (dist <= this.attackReach) {
         this.state = 'Attack';
       } else if (dist <= this.aggroRadius) {
@@ -2346,9 +2655,17 @@
         const toPlayerZ = pz - this.z;
         this.rotationY = Math.atan2(toPlayerX, toPlayerZ);
 
-        if (this.attackTimer <= 0) {
-          this.attackTimer = this.attackCooldown;
-          this._performAttack(dist);
+        if (this.isDragon) {
+          if ((!this.wyvernAttackStage || this.wyvernAttackStage === 'idle') && this.attackTimer <= 0) {
+            this.wyvernAttackStage = 'windup';
+            this.wyvernStageTimer = 0.75;
+            this.attackTimer = this.attackCooldown;
+          }
+        } else {
+          if (this.attackTimer <= 0) {
+            this.attackTimer = this.attackCooldown;
+            this._performAttack(dist);
+          }
         }
       }
 
@@ -2469,49 +2786,205 @@
       const strideBounce = (moveSpeed > 0.05) ? Math.abs(Math.sin(walkPhase)) * 0.035 : 0;
       let rootPosY = strideBounce;
 
-      // Telegrafování a úderová animace při útoku (windup & active lunging strike)
-      if (this.state === 'Attack') {
-        if (this.attackTimer > 0 && this.attackTimer <= 0.45) {
-          // 1. Windup (Nápřah a telegrafování - zaklonění hlavy a těla vzad, zvednutí předních tlapek/zbraně)
-          const tw = 1 - (this.attackTimer / 0.45);
-          const windupSin = Math.sin(tw * Math.PI);
-          rootRotX = -0.32 * windupSin;
-          rootPosY = strideBounce + 0.12 * windupSin;
-          if (this.limbMeshes.head) {
-            this.limbMeshes.head.rotation.x = -0.38 * windupSin;
+      // Telegrafování a úderová animace při útoku
+      if (this.isDragon) {
+        if (this.state !== 'Attack' && (!this.wyvernAttackStage || this.wyvernAttackStage === 'idle')) {
+          // Klidový cyklus: plynulé dýchání hrudi, mírné kmitání ocasu a slabý žár v hrdle
+          if (this.limbMeshes.chest) {
+            const idleBreathe = Math.sin(animNow * 0.003 + this.id) * 0.035;
+            this.limbMeshes.chest.scale.set(1.0 + idleBreathe, 1.0 + idleBreathe, 1.0 + idleBreathe * 0.5);
           }
-          if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
-            this.limbMeshes.arms.forEach(arm => { arm.rotation.x = -1.6 * windupSin; });
+          if (this.limbMeshes.throatMat) {
+            this.limbMeshes.throatMat.emissiveIntensity = 0.15;
           }
-        } else if (this.attackTimer > this.attackCooldown - 0.22) {
-          // 2. Active Strike (Výpad a drtivý dopad do cíle)
-          const ts = (this.attackCooldown - this.attackTimer) / 0.22;
-          const strikeSin = Math.sin(ts * Math.PI);
-          rootRotX = 0.32 * strikeSin;
-          rootPosZ = 0.22 * strikeSin;
-          if (this.limbMeshes.head) {
-            this.limbMeshes.head.rotation.x = 0.35 * strikeSin;
+          if (this.limbMeshes.jaw) {
+            this.limbMeshes.jaw.rotation.x = 0;
           }
-          if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
-            this.limbMeshes.arms.forEach(arm => { arm.rotation.x = 0.55 * strikeSin; });
+        } else if (this.wyvernAttackStage && this.wyvernAttackStage !== 'idle') {
+          this.wyvernStageTimer -= dt;
+
+          if (this.wyvernAttackStage === 'windup') {
+            const p = Math.max(0, Math.min(1, 1 - (this.wyvernStageTimer / 0.75)));
+            // 1. Wind-up (Příprava): Wyverna se zapře, roztáhne křídla pro rovnováhu, nadechne se a v hrdle se rozsvěcí žár
+            rootPosY = strideBounce - 0.20 * Math.sin(p * Math.PI * 0.5);
+            rootRotX = -0.24 * p;
+            rootPosZ = -0.16 * p;
+
+            if (this.limbMeshes.wings && this.limbMeshes.wings.length > 0) {
+              this.limbMeshes.wings.forEach((w, i) => {
+                w.rotation.z = (i === 0 ? -1 : 1) * (0.35 + 0.55 * p);
+                w.rotation.y = (i === 0 ? 1 : -1) * (0.22 * p);
+              });
+            }
+
+            if (this.limbMeshes.chest) {
+              this.limbMeshes.chest.scale.set(1.0 + 0.22 * p, 1.0 + 0.20 * p, 1.0 + 0.15 * p);
+            }
+
+            if (this.limbMeshes.neckSegments && this.limbMeshes.neckSegments.length >= 3) {
+              this.limbMeshes.neckSegments[0].rotation.x = -0.42 * p;
+              this.limbMeshes.neckSegments[1].rotation.x = 0.38 * p;
+              this.limbMeshes.neckSegments[2].rotation.x = -0.28 * p;
+            }
+            if (this.limbMeshes.head) {
+              this.limbMeshes.head.rotation.x = -0.32 * p;
+            }
+
+            if (this.limbMeshes.throatMat) {
+              const glow = 0.2 + 2.4 * Math.sin(p * Math.PI * 0.5);
+              const flicker = Math.sin(animNow * 0.035) * 0.3;
+              this.limbMeshes.throatMat.emissiveIntensity = Math.min(3.5, glow + flicker);
+            }
+
+            if (this.limbMeshes.jaw) {
+              this.limbMeshes.jaw.rotation.x = 0.25 * p;
+            }
+
+            if (this.limbMeshes.tail) {
+              this.limbMeshes.tail.rotation.x = -0.22 * p;
+            }
+
+            if (this.wyvernStageTimer <= 0) {
+              this.wyvernAttackStage = 'fire';
+              this.wyvernStageTimer = 0.85;
+              this._performAttack(dist);
+              if (this.limbMeshes.jaw) this.limbMeshes.jaw.rotation.x = 1.15;
+              if (this.limbMeshes.throatMat) this.limbMeshes.throatMat.emissiveIntensity = 2.8;
+              if (this.limbMeshes.head) this.limbMeshes.head.rotation.x = 0.35;
+              rootPosZ = -0.32;
+            }
+          } else if (this.wyvernAttackStage === 'fire') {
+            const p = Math.max(0, Math.min(1, 1 - (this.wyvernStageTimer / 0.85)));
+
+            // 2. Samotný útok: Hlava vyrazí prudce dopředu, čelisti se plně rozevřou, plameny tryskají se zpětným rázem
+            if (this.limbMeshes.neckSegments && this.limbMeshes.neckSegments.length >= 3) {
+              this.limbMeshes.neckSegments[0].rotation.x = 0.36;
+              this.limbMeshes.neckSegments[1].rotation.x = -0.16;
+              this.limbMeshes.neckSegments[2].rotation.x = 0.24;
+            }
+            if (this.limbMeshes.head) {
+              this.limbMeshes.head.rotation.x = 0.35;
+            }
+
+            if (this.limbMeshes.jaw) {
+              this.limbMeshes.jaw.rotation.x = 1.15; // plné rozevření (~66°)
+            }
+
+            const recoil = Math.sin(p * Math.PI);
+            rootPosZ = -0.38 * Math.max(0.2, recoil);
+            rootRotX = 0.18 * recoil;
+            rootPosY = strideBounce + (Math.random() - 0.5) * 0.04;
+
+            if (this.limbMeshes.wings && this.limbMeshes.wings.length > 0) {
+              this.limbMeshes.wings.forEach((w, i) => {
+                w.rotation.z = (i === 0 ? -1 : 1) * (0.42 + Math.sin(animNow * 0.04) * 0.08);
+              });
+            }
+
+            if (this.limbMeshes.chest) {
+              this.limbMeshes.chest.scale.set(1.0 + 0.22 * (1 - p), 1.0 + 0.20 * (1 - p), 1.0 + 0.15 * (1 - p));
+            }
+
+            if (this.limbMeshes.tail) {
+              this.limbMeshes.tail.rotation.z = Math.sin(p * Math.PI * 2) * 0.48;
+            }
+
+            if (this.limbMeshes.throatMat) {
+              this.limbMeshes.throatMat.emissiveIntensity = 2.8;
+            }
+
+            if (this.wyvernStageTimer <= 0) {
+              this.wyvernAttackStage = 'recovery';
+              this.wyvernStageTimer = 0.65;
+              if (this.limbMeshes.jaw) this.limbMeshes.jaw.rotation.x = 0.35;
+              if (this.limbMeshes.throatMat) this.limbMeshes.throatMat.emissiveIntensity = 2.0;
+            }
+          } else if (this.wyvernAttackStage === 'recovery') {
+            const p = Math.max(0, Math.min(1, 1 - (this.wyvernStageTimer / 0.65)));
+
+            // 3. Doznívání: Plynulý návrat do bojového postoje, kouř stoupá z tlamy
+            if (this.limbMeshes.jaw) {
+              this.limbMeshes.jaw.rotation.x = 0.35 * (1 - p);
+            }
+            if (this.limbMeshes.neckSegments && this.limbMeshes.neckSegments.length >= 3) {
+              this.limbMeshes.neckSegments[0].rotation.x = 0.36 * (1 - p);
+              this.limbMeshes.neckSegments[1].rotation.x = -0.16 * (1 - p);
+              this.limbMeshes.neckSegments[2].rotation.x = 0.24 * (1 - p);
+            }
+            if (this.limbMeshes.head) {
+              this.limbMeshes.head.rotation.x = 0.35 * (1 - p);
+            }
+
+            rootPosZ = -0.38 * (1 - p);
+            rootRotX = 0;
+            if (this.limbMeshes.chest) {
+              this.limbMeshes.chest.scale.set(1, 1, 1);
+            }
+
+            if (this.limbMeshes.throatMat) {
+              this.limbMeshes.throatMat.emissiveIntensity = Math.max(0.15, 2.8 * (1 - p));
+            }
+
+            this.wyvernSmokeCooldown = (this.wyvernSmokeCooldown || 0) - dt;
+            if (this.wyvernSmokeCooldown <= 0) {
+              this.wyvernSmokeCooldown = 0.16;
+              if (typeof window !== 'undefined' && typeof window.spawnWyvernSmokePuff === 'function') {
+                const fwdX = Math.sin(this.rotationY);
+                const fwdZ = Math.cos(this.rotationY);
+                const mouthY = (this.renderY || this.y) + 1.8 * (this.tierScale || 1.0);
+                const mouthX = this.x + fwdX * 2.1 * (this.tierScale || 1.0);
+                const mouthZ = this.z + fwdZ * 2.1 * (this.tierScale || 1.0);
+                window.spawnWyvernSmokePuff(mouthX, mouthY, mouthZ, fwdX, fwdZ, this.dragonType === 'ice');
+              }
+            }
+
+            if (this.wyvernStageTimer <= 0) {
+              this.wyvernAttackStage = 'idle';
+            }
           }
         }
-      }
-
-      // Animace rozevření čelisti draka při útoku nebo chrlení
-      if (this.limbMeshes.jaw) {
+      } else {
+        // Standardní creature útok (vlci, skřeti, golemové atd.)
         if (this.state === 'Attack') {
           if (this.attackTimer > 0 && this.attackTimer <= 0.45) {
             const tw = 1 - (this.attackTimer / 0.45);
-            this.limbMeshes.jaw.rotation.x = 0.70 * Math.sin(tw * Math.PI);
+            const windupSin = Math.sin(tw * Math.PI);
+            rootRotX = -0.32 * windupSin;
+            rootPosY = strideBounce + 0.12 * windupSin;
+            if (this.limbMeshes.head) {
+              this.limbMeshes.head.rotation.x = -0.38 * windupSin;
+            }
+            if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
+              this.limbMeshes.arms.forEach(arm => { arm.rotation.x = -1.6 * windupSin; });
+            }
           } else if (this.attackTimer > this.attackCooldown - 0.22) {
             const ts = (this.attackCooldown - this.attackTimer) / 0.22;
-            this.limbMeshes.jaw.rotation.x = 0.60 * Math.sin(ts * Math.PI);
+            const strikeSin = Math.sin(ts * Math.PI);
+            rootRotX = 0.32 * strikeSin;
+            rootPosZ = 0.22 * strikeSin;
+            if (this.limbMeshes.head) {
+              this.limbMeshes.head.rotation.x = 0.35 * strikeSin;
+            }
+            if (this.limbMeshes.arms && this.limbMeshes.arms.length > 0) {
+              this.limbMeshes.arms.forEach(arm => { arm.rotation.x = 0.55 * strikeSin; });
+            }
+          }
+        }
+
+        if (this.limbMeshes.jaw) {
+          if (this.state === 'Attack') {
+            if (this.attackTimer > 0 && this.attackTimer <= 0.45) {
+              const tw = 1 - (this.attackTimer / 0.45);
+              this.limbMeshes.jaw.rotation.x = 0.70 * Math.sin(tw * Math.PI);
+            } else if (this.attackTimer > this.attackCooldown - 0.22) {
+              const ts = (this.attackCooldown - this.attackTimer) / 0.22;
+              this.limbMeshes.jaw.rotation.x = 0.60 * Math.sin(ts * Math.PI);
+            } else {
+              this.limbMeshes.jaw.rotation.x = 0;
+            }
           } else {
             this.limbMeshes.jaw.rotation.x = 0;
           }
-        } else {
-          this.limbMeshes.jaw.rotation.x = 0;
         }
       }
 
@@ -3377,8 +3850,8 @@
       const pet = this.activePet;
       if (pet.attackCooldownTimer > 0) return false;
 
-      pet.attackCooldownTimer = 0.85; // plynulý cooldown mezi chrleními
-      pet.attackAnimTimer = 0.70;
+      pet.attackCooldownTimer = 1.15; // plynulý cooldown mezi chrleními
+      pet.attackAnimTimer = 1.05;
 
       // Otevřít tlamu dokořán
       if (pet.limbMeshes && pet.limbMeshes.jaw) {
@@ -3567,12 +4040,66 @@
       let attackLungeRoot = 0;
       let attackJawOpen = 0;
       if (pet.attackAnimTimer > 0) {
-        const animDuration = pet.isDragon ? 0.70 : 0.35;
-        const progress = Math.max(0, Math.min(1, 1 - (pet.attackAnimTimer / animDuration)));
-        const lunge = Math.sin(progress * Math.PI);
-        attackLungeHead = -lunge * 0.45;
-        attackLungeRoot = lunge * 0.12;
-        attackJawOpen = lunge * 0.75;
+        if (pet.isDragon) {
+          const animDuration = 1.05;
+          const progress = Math.max(0, Math.min(1, 1 - (pet.attackAnimTimer / animDuration)));
+          if (progress < 0.28) {
+            // 1. Wind-up (nápřah, roztažení křídel, expanze hrudníku a žár v hrdle)
+            const p = progress / 0.28;
+            attackLungeRoot = -0.16 * p;
+            attackLungeHead = -0.32 * p;
+            attackJawOpen = 0.24 * p + 0.05;
+            if (pet.limbMeshes && pet.limbMeshes.chest) {
+              pet.limbMeshes.chest.scale.set(1.0 + 0.20 * p, 1.0 + 0.18 * p, 1.0 + 0.12 * p);
+            }
+            if (pet.limbMeshes && pet.limbMeshes.throatMat) {
+              pet.limbMeshes.throatMat.emissiveIntensity = 0.2 + 2.4 * p;
+            }
+          } else if (progress < 0.70) {
+            // 2. Fire Blast & Recoil (výpad, plameny, plné rozevření čelistí a zpětný ráz)
+            const p = (progress - 0.28) / 0.42;
+            attackLungeHead = 0.35;
+            attackJawOpen = 1.15; // plné rozevření čelistí (~66°)
+            attackLungeRoot = -0.36 * Math.sin(p * Math.PI);
+            if (pet.limbMeshes && pet.limbMeshes.chest) {
+              pet.limbMeshes.chest.scale.set(1.0 + 0.20 * (1 - p), 1.0 + 0.18 * (1 - p), 1.0 + 0.12 * (1 - p));
+            }
+            if (pet.limbMeshes && pet.limbMeshes.throatMat) {
+              pet.limbMeshes.throatMat.emissiveIntensity = 2.8;
+            }
+          } else {
+            // 3. Recovery & Smoke (doznění, kouř z tlamy, chladnutí)
+            const p = (progress - 0.70) / 0.30;
+            attackLungeHead = 0.35 * (1 - p);
+            attackJawOpen = 0.28 * (1 - p);
+            attackLungeRoot = -0.36 * (1 - p);
+            if (pet.limbMeshes && pet.limbMeshes.chest) {
+              pet.limbMeshes.chest.scale.set(1, 1, 1);
+            }
+            if (pet.limbMeshes && pet.limbMeshes.throatMat) {
+              pet.limbMeshes.throatMat.emissiveIntensity = Math.max(0.15, 2.8 * (1 - p));
+            }
+            pet.smokeCool = (pet.smokeCool || 0) - dt;
+            if (pet.smokeCool <= 0) {
+              pet.smokeCool = 0.16;
+              if (typeof window !== 'undefined' && typeof window.spawnWyvernSmokePuff === 'function') {
+                const fwdX = -Math.sin(pet.rotationY);
+                const fwdZ = -Math.cos(pet.rotationY);
+                const mouthY = (pet.y || 50) + 1.8 * (pet.tierScale || 1.0);
+                const mouthX = pet.x + fwdX * 2.0 * (pet.tierScale || 1.0);
+                const mouthZ = pet.z + fwdZ * 2.0 * (pet.tierScale || 1.0);
+                window.spawnWyvernSmokePuff(mouthX, mouthY, mouthZ, fwdX, fwdZ, pet.dragonType === 'ice');
+              }
+            }
+          }
+        } else {
+          const animDuration = 0.35;
+          const progress = Math.max(0, Math.min(1, 1 - (pet.attackAnimTimer / animDuration)));
+          const lunge = Math.sin(progress * Math.PI);
+          attackLungeHead = -lunge * 0.45;
+          attackLungeRoot = lunge * 0.12;
+          attackJawOpen = lunge * 0.75;
+        }
       }
 
       // Pomocná funkce pro vyhledání nejlepšího nepřátelského cíle
